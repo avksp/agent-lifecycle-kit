@@ -364,3 +364,136 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
                 )
                 self.assertEqual("outer.inner", payload["blockers"][0]["name"])
                 self.assertEqual([0, 21], [row["score"] for row in payload["branches"]])
+
+
+class SemanticFingerprintPortabilityTests(unittest.TestCase):
+    def test_accepted_python312_golden_fingerprints(self):
+        import ast
+
+        from agent_lifecycle.quality.architecture_policy import semantic_fingerprint
+
+        # Captured from the accepted implementation on actual Python 3.12.
+        cases = (
+            (
+                ("def f(x):\n    return x\n"),
+                "e5557f974d3c4016f6d67d07114392c94a3926e0457069ef35f5dfa6c10fe86f",
+            ),
+            (
+                (
+                    "@decorate(flag if enabled else fallback)\n"
+                    "async def f(x=first or second, *, enabled=True):\n"
+                    '    """Ignored documentation."""\n'
+                    "    class Inner:\n"
+                    "        def value(self):\n"
+                    "            return None\n"
+                    "    async def child(y=lambda z: z + 1):\n"
+                    '        return f"{y!r}"\n'
+                    "    if enabled:\n"
+                    "        return [item for item in x if item]\n"
+                    "    return await child()\n"
+                ),
+                "ed38f09846adee2f19b4a75563c8a2da027176e23969e866b4d2ccc1f363c30f",
+            ),
+            (
+                (
+                    "def f(value):\n"
+                    "    match value:\n"
+                    "        case [first, *rest] if first:\n"
+                    '            return (None, True, b"x", 1.25, 2j, ..., rest[1:])\n'
+                    '        case {"key": item, **rest}:\n'
+                    "            try:\n"
+                    '                return {**rest, "key": item}\n'
+                    "            except ValueError as error:\n"
+                    '                raise RuntimeError("failed") from error\n'
+                    "        case _:\n"
+                    "            return []\n"
+                ),
+                "9544a37ba41b44a9dc05c526419193532fefd527b10090863c1a7e0af8284b12",
+            ),
+        )
+        for source, expected in cases:
+            with self.subTest(source=source):
+                node = ast.parse(source).body[0]
+                self.assertIsInstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                self.assertEqual(expected, semantic_fingerprint(node))
+
+    def test_exact_accepted_dump_keeps_empty_lists_and_required_none(self):
+        import ast
+
+        from agent_lifecycle.quality.architecture_policy import _canonical_ast_dump
+
+        node = ast.parse("def f(x):\n    return x\n").body[0]
+        expected = (
+            "FunctionDef(name='f', args=arguments(posonlyargs=[], args=[arg(arg='x')], kwonlyargs="
+            "[], kw_defaults=[], defaults=[]), body=[Return(value=Name(id='x', ctx=Load()))], deco"
+            "rator_list=[], type_params=[])"
+        )
+        self.assertEqual(expected, _canonical_ast_dump(node))
+        self.assertEqual("Constant(value=None)", _canonical_ast_dump(ast.Constant(value=None)))
+
+    def test_nonempty_type_parameters_are_retained_on_every_runtime(self):
+        import ast
+
+        from agent_lifecycle.quality.architecture_policy import _canonical_ast_dump, semantic_fingerprint
+
+        node = ast.parse("def f(x):\n    return x\n").body[0]
+        before = semantic_fingerprint(node)
+        # Model populated type_params even on 3.11, whose parser lacks the field.
+        node.type_params = [ast.Name(id="T", ctx=ast.Load())]
+        self.assertIn("type_params=[Name(id='T', ctx=Load())]", _canonical_ast_dump(node))
+        self.assertNotEqual(before, semantic_fingerprint(node))
+        if hasattr(ast, "TypeVar"):
+            first = ast.parse("def f[T](x):\n    return x\n").body[0]
+            second = ast.parse("def f[U](x):\n    return x\n").body[0]
+            self.assertNotEqual(semantic_fingerprint(first), semantic_fingerprint(second))
+
+    def test_future_populated_fields_are_not_filtered_to_a_fixed_schema(self):
+        import ast
+
+        from agent_lifecycle.quality.architecture_policy import _canonical_ast_dump, semantic_fingerprint
+
+        node = ast.parse("def f(x):\n    return x\n").body[0]
+        before = semantic_fingerprint(node)
+        node._fields = (*node._fields, "future_field")
+        node.future_field = ast.Constant(value="first")
+        first = semantic_fingerprint(node)
+        self.assertNotEqual(before, first)
+        self.assertIn("future_field=Constant(value='first')", _canonical_ast_dump(node))
+        node.future_field = ast.Constant(value="second")
+        self.assertNotEqual(first, semantic_fingerprint(node))
+
+    def test_changed_body_defaults_decorators_nested_body_and_new_debt_still_refuse(self):
+        import ast
+
+        from agent_lifecycle.contracts import canonical_digest
+        from agent_lifecycle.quality.architecture_policy import branch_findings, function_branch_records
+
+        source = (
+            "@decorate(flag)\ndef f(x=1, *, enabled=True):\n"
+            + "    if enabled: x += 1\n" * 25
+            + "    def nested():\n        return 1\n    return x\n"
+        )
+        original = function_branch_records(ast.parse(source), "fixture.py")[0]
+        baseline = [{key: original[key] for key in ("path", "name", "score", "fingerprint")}]
+        policy = {
+            "branchLimit": 20,
+            "branchBaseline": baseline,
+            "branchBaselineDigest": canonical_digest(baseline),
+            "branchExceptions": [],
+        }
+        self.assertEqual([], branch_findings([original], policy))
+        for old, new in (
+            ("return x", "return x + 1"),
+            ("x=1", "x=2"),
+            ("enabled=True", "enabled=False"),
+            ("decorate(flag)", "decorate(other)"),
+            ("return 1", "return 2"),
+        ):
+            changed = function_branch_records(ast.parse(source.replace(old, new)), "fixture.py")[0]
+            with self.subTest(change=(old, new)):
+                self.assertEqual(original["score"], changed["score"])
+                self.assertNotEqual(original["fingerprint"], changed["fingerprint"])
+                self.assertEqual("architecture-branch-ratchet-violation", branch_findings([changed], policy)[0]["code"])
+        policy["branchBaseline"] = []
+        policy["branchBaselineDigest"] = canonical_digest([])
+        self.assertTrue(branch_findings([original], policy))

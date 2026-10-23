@@ -18,7 +18,8 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any
+from types import EllipsisType
+from typing import Any, TypeAlias
 
 from agent_lifecycle.contracts import canonical_digest
 from agent_lifecycle.quality.dependency_impact import package_name
@@ -85,9 +86,36 @@ class _SemanticTree(ast.NodeTransformer):
         return self.visit(ast.Assign(targets=[node.target], value=node.value))
 
 
+_AstValue: TypeAlias = "ast.AST | list[_AstValue] | str | int | float | complex | bytes | EllipsisType | None"
+
+
+def _canonical_ast_dump(value: _AstValue) -> str:
+    """Keep the accepted Python 3.12 field representation on supported runtimes.
+
+    Unlike newer ast.dump defaults, empty lists remain explicit. Python 3.11
+    declarations acquire the empty type_params field introduced in 3.12.
+    Optional None fields stay omitted; populated and future fields are retained.
+    """
+    if isinstance(value, ast.AST):
+        fields = list(ast.iter_fields(value))
+        if isinstance(value, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not any(
+            name == "type_params" for name, _ in fields
+        ):
+            fields.append(("type_params", getattr(value, "type_params", [])))
+        parts = [
+            f"{name}={_canonical_ast_dump(child)}"
+            for name, child in fields
+            if not (child is None and getattr(type(value), name, ...) is None)
+        ]
+        return f"{type(value).__name__}({', '.join(parts)})"
+    if isinstance(value, list):
+        return f"[{', '.join(_canonical_ast_dump(child) for child in value)}]"
+    return repr(value)
+
+
 def semantic_fingerprint(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     normalized = _SemanticTree().visit(copy.deepcopy(node))
-    return hashlib.sha256(ast.dump(normalized, include_attributes=False).encode()).hexdigest()
+    return hashlib.sha256(_canonical_ast_dump(normalized).encode()).hexdigest()
 
 
 class _Functions(ast.NodeVisitor):
