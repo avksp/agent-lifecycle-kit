@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import errno
 import json
+import os
 import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from agent_lifecycle.contracts import LifecycleError
@@ -66,8 +69,10 @@ class SecurityFindingImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "findings.json"
             path.write_text('{"findings":[]}', encoding="utf-8")
+            original = path.read_bytes()
             cap = 64
             reads = []
+            write_errors = []
 
             @contextmanager
             def observe(source, **kwargs):
@@ -80,7 +85,11 @@ class SecurityFindingImportTests(unittest.TestCase):
                         def read(self, size):
                             data = handle.read(size)
                             reads.append((size, len(data)))
-                            path.write_text('{"findings":[],"changed":true}', encoding="utf-8")
+                            try:
+                                path.write_text('{"findings":[],"changed":true}', encoding="utf-8")
+                            except OSError as error:
+                                write_errors.append(error)
+                                raise
                             return data
 
                     yield Reader()
@@ -90,7 +99,75 @@ class SecurityFindingImportTests(unittest.TestCase):
                 self.assertRaises(LifecycleError) as caught,
             ):
                 import_security_findings(path, max_input_bytes=cap)
+            if write_errors:
+                self.assertEqual(len(write_errors), 1)
+                error = write_errors[0]
+                self.assertEqual(os.name, "nt")
+                self.assertIsInstance(error, PermissionError)
+                self.assertEqual(error.errno, errno.EACCES)
+                winerror = getattr(error, "winerror", None)
+                if winerror is not None:
+                    self.assertIn(winerror, (5, 32, 33))
+                self.assertEqual(path.read_bytes(), original)
+                self.assertEqual(caught.exception.code, "authority-input-unavailable")
+                observation = {"branch": "native-write-denied", "errno": error.errno, "winerror": winerror}
+            else:
+                self.assertEqual(path.read_bytes(), b'{"findings":[],"changed":true}')
+                self.assertNotEqual(path.read_bytes(), original)
+                self.assertEqual(caught.exception.code, "authority-input-changed")
+                observation = {"branch": "native-mutation-detected"}
+            print("SECURITY_FINDINGS_NATIVE_MUTATION " + json.dumps(observation, sort_keys=True))
+            self.assertEqual(reads[0][0], cap + 1)
+            self.assertLessEqual(sum(actual for _, actual in reads), cap + 1)
+
+    def test_injected_post_read_descriptor_identity_change_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "findings.json"
+            original = b'{"findings":[]}'
+            path.write_bytes(original)
+            cap = 64
+            original_fstat = os.fstat
+            read_descriptors = []
+            reads = []
+            injected = []
+
+            def changed_stat(descriptor):
+                actual = original_fstat(descriptor)
+                if descriptor in read_descriptors:
+                    changed = SimpleNamespace(
+                        **{name: getattr(actual, name) for name in dir(actual) if name.startswith("st_")}
+                    )
+                    changed.st_size += 1
+                    injected.append(descriptor)
+                    return changed
+                return actual
+
+            @contextmanager
+            def observe(source, **kwargs):
+                with open_authority_read(source, **kwargs) as handle:
+
+                    class Reader:
+                        def fileno(self):
+                            return handle.fileno()
+
+                        def read(self, size):
+                            data = handle.read(size)
+                            reads.append((size, len(data)))
+                            read_descriptors.append(handle.fileno())
+                            return data
+
+                    yield Reader()
+
+            with (
+                patch("agent_lifecycle.contracts.authority_io.os.fstat", changed_stat),
+                patch("agent_lifecycle.contracts.authority_io.open_authority_read", observe),
+                self.assertRaises(LifecycleError) as caught,
+            ):
+                import_security_findings(path, max_input_bytes=cap)
             self.assertEqual(caught.exception.code, "authority-input-changed")
+            self.assertEqual(len(read_descriptors), 1)
+            self.assertEqual(injected, read_descriptors)
+            self.assertEqual(path.read_bytes(), original)
             self.assertEqual(reads[0][0], cap + 1)
             self.assertLessEqual(sum(actual for _, actual in reads), cap + 1)
 

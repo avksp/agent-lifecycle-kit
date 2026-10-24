@@ -27,7 +27,7 @@ I/O. ALK всё равно остановится до действия моде
 Выберите сценарий для текущего запроса и этапа. До действия прочитайте его
 обязательные ссылки. Если этап неясен, сначала изучите сохранённое состояние.
 При смене этапа выберите другой сценарий. В пилоте оркестратора
-[полный lifecycle contract](../../../skills/agent-workflow-orchestrator/references/lifecycle-contract.md)
+[полный lifecycle contract](https://github.com/avksp/agent-lifecycle-kit/blob/main/skills/agent-workflow-orchestrator/references/lifecycle-contract.md)
 остаётся обязательным; его хеш и origin находятся в entrypoint навыка. Выбор
 сценария не заменяет frozen plan, активный packet или общие контракты.
 Термины и границы измерений описаны в [локальном профиле письма](controlled-technical-english.md).

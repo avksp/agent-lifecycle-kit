@@ -141,7 +141,7 @@ validation = validate_import_result(result)
 
 Семантические примеры для синонимов workflow (`steps`/`jobs`,
 `validation`/`validations`/`checks`) и преобразования роли/правил агента находятся в
-[`test_external_dialects.py`](../../../tests/imports/test_external_dialects.py).
+[`test_external_dialects.py`](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/imports/test_external_dialects.py).
 Преобразователь принимает объекты JSON и ограниченную YAML-подобную запись, а не
 произвольный движок workflow на YAML. Он сохраняет максимум восемь требований,
 обрезая каждое до 180 символов; рабочие и проверочные подсказки workflow также
@@ -149,12 +149,12 @@ validation = validate_import_result(result)
 семантического перевода. Перед одобрением объёма работ проверяющий должен свериться
 с исходником. Проверки доверия, обязательного ревью, запрета заморозки и изменения
 отпечатка профиля находятся в
-[`test_external_dialect_framework.py`](../../../tests/imports/test_external_dialect_framework.py);
+[`test_external_dialect_framework.py`](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/imports/test_external_dialect_framework.py);
 проверки эффектов CLI и подмены подтверждений — в
-[`test_untrusted_input_boundaries.py`](../../../tests/imports/test_untrusted_input_boundaries.py).
+[`test_untrusted_input_boundaries.py`](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/imports/test_untrusted_input_boundaries.py).
 
 Матрица CI также требует Node smoke для фактической
-[`проекции OpenCode`](../../../adapters/opencode/plugins/agent-lifecycle-kit.js).
+[`проекции OpenCode`](https://github.com/avksp/agent-lifecycle-kit/blob/main/adapters/opencode/plugins/agent-lifecycle-kit.js).
 Тест разбирает и импортирует её байты как ES-модуль, проверяет экспортированную
 функцию и неизменяемые метаданные, затем вызывает функцию и проверяет пустой
 объект хуков. Единственный подпроцесс использует существующий ограниченный

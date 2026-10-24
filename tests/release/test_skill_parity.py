@@ -76,13 +76,24 @@ class SkillParityTests(unittest.TestCase):
                 skill = root / "skills/agent-workflow-orchestrator"
                 router, reference = skill / "SKILL.md", skill / "references/lifecycle-contract.md"
                 target = router if component == "router" else reference
-                original = target.read_text(encoding="utf-8")
-                self.assertEqual(original.count(old), 1)
+                original = target.read_bytes()
+                old_bytes, new_bytes = old.encode("utf-8"), new.encode("utf-8")
+                self.assertEqual(original.count(old_bytes), 1)
                 before_digest = hashlib.sha256(reference.read_bytes()).hexdigest()
-                target.write_text(original.replace(old, new), encoding="utf-8")
+                changed = original.replace(old_bytes, new_bytes)
+                target.write_bytes(changed)
+                self.assertEqual(target.read_bytes(), changed)
+                self.assertEqual(changed.count(b"\n"), original.count(b"\n"))
+                self.assertEqual(changed.count(b"\r"), original.count(b"\r"))
                 # Repin altered reference bytes so a hash mismatch cannot mask the clause regression.
                 after_digest = hashlib.sha256(reference.read_bytes()).hexdigest()
-                router.write_text(router.read_text().replace(before_digest, after_digest), encoding="utf-8")
+                router_before = router.read_bytes()
+                self.assertEqual(router_before.count(before_digest.encode("ascii")), 1)
+                repinned = router_before.replace(before_digest.encode("ascii"), after_digest.encode("ascii"))
+                router.write_bytes(repinned)
+                self.assertEqual(router.read_bytes(), repinned)
+                self.assertEqual(repinned.count(b"\n"), router_before.count(b"\n"))
+                self.assertEqual(repinned.count(b"\r"), router_before.count(b"\r"))
                 result = validate_skill_parity(root)
                 self.assertEqual(result["status"], "FAIL")
                 self.assertEqual({item["code"] for item in result["blockers"]}, {"skill-critical-clause-missing"})

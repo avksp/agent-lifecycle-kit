@@ -8,13 +8,11 @@
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.14-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable
-finish. It keeps the requested outcome, reviewed plan, execution boundaries,
-evidence and acceptance decisions connected while the external agent changes the project.
+**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and
+acceptance decisions connected while the external agent changes the project.
 
-The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose,
-OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice
-and secret handling stay in adapters or host-local profiles.
+The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling
+stay in adapters or host-local profiles.
 
 ALK provides a verifiable finish for external-agent work with proportionate control. It adds only the checks and evidence needed for the task; most of the time remains for research, implementation and product verification.
 
@@ -35,8 +33,7 @@ agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
 ```
 
-Choose `<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md)
-and pass a task from a file:
+Choose `<adapter-id>` from the [adapter support matrix](docs/adapters/support-matrix.md) and pass a task from a file:
 
 ```bash
 agent-lifecycle start --adapter <adapter-id> --file task.md
@@ -130,16 +127,12 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 
 ## Adapter support level
 
-The adapter support level describes how much of the ALK integration is verified
-for a specific host. It covers the declared CLI/version, command projection,
-environment boundary, live conformance, resource calibration and accepted ALK
-lifecycle evidence. It describes the checked integration range; it is not a
-rating of the host model or of the external product.
+The adapter support level describes how much of the ALK integration is verified for a specific host. It covers the declared CLI/version, command projection, environment boundary,
+live conformance, resource calibration and accepted ALK lifecycle evidence. It describes the checked integration range; it is not a rating of the host model or of the external
+product.
 
-Accepted lifecycle artifacts include the reviewed plan and lock, state and task
-receipts, validation and evidence summaries, independent plan and implementation
-audits, and final proof. Host launch routes add usage, resource and containment
-receipts for the exact adapter/version binding.
+Accepted lifecycle artifacts include the reviewed plan and lock, state and task receipts, validation and evidence summaries, independent plan and implementation audits, and final
+proof. Host launch routes add usage, resource and containment receipts for the exact adapter/version binding.
 
 `EXPERIMENTAL` marks an adapter with offline checks and deterministic contract
 tests. `VERIFIED` adds bounded live host conformance, usage/resource calibration,
@@ -181,10 +174,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 ## Release 2.25: focused security and maintainability
 
-Release 2.25 hardens sensitive imports and launcher checks, repairs named
-ownership seams, and checks untyped Python function bodies with mypy. See the
-[current security controls](docs/security/release-security.md) and [architecture map](docs/architecture/system-architecture.md).
-The [staged reading pilot](docs/guides/controlled-technical-english.md) preserves full references and approval gates;
-byte/word measurements do not prove token savings. Existing OpenCode 1.x/2.x
-qualification and unsupported host routes remain unchanged. Local preparation,
-exact-candidate CI, native final proof and public publication are separate gates.
+Release 2.25 hardens sensitive imports and launcher checks, repairs named ownership seams, and checks untyped Python function bodies with mypy. See the [current security
+controls](docs/security/release-security.md) and [architecture map](docs/architecture/system-architecture.md). The [staged reading
+pilot](docs/guides/controlled-technical-english.md) preserves full references and approval gates; byte/word measurements do not prove token savings. Existing OpenCode 1.x/2.x
+qualification and unsupported host routes remain unchanged. Local preparation, exact-candidate CI, native final proof and public publication are separate gates.

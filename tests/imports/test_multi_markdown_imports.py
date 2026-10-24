@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import errno
+import json
+import os
 import tempfile
 import unittest
 from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from agent_lifecycle.contracts import LifecycleError
@@ -115,6 +119,8 @@ class MultiMarkdownImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "entry.md"
             source.write_text("- Review", encoding="utf-8")
+            original = source.read_bytes()
+            write_errors = []
 
             @contextmanager
             def replace_during_read(path):
@@ -123,7 +129,11 @@ class MultiMarkdownImportTests(unittest.TestCase):
                     class Reader:
                         def read(self, size):
                             data = handle.read(size)
-                            source.write_text("- Changed after read", encoding="utf-8")
+                            try:
+                                source.write_text("- Changed after read", encoding="utf-8")
+                            except OSError as error:
+                                write_errors.append(error)
+                                raise
                             return data
 
                     yield Reader()
@@ -133,7 +143,67 @@ class MultiMarkdownImportTests(unittest.TestCase):
                 self.assertRaises(LifecycleError) as caught,
             ):
                 collect_markdown_collection(source)
+            if write_errors:
+                self.assertEqual(len(write_errors), 1)
+                error = write_errors[0]
+                self.assertEqual(os.name, "nt")
+                self.assertIsInstance(error, PermissionError)
+                self.assertEqual(error.errno, errno.EACCES)
+                winerror = getattr(error, "winerror", None)
+                if winerror is not None:
+                    self.assertIn(winerror, (5, 32, 33))
+                self.assertEqual(source.read_bytes(), original)
+                self.assertEqual(caught.exception.code, "authority-input-unavailable")
+                observation = {"branch": "native-write-denied", "errno": error.errno, "winerror": winerror}
+            else:
+                self.assertEqual(source.read_bytes(), b"- Changed after read")
+                self.assertNotEqual(source.read_bytes(), original)
+                self.assertEqual(caught.exception.code, "authority-input-changed")
+                observation = {"branch": "native-mutation-detected"}
+            print("MULTI_MARKDOWN_NATIVE_MUTATION " + json.dumps(observation, sort_keys=True))
+
+    def test_injected_post_read_descriptor_identity_change_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "entry.md"
+            original = b"- Review"
+            source.write_bytes(original)
+            original_fstat = os.fstat
+            read_descriptors = []
+            injected = []
+
+            def changed_stat(descriptor):
+                actual = original_fstat(descriptor)
+                if descriptor in read_descriptors:
+                    changed = SimpleNamespace(
+                        **{name: getattr(actual, name) for name in dir(actual) if name.startswith("st_")}
+                    )
+                    changed.st_size += 1
+                    injected.append(descriptor)
+                    return changed
+                return actual
+
+            @contextmanager
+            def observe(path):
+                with open_authority_read(path) as handle:
+
+                    class Reader:
+                        def read(self, size):
+                            data = handle.read(size)
+                            read_descriptors.append(handle.fileno())
+                            return data
+
+                    yield Reader()
+
+            with (
+                patch("agent_lifecycle.contracts.authority_io.os.fstat", changed_stat),
+                patch("agent_lifecycle.imports.multi_markdown.open_authority_read", observe),
+                self.assertRaises(LifecycleError) as caught,
+            ):
+                collect_markdown_collection(source)
             self.assertEqual(caught.exception.code, "authority-input-changed")
+            self.assertEqual(len(read_descriptors), 1)
+            self.assertEqual(injected, read_descriptors)
+            self.assertEqual(source.read_bytes(), original)
 
     def test_file_and_directory_links_are_refused(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

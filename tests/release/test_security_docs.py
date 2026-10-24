@@ -18,6 +18,30 @@ DOCUMENTS = (
 )
 
 
+def source_reference_target(document: Path, link: str) -> Path:
+    """Bind relative links or approved GitHub main URLs to existing repository paths."""
+    mode = None
+    if "://" in link or link.startswith("//"):
+        match = re.fullmatch(
+            r"https://github[.]com/avksp/agent-lifecycle-kit/(blob|tree)/main/"
+            r"([A-Za-z0-9_./-]+)(?:#[A-Za-z0-9_-]+)?",
+            link,
+        )
+        if match is None:
+            raise ValueError("Unapproved repository reference")
+        mode, relative = match.groups()
+        if any(part in {"", ".", ".."} for part in relative.split("/")):
+            raise ValueError("Noncanonical repository path")
+        target = (ROOT / relative).resolve()
+    else:
+        target = (document.parent / link.split("#", 1)[0]).resolve()
+    if not target.is_relative_to(ROOT) or not target.exists():
+        raise ValueError("Missing or escaping repository target")
+    if (mode == "blob" and not target.is_file()) or (mode == "tree" and not target.is_dir()):
+        raise ValueError("Repository reference kind does not match target")
+    return target
+
+
 class SecurityDocumentationTests(unittest.TestCase):
     def test_release_175_security_contract_is_historical_in_both_languages(self) -> None:
         english = (ROOT / "docs/security/release-security.md").read_text(encoding="utf-8")
@@ -42,9 +66,9 @@ class SecurityDocumentationTests(unittest.TestCase):
                     content = content.split("## C0:")[0]
                 links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", content)
                 for link in links:
-                    if "://" not in link and not link.startswith("#"):
+                    if not link.startswith("#"):
                         with self.subTest(path=path, link=link):
-                            self.assertTrue((path.parent / link.split("#")[0]).exists())
+                            self.assertTrue(source_reference_target(path, link).exists())
                 rows = [line for line in content.splitlines() if line.startswith("| ")][2:]
                 self.assertTrue(rows, path)
                 owner_checks = set()
@@ -53,12 +77,51 @@ class SecurityDocumentationTests(unittest.TestCase):
                     self.assertEqual(len(cells), 4, path)
                     self.assertTrue(all(cell.strip() for cell in cells), row)
                     for link in re.findall(r"\[[^\]]+\]\(([^)]+)\)", row):
-                        target = (path.parent / link).resolve().relative_to(ROOT).as_posix()
+                        target = source_reference_target(path, link).relative_to(ROOT).as_posix()
                         if target.startswith(("src/", "tests/", "tools/", "policy/", ".github/")):
                             owner_checks.add(target)
                 tables.append((owner_checks, set(re.findall(r"`([^`]+)`", "\n".join(rows)))))
             self.assertTrue(tables[0][0], name)
             self.assertEqual(tables[0], tables[1], name)
+
+    def test_source_reference_resolver_binds_only_existing_approved_targets(self) -> None:
+        document = ROOT / "docs/ru/security/release-security.md"
+        prefix = "https://github.com/avksp/agent-lifecycle-kit/"
+        cases = [
+            ("../../../src/agent_lifecycle/imports/planning.py", "src/agent_lifecycle/imports/planning.py"),
+            (prefix + "blob/main/src/agent_lifecycle/imports/planning.py", "src/agent_lifecycle/imports/planning.py"),
+            (prefix + "blob/main/tests/release/test_security_docs.py#L1", "tests/release/test_security_docs.py"),
+            (prefix + "tree/main/src/agent_lifecycle/freeze", "src/agent_lifecycle/freeze"),
+        ]
+        for link, expected in cases:
+            with self.subTest(link=link):
+                self.assertEqual(source_reference_target(document, link), ROOT / expected)
+
+    def test_source_reference_resolver_rejects_wrong_missing_and_escaping_targets(self) -> None:
+        document = ROOT / "docs/ru/security/release-security.md"
+        prefix = "https://github.com/avksp/agent-lifecycle-kit/"
+        target = "blob/main/src/agent_lifecycle/imports/planning.py"
+        cases = [
+            "https://github.com/avksp/other-repository/" + target,
+            "https://github.com/other-owner/agent-lifecycle-kit/" + target,
+            "https://github.com.example.org/avksp/agent-lifecycle-kit/" + target,
+            "http://github.com/avksp/agent-lifecycle-kit/" + target,
+            "//github.com/avksp/agent-lifecycle-kit/" + target,
+            prefix + "blob/other-branch/src/agent_lifecycle/imports/planning.py",
+            prefix + "blob/main/src/absent-security-docs-target.py",
+            prefix + "tree/main/src/absent-security-docs-directory",
+            prefix + "blob/main/../../outside.py",
+            prefix + "blob/main/src/../src/agent_lifecycle/imports/planning.py",
+            prefix + "blob/main/%2e%2e/outside.py",
+            prefix + target + "?raw=1",
+            prefix + "tree/main/src/agent_lifecycle/imports/planning.py",
+            prefix + "blob/main/src/agent_lifecycle/freeze",
+            "../../../src/absent-security-docs-target.py",
+            "../../../../outside.py",
+        ]
+        for link in cases:
+            with self.subTest(link=link), self.assertRaises(ValueError):
+                source_reference_target(document, link)
 
     def test_security_maps_keep_runtime_ci_optional_and_host_boundaries(self) -> None:
         for prefix in ("docs", "docs/ru"):
