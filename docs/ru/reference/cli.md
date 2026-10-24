@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.24.0
+python -m pip install agent-lifecycle-kit==2.25.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -868,3 +868,14 @@ agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-
 ## Компактные пакеты S0/S1 в 2.23
 
 [Подготовка компактного DRAFT](tier-proportional-plan-packages.md) сохраняет проверки, независимое ревью и отдельное разрешение. Перед freeze требуется явно добавить acceptance-criteria.md и его запись в planFiles; UNKNOWN-метрики не становятся нулём.
+
+## Релиз 2.25: безопасность и сопровождаемость
+
+В 2.25 усилены проверки чувствительных импортов и запуска процессов, исправлены
+указанные границы владения и включена проверка mypy внутри нетипизированных
+функций. См. [текущие меры безопасности](../security/release-security.md) и [карту архитектуры](../architecture/system-architecture.md).
+[Пилот поэтапного чтения](../guides/controlled-technical-english.md) сохраняет полные ссылки и этапы согласования;
+измерения байтов и слов не доказывают экономию токенов. Квалификация OpenCode
+1.x/2.x и отказы для неподдерживаемых маршрутов хоста остаются прежними. Локальная
+подготовка, CI точного кандидата, итоговое доказательство ALK и публичная
+публикация — отдельные этапы.

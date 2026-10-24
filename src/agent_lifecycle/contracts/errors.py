@@ -24,3 +24,9 @@ class LifecycleError(RuntimeError):
             "message": self.message,
             "details": self.details,
         }
+
+
+def require_condition(condition: bool, code: str, message: str) -> None:
+    """Require a condition with the caller's stable lifecycle error envelope."""
+    if not condition:
+        raise LifecycleError(code, message)

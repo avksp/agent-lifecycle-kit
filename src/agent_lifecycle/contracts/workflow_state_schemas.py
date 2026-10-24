@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
 from typing import Any
 
 from agent_lifecycle.contracts.canonical import canonical_digest
+from agent_lifecycle.contracts.closing_time import closing_instant as _closing_instant
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.immutable_input_schemas import _validate_a5_state
 from agent_lifecycle.contracts.paths import MAX_REPO_PATH_BYTES, normalize_repo_path
@@ -846,18 +846,6 @@ def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True)
     if "closingWindow" in state:
         validate_closing_context(state["closingWindow"], state=state)
     return state
-
-
-def _closing_instant(value: Any, label: str) -> datetime:
-    if type(value) is not str:
-        raise LifecycleError("closing-context-invalid", f"{label} must be an aware UTC timestamp")
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        raise LifecycleError("closing-context-invalid", f"{label} is invalid") from None
-    if parsed.tzinfo is None or parsed.utcoffset() != UTC.utcoffset(parsed):
-        raise LifecycleError("closing-context-invalid", f"{label} must be UTC")
-    return parsed
 
 
 def validate_closing_context(value: Any, *, state: dict[str, Any] | None = None) -> dict[str, Any]:

@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
+from agent_lifecycle.contracts.redaction import is_sensitive_key, redact_text_with_stats
 from agent_lifecycle.planning import validate_plan_manifest
 
 PLANNING_IMPORT_RESULT_SCHEMA = "agent-planning-import-result.v1"
@@ -23,7 +24,7 @@ MAX_REQUIREMENT_CHARS = 180
 LOCAL_PATH_PATTERNS = (
     re.compile(r"/" + r"Users/[^\s`'\"<>]+"),
     re.compile(r"/" + r"Volumes/[^\s`'\"<>]+"),
-    re.compile(r"[A-Za-z]:[\\/][^\s`'\"<>]+"),
+    re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/][^\s`'\"<>]+"),
 )
 SECRET_MARKERS = (
     "BEGIN " + "OPENSSH PRIVATE KEY",
@@ -108,8 +109,9 @@ def _build_import_result(
     dialect_profile: dict[str, Any] | None,
     blockers: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    native_dialect_profile_digest = _profile_digest(dialect_profile)
     text = _decode_text(data, blockers) if data and len(data) <= max_input_bytes else ""
+    require_no_import_secrets([source_label, package_id, dialect_profile, text, _parse_structured_input(data)])
+    native_dialect_profile_digest = _profile_digest(dialect_profile)
     blockers.extend(_content_blockers(text))
     candidate = (
         _candidate_plan(
@@ -165,6 +167,24 @@ def _build_import_result(
     if body["blockers"]:
         body["status"] = "FAIL"
     return {**body, "importDigest": canonical_digest(body)}
+
+
+def require_no_import_secrets(value: Any) -> None:
+    """Refuse shared secret categories before an importer constructs output."""
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(key, str) and is_sensitive_key(key):
+                raise LifecycleError("import-sensitive-content", "import input contains sensitive content")
+            require_no_import_secrets(key)
+            require_no_import_secrets(item)
+    elif isinstance(value, list):
+        for item in value:
+            require_no_import_secrets(item)
+    elif isinstance(value, str):
+        _redacted, _changed, counts = redact_text_with_stats(value)
+        if counts["secretLikeMarkersRedacted"]:
+            raise LifecycleError("import-sensitive-content", "import input contains sensitive content")
 
 
 def validate_import_result(result: dict[str, Any]) -> dict[str, Any]:

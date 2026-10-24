@@ -4,21 +4,16 @@
 
 # Agent Lifecycle Kit
 
-Agent Lifecycle Kit (ALK) координирует работу кодового агента до проверяемого
-завершения. Он связывает ожидаемый результат, проверенный план, границы
-выполнения, подтверждения и решение о приёмке, пока внешний агент меняет проект.
+Agent Lifecycle Kit (ALK) координирует работу кодового агента до проверяемого завершения. Он связывает ожидаемый результат, проверенный план, границы выполнения, подтверждения и
+решение о приёмке, пока внешний агент меняет проект.
 
-Проект работает поверх разных CLI: Codex, Claude Code, Qwen Code, Goose,
-OpenInterpreter, Pi, Grok Build и других. Ядро не зависит от конкретного
-провайдера или модели; команды, настройки окружения и работа с секретами
-выносятся в адаптеры или локальные профили хоста.
+Проект работает поверх разных CLI: Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build и других. Ядро не зависит от конкретного провайдера или модели; команды,
+настройки окружения и работа с секретами выносятся в адаптеры или локальные профили хоста.
 
-Задача проекта — обеспечить проверяемое завершение работы внешнего агента с
-соразмерным уровнем контроля. ALK добавляет только необходимые проверки и
-подтверждения, а основное время остаётся на исследование, реализацию и проверку
-продукта.
+Задача проекта — обеспечить проверяемое завершение работы внешнего агента с соразмерным уровнем контроля. ALK добавляет только необходимые проверки и подтверждения, а основное
+время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.24.0 · Python 3.11-3.14
+**Лицензия:** Apache-2.0 · **Версия:** 2.25.0 · Python 3.11-3.14
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -28,7 +23,7 @@ OpenInterpreter, Pi, Grok Build и других. Ядро не зависит о
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.24.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.25.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
 
 Для быстрого старта выполните:
 
@@ -42,8 +37,7 @@ agent-lifecycle version
 agent-lifecycle diagnose --no-install-plans
 ```
 
-Выберите `<adapter-id>` в [матрице поддержки адаптеров](adapters/support-matrix.md)
-и передайте задачу из файла:
+Выберите `<adapter-id>` в [матрице поддержки адаптеров](adapters/support-matrix.md) и передайте задачу из файла:
 
 ```bash
 agent-lifecycle start --adapter <adapter-id> --file task.md
@@ -146,11 +140,8 @@ agent-lifecycle start --adapter <adapter-id> --file task.md
 ресурсов и принятые подтверждения жизненного цикла. Это характеристика
 проверенного диапазона интеграции, а не оценка модели или внешнего продукта.
 
-К принятым артефактам жизненного цикла относятся проверенный план и lock-файл,
-подтверждения переходов состояния и задач, сводки проверок и доказательств,
-независимые аудиты плана и реализации, а также итоговое доказательство. Для
-запуска внешнего хоста добавляются подтверждения расхода, ресурсов и
-ограничений среды для точной связки адаптера и версии.
+К принятым артефактам жизненного цикла относятся проверенный план и lock-файл, подтверждения переходов состояния и задач, сводки проверок и доказательств, независимые аудиты плана
+и реализации, а также итоговое доказательство. Для запуска внешнего хоста добавляются подтверждения расхода, ресурсов и ограничений среды для точной связки адаптера и версии.
 
 `EXPERIMENTAL` означает, что адаптер описан в исходниках и проходит повторяемые
 локальные проверки. `VERIFIED` добавляет ограниченную проверку реального хоста,
@@ -188,3 +179,10 @@ OpenInterpreter, Pi и Qwen Code.
 - Адаптеры: [установка](adapters/install.md), [способы использования](adapters/usage-modes.md), [поддержка](adapters/support-matrix.md), [управляемые сессии](adapters/managed-session-support.md), [прогресс](adapters/progress-bridge-matrix.md), [захват событий](adapters/event-capture-matrix.md), [создание адаптера](adapters/authoring.md), [порядок перевода в VERIFIED](adapters/live-promotion-runbook.md), [Codex](adapters/codex.md), [Claude Code](adapters/claude.md), [Cursor](adapters/cursor.md), [Gemini CLI](adapters/gemini-cli.md), [Goose](adapters/goose.md), [Grok Build](adapters/grok-build.md), [Hermes](adapters/hermes.md), [Kimi Code](adapters/kimi-code.md), [OpenCode](adapters/opencode.md), [OpenInterpreter](adapters/openinterpreter.md), [Pi](adapters/pi.md) и [Qwen Code](adapters/qwen-code.md).
 - Основной справочник: [архитектура системы](architecture/system-architecture.md), [настройка рабочего процесса и управления выполнением](reference/workflow-customization.md), [проверка целостности плана](reference/plan-verification.md), [профиль рабочего процесса проекта](reference/project-workflow-profile.md), [профили рабочего процесса](reference/workflow-presets.md), [оптимизация проверок по подтверждённым данным](reference/audit-optimization.md), [эффективность проверки](reference/review-efficiency.md), [независимость подтверждений](reference/evidence-independence.md), [локальная статистика качества и расхода](reference/quality-cost-learning.md), [бюджеты производительности и ресурсов](reference/performance-and-resource-budgets.md), [стратегия выполнения](reference/execution-strategy.md), [команды CLI](reference/cli.md), [внешние проверки проекта](reference/external-verification-checks.md), [контракт ошибок CLI](reference/cli-errors.md), [поддерживаемый API Python](reference/python-api.md), [проверка исследовательских материалов](reference/research-evidence.md), [публичные локаторы и редакция](reference/public-locators-and-redaction.md), [источник правды](reference/source-of-truth.md), [сравнение проекта](reference/project-comparison.md), [управляемый шаг жизненного цикла](reference/managed-lifecycle-runner.md), [управляемые сессии адаптеров](reference/managed-adapter-sessions.md), [переносимый пакет Agent Plugins](reference/agent-plugins.md), [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), [публикация плагинов](reference/plugin-publication.md), [публичные контракты](reference/public-contracts.md), [диагностика готовности](reference/readiness-diagnostics.md), [проверка нейтральности](reference/neutrality.md), [оценка по эталонным задачам](reference/reference-task-evaluation.md), [проверка вариантов выполнения по эталонным задачам](reference/benchmark-qualification.md), [квалификация структурированного результата](reference/structured-result-qualification.md), [проверка внешней рабочей оболочки модели](guides/model-harness-evaluation.md), [учёт расхода](reference/lifecycle-cost.md), [локальный учёт токенов хоста](reference/host-local-token-accounting.md), [наблюдение за выполнением процессов](reference/process-execution-observability.md), [экспорт использования](reference/usage-export.md), [целостность подтверждений](reference/evidence-integrity.md), [границы песочницы](reference/sandbox-boundaries.md), [безопасность релиза](security/release-security.md) и [контракт нейтральности](security/neutrality-contract.md). Новое в 2.20: [составная инициализация и хеши](reference/cli.md#release-220-составная-инициализация-и-отображение-хешей), [локальное продолжение](reference/workflow-continuation.md) и пакетные Git-снимки. Новое в 2.19: [безопасное создание артефактов](reference/safe-artifact-authoring.md), [контракт review](reference/review-mesh.md#bounded-review-handoff), [границы SDLC](architecture/sdlc-boundary.md).
 - Дополнительный справочник: [необязательный мост управления тредами](reference/optional-thread-bridge.md), [статус без записи](reference/read-only-status-view.md), [прогресс](reference/automatic-progress-bridge.md), [индекс подтверждений и импорт](reference/evidence-imports.md), [импорт внешних форматов](reference/import-mappers.md), [эпизоды](reference/episode-retrieval.md), [восстановление](reference/runner-recovery.md), [перепроверка](reference/cross-check-profile.md), [проверка несколькими моделями ИИ](reference/review-mesh.md), [независимая проверка для рискованных критериев](reference/risk-bound-independent-verification.md), [рекомендация режима](reference/review-mesh.md#рекомендация-режима), [подготовка заданий](reference/review-mesh.md#шаблоны-и-подготовка), [профиль расследования ошибок](reference/bug-forensics.md), [бюджет контекста для него](reference/bug-forensics-context-budget.md), [проверка завершения](reference/completion-check.md), [непрерывность цели](reference/goal-continuity.md), [реестр отложенной работы](reference/follow-up-register.md), [изоляция рабочего дерева](reference/worktree-isolation.md), [возможности хоста](reference/host-capabilities.md), [захват событий адаптера](reference/adapter-event-capture.md), [вердикт проверки](reference/review-verdict.md), [дополнительные пакеты качества](reference/optional-quality-packs.md), [маршрутизация моделей](reference/model-routing.md), [предложения правил](reference/policy.md), [промышленная готовность](reference/production-promotion.md), [калибровка реального расхода](reference/live-cost-calibration.md), [непрерывность плана](reference/plan-continuity.md), [диагностические пакеты](reference/diagnostic-bundles.md), [контролируемый запуск](reference/runner.md) и [шаблоны задач](reference/task-templates.md).
+
+## Релиз 2.25: безопасность и сопровождаемость
+
+В 2.25 усилены проверки чувствительных импортов и запуска процессов, исправлены указанные границы владения и включена проверка mypy внутри нетипизированных функций. См. [текущие
+меры безопасности](security/release-security.md) и [карту архитектуры](architecture/system-architecture.md). [Пилот поэтапного чтения](guides/controlled-technical-english.md)
+сохраняет полные ссылки и этапы согласования; измерения байтов и слов не доказывают экономию токенов. Квалификация OpenCode 1.x/2.x и отказы для неподдерживаемых маршрутов хоста
+остаются прежними. Локальная подготовка, CI точного кандидата, итоговое доказательство ALK и публичная публикация — отдельные этапы.

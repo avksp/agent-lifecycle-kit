@@ -6,6 +6,18 @@ exploitability evidence, deduplication, remediation and independent
 verification. It is not a vulnerability scanner and it does not run exploit
 code by default.
 
+## Control owners and limits
+
+| Control | Owner | Check | Limit |
+| --- | --- | --- | --- |
+| Disabled profile, execution-gate receipts and finding validation | [quality/security_analysis.py](../../src/agent_lifecycle/quality/security_analysis.py) | [profile and gate tests](../../tests/quality/test_security_analysis.py) | A receipt validates declared authorization and limits; ALK does not supply a sandbox or run an exploit. |
+| File import and recognized-secret refusal | [imports/security_findings.py](../../src/agent_lifecycle/imports/security_findings.py), [shared import guard](../../src/agent_lifecycle/imports/planning.py), [authority I/O](../../src/agent_lifecycle/contracts/authority_io.py) | [import tests](../../tests/imports/test_security_findings.py), [CLI output tests](../../tests/cli/test_import_security_boundaries.py) | `import-sensitive-content` refuses recognized categories in content and metadata before output; not every possible secret. Bounded file reads reject links/identity changes and retain `security-analysis-import-too-large`. |
+| Independent verification for covered remediation | [workflow/task_transitions.py](../../src/agent_lifecycle/workflow/task_transitions.py), [security_analysis_acceptance_blocker](../../src/agent_lifecycle/quality/security_analysis.py) | [acceptance tests](../../tests/workflow/test_security_analysis_profile.py) | Enforced only for the adopted security-analysis policy and its covered severity; an imported finding never accepts a task. |
+
+See the [current security map](../security/release-security.md) for CI guards
+and host limits. `GUIDANCE_ONLY` is not host enforcement, and optional analysis
+does not qualify protected closure/operator routes or prove safety on all hosts.
+
 ## Default boundary
 
 The profile is `OPTIONAL` and disabled by default. A profile or imported
@@ -24,21 +36,28 @@ The default execution policy is:
 
 The normal read-only path is enough for static evidence:
 
+Replace `SOURCE_REVISION` with the revision analyzed by `findings.sarif`.
+Use fresh output paths; the commands create evidence files without changing
+workflow state. `--profile` on the report is a boolean flag that includes
+the default profile, not a file argument. The report imports the same raw
+findings source; validation does not turn that source into trusted evidence.
+
 ```bash
 agent-lifecycle quality security-profile --out work/security-profile.json
 agent-lifecycle import security-findings \
   --source findings.sarif \
-  --expected-source-revision <revision> \
+  --source-revision "SOURCE_REVISION" \
+  --expected-source-revision "SOURCE_REVISION" \
   --out work/security-findings.json
 agent-lifecycle quality security-finding-check \
   --candidate work/security-findings.json \
-  --expected-source-revision <revision> \
+  --expected-source-revision "SOURCE_REVISION" \
   --out work/security-findings-validation.json
 agent-lifecycle report security-analysis \
-  --finding work/security-findings.json \
+  --finding findings.sarif \
   --profile \
-  --source-revision <revision> \
-  --expected-source-revision <revision> \
+  --source-revision "SOURCE_REVISION" \
+  --expected-source-revision "SOURCE_REVISION" \
   --out work/security-analysis-report.json
 ```
 

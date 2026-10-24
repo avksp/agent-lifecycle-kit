@@ -19,11 +19,11 @@ from agent_lifecycle.accounting.declared_ledger_records import (
     _R11_COORDINATOR_BASE,
     _r11_role_funding_record,
     _r11_role_prefix_record,
-    _require,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.authority_io import normalize_authority_path, read_authority_bytes
 from agent_lifecycle.contracts.bounded_json import load_bounded_json as _r11_json
+from agent_lifecycle.contracts.errors import require_condition as _require
 
 _R11_COORDINATOR_HEAD = _R11_COORDINATOR_BASE + "/COORDINATOR-COST-HEAD.json"
 

@@ -19,6 +19,7 @@ from agent_lifecycle.imports.planning import (
     DEFAULT_MAX_INPUT_BYTES,
     DEFAULT_TARGET_TOKENS,
     PLANNING_IMPORT_RESULT_SCHEMA,
+    require_no_import_secrets,
     validate_import_result,
 )
 from agent_lifecycle.planning import validate_plan_manifest
@@ -30,7 +31,11 @@ MAX_REQUIREMENT_CHARS = 180
 _POSIX_USER_PREFIX = "/" + "Users/"
 _POSIX_VOLUME_PREFIX = "/" + "Volumes/"
 _LOCAL_PATH_RE = re.compile(
-    r"(" + re.escape(_POSIX_USER_PREFIX) + r"|" + re.escape(_POSIX_VOLUME_PREFIX) + r"|[A-Za-z]:[\\/])\S+"
+    r"("
+    + re.escape(_POSIX_USER_PREFIX)
+    + r"|"
+    + re.escape(_POSIX_VOLUME_PREFIX)
+    + r"|(?<![A-Za-z0-9])[A-Za-z]:[\\/])\S+"
 )
 _SECRET_ASSIGNMENT_RE = re.compile(
     r"(?i)\b([A-Z0-9_]*(TOKEN|SECRET|PASSWORD|CREDENTIAL)[A-Z0-9_]*)\s*[:=]\s*[^\s,}\]]+"
@@ -50,17 +55,20 @@ def import_external_dialect(
 
     _check_positive_cap(max_input_bytes, "maxInputBytes")
     _check_positive_cap(target_tokens, "targetTokens")
+    require_no_import_secrets([family, profile_id])
     profile = external_dialect_profile(
         family,
         profile_id=profile_id,
         max_input_bytes=max_input_bytes,
         target_tokens=target_tokens,
     )
+    require_no_import_secrets(profile)
     require_external_profile_pass(validate_external_dialect_profile(profile))
     blockers: list[dict[str, Any]] = []
     data = _read_source(source_path, max_input_bytes=max_input_bytes, blockers=blockers)
     text = _decode_source(data, blockers) if data else ""
     parsed = _parse_input(text, blockers) if text else {}
+    require_no_import_secrets([source_path.name, package_id, text, parsed])
     mapping = _map_family(family, parsed, text, blockers)
     candidate = (
         _candidate_plan(

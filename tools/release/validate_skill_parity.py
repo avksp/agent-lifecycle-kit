@@ -25,6 +25,62 @@ _BYPASS = re.compile(
 )
 
 
+# Exact clauses catch bounded regressions, not arbitrary contradictions or meaning.
+# Whitespace normalization permits wrapping without changing required wording.
+_ORCHESTRATOR_CLAUSES = {
+    "router": (
+        "Read [the complete lifecycle contract](references/lifecycle-contract.md) before acting in this stage.",
+        "The complete lifecycle contract remains required.",
+        "Read the common route, recipe table and safety rules in docs/guides/lifecycle-cookbook.md.",
+        "Select the recipe for the current request and stage.",
+        "Read that recipe and its required links before acting.",
+        "Load another recipe when the stage changes.",
+        "Retain valid evidence after overruns; preserve all expenses and UNKNOWN usage across retries and compact.",
+        "Start only the selected frozen task.",
+        "Do not bypass independent review, reviewed freeze, ownership, authorization or budgets.",
+        "Missing evidence stays missing; unknown telemetry stays null.",
+        "Do not reset expenses or run clocks after retries or context compaction.",
+        "Serialization and prepared Review Mesh packets grant no review, attestation or execution authority.",
+        "A prompt, skill or fixture cannot create host enforcement.",
+        "restored context grants no execution authority.",
+    ),
+    "reference": (
+        "Freeze only reviewed matching inputs.",
+        "Respect execution mode: plan-only, approval-required, or auto-after-freeze.",
+        "Launch only dependency-ready packets within frozen parallelism.",
+        "Audit every task attempt with `audit-plan-implementation` before acceptance.",
+        "For remediation require a frozen retry budget, independent `REWORK` evidence and open finding IDs;",
+        "Never edit state manually.",
+        "Later code changes require a new claim and result.",
+        "Review Mesh is not authority to inject prompts into hosts or bypass review/freeze.",
+        "`PLAN_ONLY` never authorizes.",
+        "A missing, stale or mismatched receipt blocks the level selected by the plan.",
+        "Budget exhaustion, missing receipts, stale evidence, or unverifiable telemetry cannot produce a pass.",
+        "Keep the latest user instructions and active packet verbatim.",
+        "overflow must split, request larger context, or block, never silently truncate.",
+    ),
+}
+
+
+def _critical_clause_blockers(name: str, router: str, reference: str) -> list[dict]:
+    if name != "agent-workflow-orchestrator":
+        return []
+    blockers = []
+    for component, text in (("router", router), ("reference", reference)):
+        normalized = " ".join(text.split())
+        for clause in _ORCHESTRATOR_CLAUSES[component]:
+            if clause not in normalized:
+                blockers.append(
+                    {
+                        "code": "skill-critical-clause-missing",
+                        "skill": name,
+                        "component": component,
+                        "clause": clause,
+                    }
+                )
+    return blockers
+
+
 def validate_skill_parity(
     root: Path,
     *,
@@ -42,7 +98,7 @@ def validate_skill_parity(
             blockers.append({"code": "skill-reference-missing", "skill": name})
             continue
         raw, full = router.read_bytes(), reference.read_bytes()
-        text = raw.decode("utf-8")
+        text, reference_text = raw.decode("utf-8"), full.decode("utf-8")
         digest = hashlib.sha256(full).hexdigest()
         if len(raw) > 4096 or len(full) > 524288:
             blockers.append({"code": "skill-routing-size-invalid", "skill": name})
@@ -55,7 +111,18 @@ def validate_skill_parity(
                 blockers.append({"code": "skill-invariant-missing", "skill": name, "marker": marker})
         if _BYPASS.search(text) or _BYPASS.search(full.decode("utf-8")):
             blockers.append({"code": "skill-bypass-advice", "skill": name})
-        pins.append({"skill": name, "routerBytes": len(raw), "referenceBytes": len(full), "referenceSha256": digest})
+        blockers.extend(_critical_clause_blockers(name, text, reference_text))
+        pins.append(
+            {
+                "skill": name,
+                "routerBytes": len(raw),
+                "routerWords": len(text.split()),
+                "routerSha256": hashlib.sha256(raw).hexdigest(),
+                "referenceBytes": len(full),
+                "referenceWords": len(reference_text.split()),
+                "referenceSha256": digest,
+            }
+        )
     expected = _inventory(source, "skills/")
     if package_root is not None:
         blockers.extend(validate_package(package_root)["blockers"])
@@ -85,6 +152,9 @@ def validate_skill_parity(
         "packageCompared": package_root is not None,
         "archiveCompared": archive is not None,
         "hostInstallationAttested": False,
+        "wordCountMethod": "len(utf8_text.split()); includes Markdown and code",
+        "semanticEquivalenceAttested": False,
+        "steComplianceAttested": False,
     }
 
 

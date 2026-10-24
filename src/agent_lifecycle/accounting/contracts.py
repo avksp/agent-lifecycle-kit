@@ -631,6 +631,7 @@ if TYPE_CHECKING:
         """Static view of the existing live Journal composition; no runtime base."""
 
         _admission_depth: int
+        _utc_clock: Callable[[], datetime]
 
         def _archive_state(self, scope: str, *, restore: bool = False) -> tuple[dict, int]: ...
 

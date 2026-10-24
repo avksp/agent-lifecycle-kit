@@ -22,6 +22,16 @@ execution.
 
 ## Choose a recipe
 
+Read the common route above, this table and [Safety rules](#safety-rules).
+Select the recipe for the current request and stage. Read its required links
+before acting. If the stage is unclear, inspect the durable state first.
+Select another recipe when the stage changes. For the orchestrator pilot, the
+[complete lifecycle contract](../../skills/agent-workflow-orchestrator/references/lifecycle-contract.md)
+remains required; its hash and origin are in the skill entrypoint. Recipe
+selection does not replace the frozen plan, active packet or shared contracts.
+See the [local writing profile](controlled-technical-english.md) for terminology
+and measurement limits.
+
 | Need | Start here | Stops before implementation |
 | --- | --- | --- |
 | Research an area and write a plan | [Research and planning only](#research-and-planning-only) | Yes |
@@ -34,6 +44,9 @@ execution.
 | Ask several reviewers | [Coordinate cross-review](#coordinate-cross-review) | Yes, unless a frozen plan requires quorum |
 | Inspect an active run | [View goal and progress](#view-goal-and-progress) | Yes |
 | Start a frozen task with bounded resources | [Run a risk-aware task](#run-a-risk-aware-task) | No, it authorizes one task attempt |
+| Initialize state or apply a task review | [Use the v4 task-local workflow](#use-the-v4-task-local-workflow) | Initialization still requires separate execution authorization |
+| Recover an authorization or final-audit route | [Recover a run without editing state](#recover-a-run-without-editing-state) | The selected typed gate controls execution |
+| Assess a new capability before freeze | [Bounded capability feasibility before freeze](#bounded-capability-feasibility-before-freeze) | Yes |
 
 ## Research and planning only
 
@@ -198,6 +211,13 @@ agent-lifecycle audit implementation \
 Add `--review-mesh-quorum <path>` only when the frozen plan requires a quorum
 receipt for that phase.
 
+Follow the frozen validation sequence. If a check fails, stop the sequence and
+diagnose it before running checks that a correction would invalidate. Retain
+failed receipts and all costs. Reuse a successful check only when its exact
+source bytes, input digests and dependencies justify reuse; retain those bytes
+before a correction. Use canonical authority artifacts as audit inputs, not
+reformatted display JSON. See [Safe artifact authoring](../reference/safe-artifact-authoring.md).
+
 ## Open a remediation attempt
 
 Use this when an independent task review or implementation audit returns
@@ -216,7 +236,8 @@ agent-lifecycle workflow task-snapshot \
 
 The worker places the returned `claim` object in the task result as
 `changeSet`. After `task-result` and independent review, request rework with
-the exact open finding IDs:
+the exact open finding IDs. In task-review findings, use the schema values
+`open` and `closed` in lowercase; the review verdict remains `REWORK`:
 
 ```bash
 agent-lifecycle workflow task-rework \
@@ -238,14 +259,37 @@ attempt path. Previous result, review and audit files remain immutable.
 
 ## Use the v4 task-local workflow
 
-For a new run, create the validated v4 state before adopting task artifacts:
+For a new run from a reviewed frozen plan, project the initialization from the
+repository root. Use the state path and package id declared by that plan:
 
 ```bash
 agent-lifecycle workflow init \
+  --manifest tasks/release-x/plan.manifest.json \
   --state work/run.state.json \
   --run-id run-001 \
   --package-id release-x
 ```
+
+This projection is read-only. Apply with its current full `bindingDigest`:
+
+```bash
+agent-lifecycle workflow init \
+  --manifest tasks/release-x/plan.manifest.json \
+  --state work/run.state.json \
+  --run-id run-001 \
+  --package-id release-x \
+  --apply \
+  --projected-target-digest <full-binding-digest> \
+  --operation-id initial-adoption
+```
+
+The composed route compiles packets in `<artifactRoot>/workflow/task-packets`,
+creates v4 state and adopts the plan in `AWAITING_AUTHORIZATION`. It does not
+start execution. Use the separate existing authorization route. Without
+`--manifest`, `workflow init` creates unbound state only. For unsupported
+composition policies, use the existing explicit compile/init/adopt route. See
+[Composed initialization](../reference/cli.md#release-220-composed-initialization-and-digest-display)
+for selector checks and failure rules.
 
 For a legacy v3 state, use the explicit migration command and keep the source
 revision and expected state revision bound to the migration receipt:

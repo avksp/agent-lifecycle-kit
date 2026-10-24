@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.imports import (
     import_planning_input,
@@ -13,6 +14,7 @@ from agent_lifecycle.imports import (
     validate_import_result,
     validate_skill_improvement_proposal,
 )
+from agent_lifecycle.imports.planning import import_planning_text
 from agent_lifecycle.planning import validate_plan_manifest
 
 
@@ -89,6 +91,44 @@ class PlanningImportTests(unittest.TestCase):
             self.assertIn("planning-import-requirements-missing", {item["code"] for item in missing["blockers"]})
             self.assertEqual(capped["status"], "FAIL")
             self.assertIn("planning-import-input-cap-exceeded", {item["code"] for item in capped["blockers"]})
+
+    def test_shared_secret_categories_are_refused_without_echo(self) -> None:
+        secrets = [
+            "sk-" + "a" * 24,
+            "gh" + "p_" + "b" * 24,
+            "Bearer " + "synthetic-credential",
+            "password=" + "synthetic-credential",
+            "https://example.com/download?token=" + "synthetic-credential",
+            "-----BEGIN " + "PRIVATE KEY-----\nsynthetic\n-----END PRIVATE KEY-----",
+        ]
+        for secret in secrets:
+            with self.subTest(category=secrets.index(secret)):
+                with self.assertRaises(LifecycleError) as caught:
+                    import_planning_text("- Review " + secret)
+                self.assertEqual(caught.exception.code, "import-sensitive-content")
+                self.assertTrue(secret not in str(caught.exception))
+
+    def test_labels_package_ids_and_nested_decoded_text_are_refused(self) -> None:
+        secret = "gh" + "p_" + "c" * 24
+        encoded = "".join(f"\\u{ord(char):04x}" for char in secret)
+        inputs = [
+            ("- Review", {"source_label": secret}),
+            ("- Review", {"package_id": secret}),
+            ('{"requirements":[{"description":"' + encoded + '"}]}', {}),
+            (json.dumps({"requirements": ["Review"], "metadata": {"password": ["opaque"]}}), {}),
+        ]
+        for text, options in inputs:
+            with self.assertRaises(LifecycleError) as caught:
+                import_planning_text(text, **options)
+            self.assertEqual(caught.exception.code, "import-sensitive-content")
+            self.assertTrue(secret not in str(caught.exception))
+
+    def test_path_redaction_categories_do_not_reject_benign_requirements(self) -> None:
+        text = "- Preserve /api/v1/status and https://example.com/docs?q=public."
+        result = import_planning_text(text, source_label="requirements.md")
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["source"]["label"], "requirements.md")
+        self.assertEqual(result["candidatePlan"]["specification"]["requirements"][0]["description"], text[2:])
 
     def test_skill_proposal_is_never_auto_applied(self) -> None:
         proposal = {
