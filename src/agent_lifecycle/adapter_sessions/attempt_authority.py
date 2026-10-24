@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import Any
 from typing import cast as _validated_cast
 
-from agent_lifecycle.accounting.declared_ledger import _sync_directory
-from agent_lifecycle.accounting.declared_ledger_records import _require
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
-from agent_lifecycle.contracts.authority_io import read_authority_bytes
+from agent_lifecycle.contracts.authority_io import read_authority_bytes, sync_authority_directory
+from agent_lifecycle.contracts.errors import require_condition as _require
 
 _ROOT = Path("work/release-2-16/evidence/codex-exact-prompt")
 _RESERVATION = "attempt-result-reservation.json"
@@ -455,3 +454,14 @@ def read_attempt_result(project_root: Path, *, intent_path: Path) -> dict[str, A
             "positive observations changed after publication",
         )
     return record
+
+
+def _sync_directory(path: Path) -> None:
+    """Keep the legacy missing-primitive refusal before the shared authority barrier."""
+    if os.name != "nt":
+        _require(
+            hasattr(os, "O_DIRECTORY") and hasattr(os, "O_NOFOLLOW"),
+            "r11-durable-storage-unavailable",
+            "directory durability is unavailable on this route",
+        )
+    sync_authority_directory(path)

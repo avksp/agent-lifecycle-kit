@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.security_analysis_schemas import (
     SECURITY_FINDING_IMPORT_SCHEMA,
     SECURITY_FINDING_IMPORT_VALIDATION_SCHEMA,
 )
+from agent_lifecycle.imports.planning import require_no_import_secrets
 from agent_lifecycle.quality.security_analysis import (
     build_security_finding,
     validate_security_finding,
@@ -30,6 +32,7 @@ def import_security_findings(
     """Import SARIF or normalized findings without granting workflow authority."""
 
     raw, source_format = _load_source(source, max_input_bytes=max_input_bytes)
+    require_no_import_secrets([raw, source_revision, expected_source_revision, source_lineage_digest])
     revision = source_revision or _source_revision(raw)
     lineage = source_lineage_digest or canonical_digest(
         {"sourceRevision": revision, "sourceFormat": source_format, "source": _source_metadata(raw)}
@@ -154,9 +157,15 @@ def export_security_findings_sarif(findings: list[dict[str, Any]]) -> dict[str, 
 
 def _load_source(source: Path | dict[str, Any] | list[dict[str, Any]], *, max_input_bytes: int) -> tuple[Any, str]:
     if isinstance(source, Path):
-        data = source.read_bytes()
-        if len(data) > max_input_bytes:
-            raise LifecycleError("security-analysis-import-too-large", "security finding import exceeds byte limit")
+        require_no_import_secrets(source.name)
+        try:
+            data = read_authority_bytes(source, max_bytes=max_input_bytes)
+        except LifecycleError as exc:
+            if exc.code == "authority-input-too-large":
+                raise LifecycleError(
+                    "security-analysis-import-too-large", "security finding import exceeds byte limit"
+                ) from None
+            raise
         try:
             value = json.loads(data.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:

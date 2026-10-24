@@ -43,6 +43,12 @@ jobs:
           --ref HEAD
           --require-history
           --evidence work/ci/repository-hygiene.json
+      - name: Require Node projection syntax and export smoke
+        env:
+          ALK_REQUIRE_NODE: "1"
+        run: >-
+          uv run --frozen --group quality --python ${{ matrix.python }}
+          python -m unittest tests.adapters.test_opencode_projection_runtime -v
       - name: Run stdlib tests
         id: stdlib-tests
         run: >-

@@ -41,7 +41,7 @@ operator must run normal ALK plan review and freeze before implementation.
 Generic external imports add a family/profile layer before draft creation:
 
 ```text
-parse -> normalize -> sanitize/redact -> draft artifact -> validate -> review/freeze
+parse -> reject secrets -> normalize/redact hints -> draft -> validate -> review/freeze
 ```
 
 Workflow-family imports map steps/jobs/checks to draft requirements, work hints
@@ -109,3 +109,49 @@ validation = validate_import_result(result)
 - Imported workflow nodes are never executed.
 - Provider, model, auth, environment and tool hints from agent-family inputs
   stay host-local and cannot become portable core defaults.
+
+## Tested boundaries and mapper limits
+
+The integration regressions exercise the public import and check commands with
+real files. They do not replace the parser, mapper or validators with test
+responses. The cases cover these channels and forbidden effects:
+
+| Input channel | Observed boundary |
+| --- | --- |
+| Markdown instructions, structured planning fields and source labels | Instructions remain draft data; supplied `FROZEN`, trust and freeze claims cannot replace the generated gates. |
+| Workflow JSON steps/jobs and the supported YAML-like list form | Commands become review hints; no subprocess or network connection is requested. |
+| Agent instructions, provider/model/tool hints and environment metadata | Requirements remain reviewable; host values become digests or key names, without portable provider defaults. |
+| Secret-bearing nested metadata, filename, profile ID or package ID | Import fails before writing output; the secret is absent from CLI diagnostics. |
+| A generated receipt with altered authority fields and a recomputed digest | The public check command rejects trust, execution, provider-default, review/audit or freeze escalation. A matching digest does not grant authority. |
+
+The effect tests observe `subprocess.Popen`, `os.system` and socket connection
+sinks and compare all files in a temporary workspace, including authority and
+model-profile sentinels. Successful imports add only the requested draft receipt;
+checks leave the workspace unchanged. Benign status-endpoint requirements and
+source labels, byte counts, digests and profile bindings have separate assertions.
+These are bounded local regressions, not proof against arbitrary model prompt
+injection, every host tool or every possible side effect. Imported hostile prose
+can still appear as review text. A later host must continue to treat it as data.
+
+Workflow aliases (`steps`/`jobs`, `validation`/`validations`/`checks`) and agent
+role/policy mappings have semantic examples in
+[`test_external_dialects.py`](../../tests/imports/test_external_dialects.py).
+The mapper accepts JSON objects and a limited YAML-like notation, not a general
+YAML workflow engine. It keeps at most eight requirements and truncates each to
+180 characters; workflow work and validation hints are also capped at eight.
+The source digest preserves identity, not a complete semantic translation.
+Reviewers must compare the original source before approving scope. Profile
+trust/review/freeze checks and digest drift cases are in
+[`test_external_dialect_framework.py`](../../tests/imports/test_external_dialect_framework.py);
+CLI effect and tampered-receipt cases are in
+[`test_untrusted_input_boundaries.py`](../../tests/imports/test_untrusted_input_boundaries.py).
+
+The CI matrix also requires a Node smoke of the actual
+[`OpenCode projection`](../../adapters/opencode/plugins/agent-lifecycle-kit.js).
+The test parses and imports its bytes as an ES module, checks the exported
+function and frozen metadata, and invokes the function to confirm an empty hook
+object. One subprocess uses a 15-second limit, 4096 stdout bytes and 8192 stderr
+bytes through the existing bounded transport. CI fails if Node is unavailable;
+a local skip means that smoke is unproven. This is syntax/export evidence only:
+it does not launch OpenCode, Bun or a model, qualify an installed host route, or
+change existing OpenCode 1.x/2.x qualification and unsupported-operation limits.

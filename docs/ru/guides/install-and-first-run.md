@@ -3,7 +3,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.24.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.25.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -97,7 +97,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.24.0
+python -m pip install agent-lifecycle-kit==2.25.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -108,7 +108,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.24.0
+python -m pip install agent-lifecycle-kit==2.25.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -335,3 +335,14 @@ ALK сохраняет накопленные расходы задачи/зап
 ## Компактные пакеты S0/S1 в 2.23
 
 [Подготовка компактного DRAFT](../reference/tier-proportional-plan-packages.md) сохраняет проверки, независимое ревью и отдельное разрешение. Перед freeze требуется явно добавить acceptance-criteria.md и его запись в planFiles; UNKNOWN-метрики не становятся нулём.
+
+## Релиз 2.25: безопасность и сопровождаемость
+
+В 2.25 усилены проверки чувствительных импортов и запуска процессов, исправлены
+указанные границы владения и включена проверка mypy внутри нетипизированных
+функций. См. [текущие меры безопасности](../security/release-security.md) и [карту архитектуры](../architecture/system-architecture.md).
+[Пилот поэтапного чтения](../guides/controlled-technical-english.md) сохраняет полные ссылки и этапы согласования;
+измерения байтов и слов не доказывают экономию токенов. Квалификация OpenCode
+1.x/2.x и отказы для неподдерживаемых маршрутов хоста остаются прежними. Локальная
+подготовка, CI точного кандидата, итоговое доказательство ALK и публичная
+публикация — отдельные этапы.

@@ -287,6 +287,199 @@ def _source_test_ids(root: Path, modules: list[str]) -> tuple[list[str], dict[st
     return sorted(names), source_hashes
 
 
+def _r69h_test_imports(tree: ast.Module, refusal: str) -> dict[str, str]:
+    imports: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports[alias.asname or alias.name.split(".")[0]] = alias.name
+        elif isinstance(node, ast.ImportFrom):
+            if node.level != 0 or node.module is None:
+                raise LifecycleError(refusal, "relative test import is outside reviewed closure")
+            for alias in node.names:
+                imports[alias.asname or alias.name] = node.module + "." + alias.name
+    return imports
+
+
+def _r69h_collect_named_test_call(
+    callee: ast.Name,
+    item: ast.Call,
+    current,
+    module_helpers,
+    imports,
+    static_aliases,
+    nested,
+    pending,
+    referenced_module,
+    imported,
+    refusal,
+):
+    _require(
+        callee.id not in {"eval", "exec", "globals", "locals", "vars", "__import__"},
+        refusal,
+        "dynamic test callee requires reviewed oracle amendment",
+    )
+    if callee.id == "getattr" and item.args and isinstance(item.args[0], ast.Name):
+        _require(
+            item.args[0].id not in {"self", "cls"},
+            refusal,
+            "dynamic self/cls callee requires reviewed oracle amendment",
+        )
+    if callee.id in module_helpers:
+        referenced_module.add(callee.id)
+        pending.append(module_helpers[callee.id])
+    elif callee.id in imports:
+        imported[callee.id] = imports[callee.id]
+    elif callee.id in static_aliases:
+        imported[callee.id] = static_aliases[callee.id]
+    elif callee.id not in nested and callee.id in {
+        name.id for name in ast.walk(current) if isinstance(name, ast.Name) and isinstance(name.ctx, ast.Store)
+    }:
+        raise LifecycleError(refusal, "dynamic local test callee")
+
+
+def _r69h_collect_test_calls(
+    current,
+    methods,
+    module_helpers,
+    imports,
+    inherited,
+    refusal,
+    static_aliases,
+    nested,
+    pending,
+    callees,
+    referenced_module,
+    imported,
+):
+    for item in ast.walk(current):
+        if not isinstance(item, ast.Call):
+            continue
+        callee = item.func
+        if not isinstance(callee, (ast.Name, ast.Attribute)):
+            raise LifecycleError(refusal, "dynamic test callee requires reviewed oracle amendment")
+        if isinstance(callee, ast.Name):
+            _r69h_collect_named_test_call(
+                callee,
+                item,
+                current,
+                module_helpers,
+                imports,
+                static_aliases,
+                nested,
+                pending,
+                referenced_module,
+                imported,
+                refusal,
+            )
+        elif isinstance(callee.value, ast.Name) and callee.value.id in {"self", "cls"}:
+            if callee.attr in methods:
+                callees.add(callee.attr)
+                pending.append(methods[callee.attr])
+            else:
+                _require(callee.attr in inherited, refusal, "unknown self/cls test callee")
+
+
+def _r69h_test_call_closure(method, methods, module_helpers, imports, inherited, refusal):
+    pending = [method]
+    visited = set()
+    callees: set[str] = set()
+    referenced_module: set[str] = set()
+    imported: dict[str, str] = {}
+    while pending:
+        current = pending.pop()
+        if id(current) in visited:
+            continue
+        visited.add(id(current))
+        _require(
+            not any(isinstance(node, (ast.Import, ast.ImportFrom)) for node in ast.walk(current)),
+            refusal,
+            "method-local import requires reviewed oracle amendment",
+        )
+        nested = {
+            node.name
+            for node in ast.walk(current)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node is not current
+        }
+        static_aliases = {
+            target.id: imports[node.value.value.id] + "." + node.value.attr
+            for node in ast.walk(current)
+            if isinstance(node, ast.Assign) and len(node.targets) == 1
+            for target in node.targets
+            if isinstance(target, ast.Name)
+            and isinstance(node.value, ast.Attribute)
+            and isinstance(node.value.value, ast.Name)
+            and (node.value.value.id in imports)
+        }
+        _r69h_collect_test_calls(
+            current,
+            methods,
+            module_helpers,
+            imports,
+            inherited,
+            refusal,
+            static_aliases,
+            nested,
+            pending,
+            callees,
+            referenced_module,
+            imported,
+        )
+    return callees, referenced_module, imported
+
+
+def _r69h_check_test_row(
+    row,
+    classes,
+    module_helpers,
+    imports,
+    path,
+    refusal,
+    selected_ranges,
+    fixture_names,
+    inherited,
+    imported_repo,
+    local_helpers,
+):
+    class_node = classes.get(row["class"])
+    if class_node is None:
+        raise LifecycleError(refusal, "selected test class missing")
+    methods = {node.name: node for node in class_node.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    method = methods.get(row["method"])
+    if method is None or not ("FULL" in selected_ranges[path] or row["method"] in selected_ranges[path]):
+        raise LifecycleError(refusal, "selected test body was not exposed")
+    fixtures = sorted(fixture_names & methods.keys())
+    _require(
+        fixtures == sorted(row["classFixtures"]),
+        refusal,
+        "new or changed class fixture requires reviewed oracle amendment",
+    )
+    callees, referenced_module, imported = _r69h_test_call_closure(
+        method, methods, module_helpers, imports, inherited, refusal
+    )
+    _require(
+        callees == set(row["sameClassCallees"]),
+        refusal,
+        "same-class test helper closure differs from reviewed roster",
+    )
+    required = {row["method"], *callees, *fixtures, *referenced_module}
+    _require(
+        "FULL" in selected_ranges[path] or required <= selected_ranges[path],
+        refusal,
+        "referenced local test helper or fixture was not fully exposed",
+    )
+    for import_name, identity in imported.items():
+        pinned = row["importedCalls"].get(import_name)
+        _require(
+            pinned is None or pinned == identity,
+            refusal,
+            "imported test helper identity differs from reviewed roster",
+        )
+        if identity.startswith("agent_lifecycle.") or identity.startswith("tests."):
+            imported_repo[path + ":" + import_name] = identity
+    local_helpers[row["class"] + "." + row["method"]] = sorted(required)
+
+
 def _r69h_check_one_test_dependency(
     root, path, rows, refusal, selected_ranges, fixture_names, inherited, imported_repo, local_helpers
 ):
@@ -299,17 +492,7 @@ def _r69h_check_one_test_dependency(
     module_helpers = {
         node.name: node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
-    imports: dict[str, str] = {}
-    for node in tree.body:
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                imports[alias.asname or alias.name.split(".")[0]] = alias.name
-        elif isinstance(node, ast.ImportFrom):
-            _require(
-                node.level == 0 and node.module is not None, refusal, "relative test import is outside reviewed closure"
-            )
-            for alias in node.names:
-                imports[alias.asname or alias.name] = node.module + "." + alias.name
+    imports = _r69h_test_imports(tree, refusal)
     additions = [
         {
             "class": class_node.name,
@@ -328,114 +511,19 @@ def _r69h_check_one_test_dependency(
         "new test collides with reviewed test roster",
     )
     for row in rows + additions:
-        class_node = classes.get(row["class"])
-        _require(class_node is not None, refusal, "selected test class missing")
-        methods = {
-            node.name: node for node in class_node.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        }
-        method = methods.get(row["method"])
-        _require(
-            method is not None and ("FULL" in selected_ranges[path] or row["method"] in selected_ranges[path]),
+        _r69h_check_test_row(
+            row,
+            classes,
+            module_helpers,
+            imports,
+            path,
             refusal,
-            "selected test body was not exposed",
+            selected_ranges,
+            fixture_names,
+            inherited,
+            imported_repo,
+            local_helpers,
         )
-        fixtures = sorted(fixture_names & methods.keys())
-        _require(
-            fixtures == sorted(row["classFixtures"]),
-            refusal,
-            "new or changed class fixture requires reviewed oracle amendment",
-        )
-        pending = [method]
-        visited = set()
-        callees = set()
-        referenced_module = set()
-        imported = {}
-        while pending:
-            current = pending.pop()
-            if id(current) in visited:
-                continue
-            visited.add(id(current))
-            _require(
-                not any(isinstance(node, (ast.Import, ast.ImportFrom)) for node in ast.walk(current)),
-                refusal,
-                "method-local import requires reviewed oracle amendment",
-            )
-            nested = {
-                node.name
-                for node in ast.walk(current)
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node is not current
-            }
-            static_aliases = {
-                target.id: imports[node.value.value.id] + "." + node.value.attr
-                for node in ast.walk(current)
-                if isinstance(node, ast.Assign) and len(node.targets) == 1
-                for target in node.targets
-                if isinstance(target, ast.Name)
-                and isinstance(node.value, ast.Attribute)
-                and isinstance(node.value.value, ast.Name)
-                and (node.value.value.id in imports)
-            }
-            for item in ast.walk(current):
-                if not isinstance(item, ast.Call):
-                    continue
-                callee = item.func
-                _require(
-                    isinstance(callee, (ast.Name, ast.Attribute)),
-                    refusal,
-                    "dynamic test callee requires reviewed oracle amendment",
-                )
-                if isinstance(callee, ast.Name):
-                    _require(
-                        callee.id not in {"eval", "exec", "globals", "locals", "vars", "__import__"},
-                        refusal,
-                        "dynamic test callee requires reviewed oracle amendment",
-                    )
-                    if callee.id == "getattr" and item.args and isinstance(item.args[0], ast.Name):
-                        _require(
-                            item.args[0].id not in {"self", "cls"},
-                            refusal,
-                            "dynamic self/cls callee requires reviewed oracle amendment",
-                        )
-                    if callee.id in module_helpers:
-                        referenced_module.add(callee.id)
-                        pending.append(module_helpers[callee.id])
-                    elif callee.id in imports:
-                        imported[callee.id] = imports[callee.id]
-                    elif callee.id in static_aliases:
-                        imported[callee.id] = static_aliases[callee.id]
-                    elif callee.id not in nested and callee.id in {
-                        name.id
-                        for name in ast.walk(current)
-                        if isinstance(name, ast.Name) and isinstance(name.ctx, ast.Store)
-                    }:
-                        raise LifecycleError(refusal, "dynamic local test callee")
-                elif isinstance(callee.value, ast.Name) and callee.value.id in {"self", "cls"}:
-                    if callee.attr in methods:
-                        callees.add(callee.attr)
-                        pending.append(methods[callee.attr])
-                    else:
-                        _require(callee.attr in inherited, refusal, "unknown self/cls test callee")
-        _require(
-            callees == set(row["sameClassCallees"]),
-            refusal,
-            "same-class test helper closure differs from reviewed roster",
-        )
-        required = {row["method"], *callees, *fixtures, *referenced_module}
-        _require(
-            "FULL" in selected_ranges[path] or required <= selected_ranges[path],
-            refusal,
-            "referenced local test helper or fixture was not fully exposed",
-        )
-        for alias, identity in imported.items():
-            pinned = row["importedCalls"].get(alias)
-            _require(
-                pinned is None or pinned == identity,
-                refusal,
-                "imported test helper identity differs from reviewed roster",
-            )
-            if identity.startswith("agent_lifecycle.") or identity.startswith("tests."):
-                imported_repo[path + ":" + alias] = identity
-        local_helpers[row["class"] + "." + row["method"]] = sorted(required)
 
 
 def _r69h_check_test_dependency_closure(

@@ -4,6 +4,24 @@
 
 - No changes yet.
 
+## 2.25.0 - 2026-10-24
+
+- Reject recognized secrets before planning-import output and bound security
+  collection reads and enumeration. Preserve benign input and draft-only gates.
+- Extend the adapter launcher AST guard for aliases, nested scopes and shadowing;
+  retain bounded-process checks and existing unsupported-route refusals.
+- Repair named private ownership seams and enable configured mypy checks inside
+  untyped functions, with an actual expected-failure typing regression.
+- Publish matching English/Russian security and architecture control maps with
+  explicit owners, checks and limits. Add a staged orchestrator reading pilot
+  with complete hash-bound references and a controlled-English guide.
+- Add adversarial import/mapper regressions and a required Node projection smoke
+  in CI. Syntax/export checks do not qualify installation or live host behavior.
+- Prepare matching package/plugin metadata and partial receipt-based accounting.
+  Missing provider tokens, cost and whole-run timing remain unavailable; document
+  sizes do not establish token savings. Existing compatibility, quality, security
+  and final-audit gates remain; preparation is separate from public publication.
+
 ## 2.24.0 - 2026-10-23
 
 - Centralize quality-floor rules and goal validation while preserving public

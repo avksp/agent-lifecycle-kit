@@ -14,7 +14,12 @@ acting in this stage. It preserves every original instruction; this entrypoint
 is a routing summary, not a replacement contract. Follow its linked shared
 contracts for the selected task.
 
-Read docs/guides/lifecycle-cookbook.md. Retain valid evidence after overruns; preserve all expenses and UNKNOWN usage across retries and compact. Start only the selected frozen task.
+Read the common route, recipe table and safety rules in
+docs/guides/lifecycle-cookbook.md. Select the recipe for the current request
+and stage. Read that recipe and its required links before acting. Load another
+recipe when the stage changes. The complete lifecycle contract remains required.
+Retain valid evidence after overruns; preserve all expenses and UNKNOWN usage
+across retries and compact. Start only the selected frozen task.
 
 Do not bypass independent review, reviewed freeze, ownership, authorization or
 budgets. Missing evidence stays missing; unknown telemetry stays null. Do not

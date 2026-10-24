@@ -15,6 +15,7 @@ from agent_lifecycle.contracts.bounded_json import (
 from agent_lifecycle.contracts.bounded_json import (
     matches_closed_schema as _r11_role_schema_matches,
 )
+from agent_lifecycle.contracts.errors import require_condition as _require
 
 _R11_ROLE_CONTRACT_SHA256 = "03d77c4fd3fcfcd3fd316d48ff119e20549ad42d8d9a325e7983bb46ab9e1247"
 
@@ -401,8 +402,3 @@ def _r11_role_prefix_record(value: dict[str, Any], relative: str) -> tuple[str, 
         "role-prefix archive changes holds, usage, identity or canonical path",
     )
     return value["recordPath"], record_raw
-
-
-def _require(condition: bool, code: str, message: str) -> None:
-    if not condition:
-        raise LifecycleError(code, message)

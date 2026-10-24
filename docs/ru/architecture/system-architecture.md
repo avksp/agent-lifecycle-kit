@@ -17,6 +17,27 @@ C1 показывает участников и внешние границы; C
 вызываются в конкретных сценариях. Подробная англоязычная карта модулей
 находится в файле `docs/architecture/modular-controller.md`.
 
+## Текущие владельцы проверок и ограничения
+
+[Карта безопасности](../security/release-security.md) разделяет проверки
+выполнения, CI, необязательный анализ и квалификацию хостов. Разделы с номерами
+релизов ниже — исторический контекст решений, а не доказательство текущего релиза.
+
+| Ответственность | Текущий владелец | Проверка | Ограничение |
+| --- | --- | --- | --- |
+| Общие отказы по условию и UTC-время закрытия | [require_condition](../../../src/agent_lifecycle/contracts/errors.py), [closing_instant](../../../src/agent_lifecycle/contracts/closing_time.py) | [контракт времени](../../../tests/contracts/test_closing_time.py), [полномочия попытки](../../../tests/adapter_sessions/test_attempt_authority.py) | Публичные функции нижнего слоя сохраняют коды отказа вызывающего модуля; не дают полномочий workflow и не расширяют поддерживаемый корневой Python API. |
+| Долговечность каталога попытки | [attempt_authority.py](../../../src/agent_lifecycle/adapter_sessions/attempt_authority.py) делегирует [sync_authority_directory](../../../src/agent_lifecycle/contracts/authority_io.py). | [тесты полномочий попытки](../../../tests/adapter_sessions/test_attempt_authority.py) | Сохранён `r11-durable-storage-unavailable` при отсутствии POSIX-примитивов; защищённый authority I/O также может отклонять небезопасные пути. |
+| Резервирование и claim внутри допущенной транзакции | [financial_transactions.py](../../../src/agent_lifecycle/accounting/financial_transactions.py) использует существующие `_JournalStoragePort` и `JournalHandle` из [контрактов учёта](../../../src/agent_lifecycle/accounting/contracts.py). | [границы транзакций](../../../tests/accounting/test_financial_transaction_boundaries.py), [восстановление](../../../tests/accounting/test_closing_resources_recovery.py) | Нет новой схемы хранения, полномочий dispatch или финансовых полномочий. Сохранены отказы admission, revision, cap, replay и protected reserve; исторические импорты восстановления и записанные расходы читаются по-прежнему. |
+| Три удалённых межпакетных закрытых импорта | [attempt_authority.py](../../../src/agent_lifecycle/adapter_sessions/attempt_authority.py), [closing_resource_recovery.py](../../../src/agent_lifecycle/accounting/closing_resource_recovery.py) | [регрессия именных зависимостей](../../../tests/release/test_architecture_policy_integration.py) | Зависимости от accounting `_require`, accounting `_sync_directory` и workflow-state `_closing_instant` заменены общими владельцами; это не устранение всех закрытых зависимостей или технического долга. |
+| Правила зависимостей и сложности | [политика зависимостей](../../../policy/architecture-dependencies.json), [политика лимитов](../../../policy/architecture-limits.json) | [валидатор зависимостей](../../../tools/release/validate_module_dependencies.py), [валидатор сложности](../../../tools/release/validate_architecture_complexity.py) | Статическая ацикличность модулей/пакетов, точные исключения и запрет роста учтённого долга; не всеобщее соответствие SOLID или отсутствие дефектов. |
+| Типизация всего исходного пакета | [pyproject.toml](../../../pyproject.toml), [quality runner](../../../tools/release/run_python_quality.py) | `python -m mypy src/agent_lifecycle --check-untyped-defs` явно проверяет нетипизированные тела. | Успех явного запуска не подтверждает сохранение `check_untyped_defs` в конфигурации. Обычная область проверки определяется настроенной контрольной точкой; релизная интеграция должна отдельно проверить настройку. |
+
+Финансовая совместимость сохраняет `declared-ledger-route-unsupported`,
+переносимые fixtures `UNIT_ONLY`, исторические байты, дайджесты и учёт UNKNOWN.
+Текущая ограниченная поддержка обычных операций Codex не квалифицирует
+защищённое закрытие или маршруты оператора. `GUIDANCE_ONLY` не принуждает
+хост к поведению; владельцы и границы проверок указаны в карте безопасности.
+
 ## C0: контекст миссии
 
 ALK решает задачу управления завершением работы внешнего кодового агента.

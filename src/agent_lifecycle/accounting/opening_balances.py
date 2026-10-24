@@ -8,7 +8,6 @@ import sqlite3
 from dataclasses import asdict
 from typing import cast as _validated_cast
 
-from .closing_resource_recovery import _claim_in_transaction, _reserve_in_transaction
 from .contracts import (
     MAX_IMPORT_BYTES,
     PROTECTED_STORAGE_SCHEMA_VERSION,
@@ -28,6 +27,7 @@ from .contracts import (
     identity,
     uint,
 )
+from .financial_transactions import _claim_in_transaction, _reserve_in_transaction
 from .normalization import UsageConflict, UsageUnavailable, semantic_final
 from .workflow_store import (
     P02_EVENTS,
@@ -108,6 +108,58 @@ def _opening_baselines(value, profiles):
     return baselines
 
 
+def _opening_operation(
+    op: Operation, scope: BudgetScope, policy: BudgetPolicy, operations: dict, consumed: dict
+) -> dict:
+    op.__post_init__()
+    if (
+        op.budget_scope_id != scope.budget_scope_id
+        or op.run_id != scope.run_id
+        or op.unit_definition_id != scope.unit_definition_id
+        or op.task_id not in (None, *policy.task_caps)
+    ):
+        raise UsageConflict("Historical operation scope/task/unit mismatch")
+    # P02 does not adopt a replacement policy. A future compatible amendment
+    # must be qualified explicitly; unknown policy lineage stays unavailable.
+    if (op.policy_id, op.policy_revision) != (policy.policy_id, policy.revision):
+        raise UsageUnavailable("Historical policy compatibility is unproved")
+    if op.operation_id in operations:
+        raise UsageConflict("Duplicate historical/pending operation")
+    operations[op.operation_id] = {
+        "binding": asdict(op),
+        "digest": op.binding_digest,
+        "state": "RESERVED",
+        "claim_id": None,
+        "reservation": op.upper_bound_tokens,
+        "actual": None,
+    }
+    if op.operation_class == "CLOSEOUT" and op.closeout_allocation_id not in consumed:
+        raise UsageConflict("Unknown original closeout allocation")
+    return operations[op.operation_id]
+
+
+def _opening_pending(
+    value: OpeningImport, scope: BudgetScope, policy: BudgetPolicy, operations: dict, consumed: dict
+) -> None:
+    for pending in value.pending or ():
+        op = pending.operation
+        stored = _opening_operation(op, scope, policy, operations, consumed)
+        if not isinstance(pending.proof, EvidenceRef):
+            raise UsageUnavailable("Pending dispatch/no-dispatch proof required")
+        if pending.state not in {"RESERVED", "DISPATCHED", "UNAVAILABLE", "CANCELLED_WITH_NO_DISPATCH_PROOF"}:
+            raise UsageConflict("Unknown pending operation state")
+        if pending.state in {"DISPATCHED", "UNAVAILABLE"} and not pending.claim_id:
+            raise UsageUnavailable("Possible historical dispatch requires original claim")
+        cancelled = pending.state == "CANCELLED_WITH_NO_DISPATCH_PROOF"
+        stored.update(
+            claim_id=pending.claim_id,
+            state=pending.state if cancelled else ("UNAVAILABLE" if pending.claim_id else "RESERVED"),
+            reservation=0 if cancelled else op.upper_bound_tokens,
+        )
+        if op.operation_class == "CLOSEOUT" and not cancelled:
+            consumed[_validated_cast(str, op.closeout_allocation_id)] += op.upper_bound_tokens
+
+
 def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImport) -> dict:
     scope.__post_init__()
     policy.__post_init__()
@@ -127,39 +179,13 @@ def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImpo
         profiles[p.profile_id] = p
     totals = {key: 0 for key in policy.task_caps}
     totals[""] = 0
-    operations, finals, consumed, atoms = {}, {}, {k: 0 for k in policy.protected_closeout}, set()
+    operations: dict[str, dict] = {}
+    finals, consumed, atoms = {}, {k: 0 for k in policy.protected_closeout}, set()
     bound_broken = False
-
-    def operation(op):
-        op.__post_init__()
-        if (
-            op.budget_scope_id != scope.budget_scope_id
-            or op.run_id != scope.run_id
-            or op.unit_definition_id != scope.unit_definition_id
-            or op.task_id not in (None, *policy.task_caps)
-        ):
-            raise UsageConflict("Historical operation scope/task/unit mismatch")
-        # P02 does not adopt a replacement policy. A future compatible amendment
-        # must be qualified explicitly; unknown policy lineage stays unavailable.
-        if (op.policy_id, op.policy_revision) != (policy.policy_id, policy.revision):
-            raise UsageUnavailable("Historical policy compatibility is unproved")
-        if op.operation_id in operations:
-            raise UsageConflict("Duplicate historical/pending operation")
-        operations[op.operation_id] = {
-            "binding": asdict(op),
-            "digest": op.binding_digest,
-            "state": "RESERVED",
-            "claim_id": None,
-            "reservation": op.upper_bound_tokens,
-            "actual": None,
-        }
-        if op.operation_class == "CLOSEOUT" and op.closeout_allocation_id not in consumed:
-            raise UsageConflict("Unknown original closeout allocation")
-        return operations[op.operation_id]
 
     for charge in value.historical:
         op = charge.operation
-        stored = operation(op)
+        stored = _opening_operation(op, scope, policy, operations, consumed)
         if not isinstance(charge.dispatch_proof, EvidenceRef) or not charge.claim_id:
             raise UsageUnavailable("Historical dispatch/claim provenance required")
         profile = profiles.get(charge.profile_id)
@@ -182,23 +208,7 @@ def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImpo
         if op.operation_class == "CLOSEOUT":
             consumed[_validated_cast(str, op.closeout_allocation_id)] += min(op.upper_bound_tokens, amount)
         bound_broken |= amount > op.upper_bound_tokens
-    for pending in value.pending or ():
-        op = pending.operation
-        stored = operation(op)
-        if not isinstance(pending.proof, EvidenceRef):
-            raise UsageUnavailable("Pending dispatch/no-dispatch proof required")
-        if pending.state not in {"RESERVED", "DISPATCHED", "UNAVAILABLE", "CANCELLED_WITH_NO_DISPATCH_PROOF"}:
-            raise UsageConflict("Unknown pending operation state")
-        if pending.state in {"DISPATCHED", "UNAVAILABLE"} and not pending.claim_id:
-            raise UsageUnavailable("Possible historical dispatch requires original claim")
-        cancelled = pending.state == "CANCELLED_WITH_NO_DISPATCH_PROOF"
-        stored.update(
-            claim_id=pending.claim_id,
-            state=pending.state if cancelled else ("UNAVAILABLE" if pending.claim_id else "RESERVED"),
-            reservation=0 if cancelled else op.upper_bound_tokens,
-        )
-        if op.operation_class == "CLOSEOUT" and not cancelled:
-            consumed[_validated_cast(str, op.closeout_allocation_id)] += op.upper_bound_tokens
+    _opening_pending(value, scope, policy, operations, consumed)
     protected, balances, known, protection_known, pending_known, complete, overflow = _opening_qualification(
         value, policy, opening, totals, consumed
     )
@@ -241,8 +251,8 @@ def compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImpo
         }
     if overflow:
         state["unresolved_reasons"]["opening:overflow"] = {"kind": "OVERFLOW", "origin": "opening"}
-    for owner, op in operations.items():
-        if op["state"] == "UNAVAILABLE":
+    for owner, stored_operation in operations.items():
+        if stored_operation["state"] == "UNAVAILABLE":
             state["unresolved_reasons"]["pending:" + owner] = {"kind": "OPERATION_PENDING", "operation_id": owner}
     if any(op["state"] == "UNAVAILABLE" for op in operations.values()) and state["gate"] == "READY":
         state["gate"] = "INCOMPLETE"

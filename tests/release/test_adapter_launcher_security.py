@@ -20,23 +20,43 @@ class AdapterLauncherSecurityValidatorTests(unittest.TestCase):
         mutations = (
             ("codex_exact_prompt.py", "total <= 4_194_304", "True"),
             ("codex_exact_prompt.py", "len(raw) <= _APP_SERVER_MAX_REQUEST_BYTES", "True"),
-            ("codex_exact_prompt.py", "_APP_SERVER_TIMEOUT_SECONDS = 15.0",
-             "_APP_SERVER_TIMEOUT_SECONDS = float('inf')"),
+            (
+                "codex_exact_prompt.py",
+                "_APP_SERVER_TIMEOUT_SECONDS = 15.0",
+                "_APP_SERVER_TIMEOUT_SECONDS = float('inf')",
+            ),
             ("codex_exact_prompt.py", "process.wait(timeout=2)", "process.wait()"),
             ("codex_exact_prompt.py", "total=total", "total=0"),
             ("codex_exact_prompt.py", 'message["result"], total', 'message["result"], 0'),
-            ("codex_exact_prompt.py", 'stdin = _validated_cast("IO[bytes]", process.stdin)',
-             'stdin = _validated_cast("IO[bytes]", process.stdout)'),
-            ("codex_exact_prompt.py", 'stdin = _validated_cast("IO[bytes]", process.stdin)',
-             '_validated_cast = lambda *_args: None\n        stdin = _validated_cast("IO[bytes]", process.stdin)'),
+            (
+                "codex_exact_prompt.py",
+                'stdin = _validated_cast("IO[bytes]", process.stdin)',
+                'stdin = _validated_cast("IO[bytes]", process.stdout)',
+            ),
+            (
+                "codex_exact_prompt.py",
+                'stdin = _validated_cast("IO[bytes]", process.stdin)',
+                '_validated_cast = lambda *_args: None\n        stdin = _validated_cast("IO[bytes]", process.stdin)',
+            ),
             ("codex_input_diagnostics.py", "total <= limit", "True"),
             ("codex_input_diagnostics.py", "deadline - time.monotonic()", "15.0"),
-            ("process.py", "    def write() -> None:\n        with failure:\n            _write_stdin(process, inputs.input_bytes)",
-             "    _write_stdin(process, inputs.input_bytes)\n    def write() -> None:\n        pass"),
+            (
+                "process.py",
+                "    def write() -> None:\n        with failure:\n"
+                "            _write_stdin(process, inputs.input_bytes)",
+                "    _write_stdin(process, inputs.input_bytes)\n    def write() -> None:\n        pass",
+            ),
             ("process.py", "    writer.start()", "    write()\n    writer.start()"),
             ("process.py", 'raise RuntimeError("process capture threads did not terminate")', "pass"),
-            ("process.py", '    if any(reader.is_alive() for reader in readers):\n        raise RuntimeError("process capture threads did not terminate")\n    capture.finish(process, readers, grace_seconds)',
-             '    capture.finish(process, readers, grace_seconds)\n    if any(reader.is_alive() for reader in readers):\n        raise RuntimeError("process capture threads did not terminate")'),
+            (
+                "process.py",
+                "    if any(reader.is_alive() for reader in readers):\n"
+                '        raise RuntimeError("process capture threads did not terminate")\n'
+                "    capture.finish(process, readers, grace_seconds)",
+                "    capture.finish(process, readers, grace_seconds)\n"
+                "    if any(reader.is_alive() for reader in readers):\n"
+                '        raise RuntimeError("process capture threads did not terminate")',
+            ),
             ("process.py", "writer.join(min(0.02, remaining))", "writer.join()"),
             ("process.py", "if cancelled or remaining <= 0:", "if False:"),
             ("process.py", "state.readers.append(writer)", "pass"),
@@ -70,7 +90,9 @@ class AdapterLauncherSecurityValidatorTests(unittest.TestCase):
         started = time.monotonic()
         result = run_process(
             [sys.executable, "-c", "import time; time.sleep(3)"],
-            env=dict(os.environ), timeout_seconds=0.1, cleanup_grace_seconds=0.1,
+            env=dict(os.environ),
+            timeout_seconds=0.1,
+            cleanup_grace_seconds=0.1,
             stdin_text="x" * 2_000_000,
         )
         self.assertLess(time.monotonic() - started, 2)
@@ -107,7 +129,7 @@ class AdapterLauncherSecurityValidatorTests(unittest.TestCase):
             root = Path(tmp)
             bad = root / "bad_launcher.py"
             evidence = root / "evidence.json"
-            bad.write_text("subprocess.run(['echo'], shell=True)\\n", encoding="utf-8")
+            bad.write_text("subprocess.run(['echo'], shell = (True))\n", encoding="utf-8")
 
             result = subprocess.run(
                 [
@@ -125,7 +147,7 @@ class AdapterLauncherSecurityValidatorTests(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(payload["status"], "FAIL")
-        self.assertIn("adapter-launcher-forbidden-snippet", {item["code"] for item in payload["blockers"]})
+        self.assertIn("adapter-launcher-shell-policy", {item["code"] for item in payload["blockers"]})
 
     def test_validator_rejects_generic_launcher_process_route(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

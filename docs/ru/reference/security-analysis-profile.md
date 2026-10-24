@@ -6,6 +6,19 @@ ALK предоставляет необязательный нейтральны
 доработку и независимую проверку. Это не сканер уязвимостей и по умолчанию он
 не запускает код эксплуатации.
 
+## Владельцы проверок и ограничения
+
+| Контроль | Владелец | Проверка | Ограничение |
+| --- | --- | --- | --- |
+| Выключенный профиль, execution-gate receipts и проверка находок | [quality/security_analysis.py](../../../src/agent_lifecycle/quality/security_analysis.py) | [тесты профиля и gate](../../../tests/quality/test_security_analysis.py) | Receipt проверяет заявленные разрешение и лимиты; ALK не предоставляет песочницу и не запускает эксплуатацию. |
+| Импорт файлов и отказ при распознанных секретах | [imports/security_findings.py](../../../src/agent_lifecycle/imports/security_findings.py), [общая проверка импорта](../../../src/agent_lifecycle/imports/planning.py), [authority I/O](../../../src/agent_lifecycle/contracts/authority_io.py) | [тесты импорта](../../../tests/imports/test_security_findings.py), [вывод CLI](../../../tests/cli/test_import_security_boundaries.py) | `import-sensitive-content` отклоняет распознанные категории в содержимом и метаданных до вывода, но не любой возможный секрет. Ограниченное чтение отклоняет ссылки/смену идентичности и сохраняет `security-analysis-import-too-large`. |
+| Независимая проверка доработок, покрытых политикой | [workflow/task_transitions.py](../../../src/agent_lifecycle/workflow/task_transitions.py), [security_analysis_acceptance_blocker](../../../src/agent_lifecycle/quality/security_analysis.py) | [тесты приёмки](../../../tests/workflow/test_security_analysis_profile.py) | Принудительно только для принятой политики security-analysis и охваченной серьёзности; импорт находки никогда не принимает задачу. |
+
+[Текущая карта безопасности](../security/release-security.md) описывает CI и
+ограничения хостов. `GUIDANCE_ONLY` не означает принуждение на хосте, а
+необязательный анализ не квалифицирует защищённое закрытие/маршруты оператора
+и не доказывает безопасность всех хостов.
+
 ## Граница по умолчанию
 
 Профиль имеет статус `OPTIONAL` и по умолчанию выключен. Профиль или
@@ -24,21 +37,28 @@ ALK предоставляет необязательный нейтральны
 
 Для статических материалов достаточно безопасного пути только для чтения:
 
+Замените `SOURCE_REVISION` ревизией, проанализированной в `findings.sarif`.
+Используйте новые пути вывода: команды создают свидетельства без изменения
+состояния workflow. `--profile` в отчёте — булев флаг включения профиля
+по умолчанию, а не аргумент файла. Отчёт импортирует тот же исходный файл
+находок; валидация не превращает источник в доверенное свидетельство.
+
 ```bash
 agent-lifecycle quality security-profile --out work/security-profile.json
 agent-lifecycle import security-findings \
   --source findings.sarif \
-  --expected-source-revision <revision> \
+  --source-revision "SOURCE_REVISION" \
+  --expected-source-revision "SOURCE_REVISION" \
   --out work/security-findings.json
 agent-lifecycle quality security-finding-check \
   --candidate work/security-findings.json \
-  --expected-source-revision <revision> \
+  --expected-source-revision "SOURCE_REVISION" \
   --out work/security-findings-validation.json
 agent-lifecycle report security-analysis \
-  --finding work/security-findings.json \
+  --finding findings.sarif \
   --profile \
-  --source-revision <revision> \
-  --expected-source-revision <revision> \
+  --source-revision "SOURCE_REVISION" \
+  --expected-source-revision "SOURCE_REVISION" \
   --out work/security-analysis-report.json
 ```
 

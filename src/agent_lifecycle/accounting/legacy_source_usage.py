@@ -197,11 +197,8 @@ def _finish_invalid_annotation_projection(tracker, ordered, result):
             "selected original pair is incomplete or out of order",
         )
         pool = next((pool for pool in ordered if pool["windowId"] == window_id), None)
-        _require(
-            pool is not None and pool["binding"] is None and pool["closeRef"] is not None,
-            "scoped-usage-recovery-invalid",
-            "selected historical pool is incomplete or eligible",
-        )
+        if pool is None or pool["binding"] is not None or pool["closeRef"] is None:
+            raise LifecycleError("scoped-usage-recovery-invalid", "selected historical pool is incomplete or eligible")
         pool["eligibility"] = "HISTORICAL_INELIGIBLE"
     result["schemaVersion"] = SOURCE_INVALID_ANNOTATION_REGISTRY
     result["invalidAnnotationDispositionRef"] = tracker["recovery"]["dispositionRef"]

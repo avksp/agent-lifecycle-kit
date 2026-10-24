@@ -350,6 +350,36 @@ def _r11_dependency_imported(
         edges.add((*caller, target, symbol))
 
 
+def _r11_dependency_namespace_names(nodes, local_imports, name, symbol, root, cache, selected, pending, edges):
+    namespace_names = set()
+    parents = {id(child): parent for parent in nodes for child in ast.iter_child_nodes(parent)}
+    for node in nodes:
+        if not isinstance(node, ast.Attribute):
+            continue
+        parent_node = parents.get(id(node))
+        if isinstance(parent_node, ast.Attribute) and parent_node.value is node:
+            continue
+        parts: list[str] = []
+        cursor: ast.expr = node
+        while isinstance(cursor, ast.Attribute):
+            parts.insert(0, cursor.attr)
+            cursor = cursor.value
+        if not isinstance(cursor, ast.Name) or cursor.id not in local_imports:
+            continue
+        module, member = local_imports[cursor.id]
+        if member is not None:
+            if _r11_dependency_module_path(module + "." + member, root) is None:
+                continue
+            module += "." + member
+        while parts and _r11_dependency_module_path(module + "." + parts[0], root) is not None:
+            module += "." + parts.pop(0)
+        _r11_dependency_imported(
+            (name, symbol), module, parts[0] if parts else None, root, cache, selected, pending, edges
+        )
+        namespace_names.add(id(cursor))
+    return namespace_names
+
+
 def _r11_expand_dependency_worklist(root, cache, selected, pending, edges, unresolved, visited):
     while pending:
         name, symbol = pending.pop()
@@ -392,32 +422,9 @@ def _r11_expand_dependency_worklist(root, cache, selected, pending, edges, unres
             _r11_dependency_include(name, unit, symbol, selected)
             nodes = list(ast.walk(unit["node"]))
             local_imports = _r11_imports(global_nodes + nodes, name)
-            namespace_names = set()
-            parents = {id(child): parent for parent in nodes for child in ast.iter_child_nodes(parent)}
-            for node in nodes:
-                if not isinstance(node, ast.Attribute):
-                    continue
-                parent_node = parents.get(id(node))
-                if isinstance(parent_node, ast.Attribute) and parent_node.value is node:
-                    continue
-                parts = []
-                cursor = node
-                while isinstance(cursor, ast.Attribute):
-                    parts.insert(0, cursor.attr)
-                    cursor = cursor.value
-                if not isinstance(cursor, ast.Name) or cursor.id not in local_imports:
-                    continue
-                module, member = local_imports[cursor.id]
-                if member is not None:
-                    if _r11_dependency_module_path(module + "." + member, root) is None:
-                        continue
-                    module += "." + member
-                while parts and _r11_dependency_module_path(module + "." + parts[0], root) is not None:
-                    module += "." + parts.pop(0)
-                _r11_dependency_imported(
-                    (name, symbol), module, parts[0] if parts else None, root, cache, selected, pending, edges
-                )
-                namespace_names.add(id(cursor))
+            namespace_names = _r11_dependency_namespace_names(
+                nodes, local_imports, name, symbol, root, cache, selected, pending, edges
+            )
             for node in nodes:
                 if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
                     if node.id in index["bindings"]:

@@ -21,7 +21,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md). Release 2.23 adds [compact S0/S1 authoring](docs/reference/tier-proportional-plan-packages.md) with explicit checklist completion and unchanged approval gates. Release 2.22 adds [conservative plan-review reuse](docs/reference/conservative-delta-review.md) with independent current applicability and no automatic full reruns. Release 2.21 adds [command accounting, bounded preparation and response recovery](docs/reference/source-native-workflow-accounting.md). Release 2.20 adds [target-bound initialization](docs/reference/cli.md#release-220-composed-initialization-and-digest-display), [bounded local continuation](docs/reference/workflow-continuation.md) and batched Git snapshots. Release 2.19 adds [safe artifact authoring and planning preflight](docs/reference/safe-artifact-authoring.md), [bounded review handoff](docs/reference/review-mesh.md#bounded-review-handoff) and thin skills with complete references. Release 2.18 bounds process/Git diagnostics, hardens signing and distinguishes OpenCode 1.x/2.x compatibility ([adapter notes](docs/adapters/opencode.md)); 2.17 strengthens [workflow validation and recovery](docs/reference/workflow-completeness.md). Release 2.16 introduced cumulative accounting within verified host capabilities; see [retention maintenance](docs/operations/retention-maintenance.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.24.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.25.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
 
 For a quick start, run:
 
@@ -178,3 +178,13 @@ Adapter installation and support-level details live in [Adapter install](docs/ad
 - Profiles and operations: [Project workflow presets](docs/reference/workflow-presets.md), [Project workflow profile](docs/reference/project-workflow-profile.md), [Read-only status views](docs/reference/read-only-status-view.md), [Adapter progress bridge](docs/reference/automatic-progress-bridge.md), [Sandbox boundaries](docs/reference/sandbox-boundaries.md), [Import mappers](docs/reference/import-mappers.md), [Episode retrieval](docs/reference/episode-retrieval.md), [Runner migration](docs/guides/runner-migration-2.md), [Runner recovery records](docs/reference/runner-recovery.md), [Cross-check profile](docs/reference/cross-check-profile.md), [Review Mesh](docs/reference/review-mesh.md), [Risk-bound independent verification](docs/reference/risk-bound-independent-verification.md), [Bug Forensics profile](docs/reference/bug-forensics.md), and [Bug Forensics context budget](docs/reference/bug-forensics-context-budget.md).
 - Release assets: [Task templates](templates/tasks/README.md), [Neutrality scanning](docs/reference/neutrality.md), and [Release security](docs/security/release-security.md).
 Apache-2.0. See [LICENSE](LICENSE).
+
+## Release 2.25: focused security and maintainability
+
+Release 2.25 hardens sensitive imports and launcher checks, repairs named
+ownership seams, and checks untyped Python function bodies with mypy. See the
+[current security controls](docs/security/release-security.md) and [architecture map](docs/architecture/system-architecture.md).
+The [staged reading pilot](docs/guides/controlled-technical-english.md) preserves full references and approval gates;
+byte/word measurements do not prove token savings. Existing OpenCode 1.x/2.x
+qualification and unsupported host routes remain unchanged. Local preparation,
+exact-candidate CI, native final proof and public publication are separate gates.

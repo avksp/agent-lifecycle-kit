@@ -1,6 +1,8 @@
 """The repository's existing gates and published examples share one contract."""
+
 from __future__ import annotations
 
+import ast
 import contextlib
 import hashlib
 import io
@@ -17,18 +19,52 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class ArchitecturePolicyIntegrationTests(unittest.TestCase):
+    def test_named_private_edges_cannot_return(self) -> None:
+        forbidden = {
+            "adapter_sessions/attempt_authority.py": {
+                ("agent_lifecycle.accounting.declared_ledger", "_sync_directory"),
+                ("agent_lifecycle.accounting.declared_ledger_records", "_require"),
+            },
+            "accounting/closing_resource_recovery.py": {
+                ("agent_lifecycle.contracts.workflow_state_schemas", "_closing_instant"),
+            },
+        }
+        for name, edges in forbidden.items():
+            tree = ast.parse((ROOT / "src/agent_lifecycle" / name).read_text())
+            imports = {
+                (node.module, alias.name)
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ImportFrom)
+                for alias in node.names
+            }
+            with self.subTest(path=name):
+                self.assertFalse(imports & edges)
+
     def test_canonical_limits_and_ci_selection_cannot_drift(self) -> None:
         policy = load_architecture_limits(ROOT / "policy/architecture-limits.json")
-        self.assertEqual({
-            "targetFileLines": 800, "hardFileLines": 1200,
-            "targetFunctionLines": 80, "hardFunctionLines": 150,
-            "hardSymbols": 80, "cliTargetFunctionLines": 80, "cliHardFunctionLines": 150,
-        }, policy["limits"])
+        self.assertEqual(
+            {
+                "targetFileLines": 800,
+                "hardFileLines": 1200,
+                "targetFunctionLines": 80,
+                "hardFunctionLines": 150,
+                "hardSymbols": 80,
+                "cliTargetFunctionLines": 80,
+                "cliHardFunctionLines": 150,
+            },
+            policy["limits"],
+        )
         ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         complexity = ci.split("- name: Validate architecture complexity\n", 1)[1].split("\n      - name:", 1)[0]
         self.assertIn("--policy policy/architecture-limits.json", complexity)
         self.assertIn("validate_architecture_complexity.py", complexity)
-        for flag in ("--target-file-lines", "--hard-file-lines", "--target-function-lines", "--hard-function-lines", "--hard-symbols"):
+        for flag in (
+            "--target-file-lines",
+            "--hard-file-lines",
+            "--target-function-lines",
+            "--hard-function-lines",
+            "--hard-symbols",
+        ):
             self.assertNotIn(flag, complexity)
         self.assertIn("--policy policy/architecture-dependencies.json", ci)
         self.assertIn("--require-acyclic-modules", ci)
@@ -53,8 +89,11 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
         parser = build_parser()
         for path in ("docs/guides/lifecycle-cookbook.md", "docs/ru/guides/lifecycle-cookbook.md"):
             document = (ROOT / path).read_text(encoding="utf-8")
-            blocks = [block for block in re.findall(r"```bash\n(.*?)```", document, re.S)
-                      if block.startswith("agent-lifecycle workflow task-review-apply")]
+            blocks = [
+                block
+                for block in re.findall(r"```bash\n(.*?)```", document, re.S)
+                if block.startswith("agent-lifecycle workflow task-review-apply")
+            ]
             self.assertEqual(1, len(blocks))
             argv = shlex.split(blocks[0].replace("\\\n", " "))[1:]
             with self.subTest(path=path):
@@ -78,9 +117,17 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
             with self.subTest(skill=name):
                 self.assertIn(f"Full contract SHA256: `{hashlib.sha256(contract).hexdigest()}`", entry)
                 text = contract.decode()
-                for required in ("1\u20133 actual entrypoints", "lower capability/authority boundary", "negative case",
-                                 "exact write owners", "UNIT_ONLY", "before freeze", "no extra audit stage",
-                                 "declared-ledger-route-unsupported", "test_unsupported_package_and_rebound_opening_refuse"):
+                for required in (
+                    "1\u20133 actual entrypoints",
+                    "lower capability/authority boundary",
+                    "negative case",
+                    "exact write owners",
+                    "UNIT_ONLY",
+                    "before freeze",
+                    "no extra audit stage",
+                    "declared-ledger-route-unsupported",
+                    "test_unsupported_package_and_rebound_opening_refuse",
+                ):
                     self.assertIn(required, text)
                 self.assertIn("user's scope decision", text)
 

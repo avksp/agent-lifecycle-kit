@@ -14,6 +14,27 @@ The detailed module boundary map remains in
 [Modular controller architecture](modular-controller.md). This document focuses
 on how the pieces work together for common operator flows.
 
+## Current control owners and limits
+
+The [security control map](../security/release-security.md) separates runtime
+controls, CI guards, optional analysis and host qualification. Release-numbered
+sections below are historical design context, not current release proof.
+
+| Responsibility | Current owner | Check | Limit |
+| --- | --- | --- | --- |
+| Shared condition failures and UTC closing timestamps | [require_condition](../../src/agent_lifecycle/contracts/errors.py), [closing_instant](../../src/agent_lifecycle/contracts/closing_time.py) | [closing-time contract tests](../../tests/contracts/test_closing_time.py), [attempt authority tests](../../tests/adapter_sessions/test_attempt_authority.py) | Public low-layer helpers preserve caller refusal codes; they confer no workflow authority and are not additions to the supported root Python API. |
+| Attempt-directory durability | [attempt_authority.py](../../src/agent_lifecycle/adapter_sessions/attempt_authority.py) delegates to [sync_authority_directory](../../src/agent_lifecycle/contracts/authority_io.py). | [attempt authority tests](../../tests/adapter_sessions/test_attempt_authority.py) | Retains `r11-durable-storage-unavailable` for missing POSIX primitives; guarded authority I/O can also refuse unsafe paths. |
+| Reservation and claim mutations inside an admitted transaction | [financial_transactions.py](../../src/agent_lifecycle/accounting/financial_transactions.py), using existing `_JournalStoragePort` and `JournalHandle` in [accounting contracts](../../src/agent_lifecycle/accounting/contracts.py) | [transaction boundary tests](../../tests/accounting/test_financial_transaction_boundaries.py), [recovery tests](../../tests/accounting/test_closing_resources_recovery.py) | No new storage schema, dispatch or financial authority. Admission, revision, cap, replay and protected-reserve refusals remain; historical recovery imports and recorded costs remain readable. |
+| Three removed cross-package private imports | [attempt_authority.py](../../src/agent_lifecycle/adapter_sessions/attempt_authority.py), [closing_resource_recovery.py](../../src/agent_lifecycle/accounting/closing_resource_recovery.py) | [named-edge regression](../../tests/release/test_architecture_policy_integration.py) | Replaces accounting `_require`, accounting `_sync_directory` and workflow-state `_closing_instant` dependencies with their shared owners; does not eliminate all private dependencies or technical debt. |
+| Dependency and complexity rules | [dependency policy](../../policy/architecture-dependencies.json), [limits policy](../../policy/architecture-limits.json) | [dependency validator](../../tools/release/validate_module_dependencies.py), [complexity validator](../../tools/release/validate_architecture_complexity.py) | Static acyclic module/package checks, exact exceptions and existing debt ratchets; not universal SOLID compliance or absence of defects. |
+| Source-wide typing | [pyproject.toml](../../pyproject.toml), [quality runner](../../tools/release/run_python_quality.py) | `python -m mypy src/agent_lifecycle --check-untyped-defs` checks untyped bodies explicitly. | A clean explicit invocation does not establish that `check_untyped_defs` is persisted in configuration. Default scope comes from the configured gate; release integration must verify that setting separately. |
+
+Financial compatibility still includes `declared-ledger-route-unsupported`,
+`UNIT_ONLY` portable fixtures and preserved historical bytes, digests and
+UNKNOWN accounting. Current Codex ordinary limited support does not qualify
+protected closure or operator routes. `GUIDANCE_ONLY` does not enforce host
+behavior; consult the linked security map for owner/check boundaries.
+
 ## C0: mission context
 
 ALK solves completion control for coding-agent work. It keeps user intent,
