@@ -3,7 +3,7 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.25.0. Verify frozen plans before execution
+These instructions target ALK v2.26.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -96,7 +96,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.25.0
+python -m pip install agent-lifecycle-kit==2.26.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -107,7 +107,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.25.0
+python -m pip install agent-lifecycle-kit==2.26.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -331,12 +331,11 @@ See [conservative plan review](../reference/conservative-delta-review.md). FULL_
 
 [Compact DRAFT authoring](../reference/tier-proportional-plan-packages.md) preserves checks, independent review and separate authorization. Explicit acceptance-criteria.md and planFiles completion are required before freeze; UNKNOWN metrics are never zero.
 
-## Release 2.25: focused security and maintainability
+## Release 2.26: bounded discovery and precise quality gates
 
-Release 2.25 hardens sensitive imports and launcher checks, repairs named
-ownership seams, and checks untyped Python function bodies with mypy. See the
-[current security controls](../security/release-security.md) and [architecture map](../architecture/system-architecture.md).
-The [staged reading pilot](../guides/controlled-technical-english.md) preserves full references and approval gates;
-byte/word measurements do not prove token savings. Existing OpenCode 1.x/2.x
-qualification and unsupported host routes remain unchanged. Local preparation,
-exact-candidate CI, native final proof and public publication are separate gates.
+Markdown imports bound examined entries, directories, depth and cooperative
+elapsed time; see the [security control map](../security/release-security.md). Tracked-source checks
+reuse the existing bare-token families. [Quality controls](../architecture/system-architecture.md)
+require both combined and statement coverage of 76 percent and retain legacy
+policy interpretation. The existing [reading pilot](../guides/controlled-technical-english.md) and host limits
+remain; measurements do not establish token savings or host enforcement.

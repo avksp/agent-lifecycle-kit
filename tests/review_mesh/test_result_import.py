@@ -23,19 +23,22 @@ class ReviewMeshResultImportTests(unittest.TestCase):
         profile, assignment = _profile_and_assignment()
         raw = _raw_output()
         first = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-        second = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw,
-                                           existing_results=[first])
+        second = import_review_mesh_result(
+            profile=profile, assignment=assignment, reviewer_output=raw, existing_results=[first]
+        )
         self.assertIs(first, second)
         self.assertEqual(first["budgetUsage"], second["budgetUsage"])
         self.assertEqual(first["resultDigest"], second["resultDigest"])
         with self.assertRaises(LifecycleError):
-            import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw,
-                                      existing_results=[first, first])
+            import_review_mesh_result(
+                profile=profile, assignment=assignment, reviewer_output=raw, existing_results=[first, first]
+            )
         changed = deepcopy(raw)
         changed["findings"] = []
         with self.assertRaises(LifecycleError):
-            import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=changed,
-                                      existing_results=[first])
+            import_review_mesh_result(
+                profile=profile, assignment=assignment, reviewer_output=changed, existing_results=[first]
+            )
 
     def test_raw_session_claim_cannot_supply_separate_provenance(self) -> None:
         from tests.review_mesh.test_contracts import session_review_inputs
@@ -47,12 +50,18 @@ class ReviewMeshResultImportTests(unittest.TestCase):
         raw["budgetUsage"] = {key: context["receipt"]["usage"][key] for key in raw["budgetUsage"]}
         with self.assertRaises(LifecycleError):
             import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-        result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw,
-                                           session_usage_context=context)
+        result = import_review_mesh_result(
+            profile=profile, assignment=assignment, reviewer_output=raw, session_usage_context=context
+        )
         self.assertEqual(result["sessionBudgetBasis"], "CUMULATIVE_PROVIDER_SESSION")
 
     def test_import_encoded_bearer_plus_does_not_expose_a_credential_suffix(self) -> None:
-        for marker in ["Bearer prefix+opaque-auth-secret", "Bearer prefix++opaque-auth-secret", "public+topic", "public topic+tail"]:
+        for marker in [
+            "Bearer prefix+opaque-auth-secret",
+            "Bearer prefix++opaque-auth-secret",
+            "public+topic",
+            "public topic+tail",
+        ]:
             for encoding, safe in [(1, ""), (2, ""), (3, ""), (1, "+"), (2, "+"), (3, "+")]:
                 for location in ["path", "query", "fragment", "routed-fragment"]:
                     with self.subTest(marker=marker, encoding=encoding, location=location, safe=safe):
@@ -67,17 +76,22 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                             suffix = "/#note=" + encoded + "&keep=home"
                         elif location == "routed-fragment":
                             suffix = "/#/note/" + encoded + "?keep=home"
-                        authority = "alice:outer-secret@example.invalid" if marker.startswith("Bearer ") else "example.invalid"
+                        authority = (
+                            "alice:outer-secret@example.invalid" if marker.startswith("Bearer ") else "example.invalid"
+                        )
                         text = "before https://" + authority + suffix + " after"
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "encoded-bearer-plus", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "encoded-bearer-plus", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             if not marker.startswith("Bearer "):
                                 self.assertEqual(message, text)
                                 continue
@@ -91,11 +105,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         self.assertEqual(raw, before)
 
     def test_import_redacts_decoded_common_secrets_without_losing_failed_command(self) -> None:
-        markers = [("Bearer opaque-auth-secret", "opaque-auth-secret"),
-                   ("sk-abcdefghijklmnopqrstuv", "abcdefghijklmnopqrstuv"),
-                   ("-----BEGIN " + "PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
-                   ("-----BEGIN " + "PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
-                    "private-key-body")]
+        markers = [
+            ("Bearer opaque-auth-secret", "opaque-auth-secret"),
+            ("sk" + "-abcdefghijklmnopqrstuv", "abcdefghijklmnopqrstuv"),
+            ("-----BEGIN " + "PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
+            (
+                "-----BEGIN "
+                + "PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
+                "private-key-body",
+            ),
+        ]
         for marker, secret in markers:
             for encoding in [1, 2, 3]:
                 for location in ["path", "query", "fragment", "routed-fragment"]:
@@ -114,13 +133,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "encoded-common-secret", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "encoded-common-secret", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             self.assertNotIn(secret, message)
                             self.assertNotIn("outer-secret", message)
                             self.assertIn("keep=home", message)
@@ -149,13 +171,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "decoded-uri-authority", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "decoded-uri-authority", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             for secret in ["first-secret", "second-secret", "outer-secret"]:
                                 self.assertNotIn(secret, message)
                             self.assertIn("keep=home", message)
@@ -184,13 +209,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "decoded-uri-authority", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "decoded-uri-authority", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             for secret in ["first-secret", "second-secret", "outer-secret"]:
                                 self.assertNotIn(secret, message)
                             self.assertIn("keep=home", message)
@@ -219,13 +247,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "decoded-uri-authority", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "decoded-uri-authority", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             for secret in ["first-secret", "second-secret", "outer-secret"]:
                                 self.assertNotIn(secret, message)
                             self.assertIn("keep=home", message)
@@ -236,8 +267,10 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         self.assertEqual(raw, before)
 
     def test_import_redacts_mixed_container_uri_without_losing_failed_command(self) -> None:
-        containers = ['["first-secret","https://safe.invalid/public","second-secret"]',
-                      '{"first":"first-secret","url":"https://safe.invalid/public","second":"second-secret"}']
+        containers = [
+            '["first-secret","https://safe.invalid/public","second-secret"]',
+            '{"first":"first-secret","url":"https://safe.invalid/public","second":"second-secret"}',
+        ]
         for container in containers:
             for encoding in [1, 2, 3]:
                 for location in ["path", "query", "routed-fragment"]:
@@ -255,13 +288,18 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                             text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                             raw = _raw_output()
                             raw["findings"][0]["message"] = text
-                            raw["commandOutcomes"] = [{"commandId": "mixed-container-uri", "status": "FAIL", "exitCode": 7,
-                                                       "stderr": text}]
+                            raw["commandOutcomes"] = [
+                                {"commandId": "mixed-container-uri", "status": "FAIL", "exitCode": 7, "stderr": text}
+                            ]
                             before = deepcopy(raw)
-                            result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                            for message in [result["findings"][0]["message"],
-                                            result["crossCheckReceipt"]["findings"][0]["message"],
-                                            result["commandOutcomes"][0]["stderr"]]:
+                            result = import_review_mesh_result(
+                                profile=profile, assignment=assignment, reviewer_output=raw
+                            )
+                            for message in [
+                                result["findings"][0]["message"],
+                                result["crossCheckReceipt"]["findings"][0]["message"],
+                                result["commandOutcomes"][0]["stderr"],
+                            ]:
                                 for secret in ["first-secret", "second-secret", "outer-secret"]:
                                     self.assertNotIn(secret, message)
                                 self.assertIn("next=home", message)
@@ -272,9 +310,11 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                             self.assertEqual(raw, before)
 
     def test_import_redacts_encoded_sensitive_containers_without_losing_failed_command(self) -> None:
-        containers = ['["first-secret","second-secret"]',
-                      '{"first":"first-secret","second":"second-secret"}',
-                      '["first-secret","https://safe.invalid/public","second-secret"]']
+        containers = [
+            '["first-secret","second-secret"]',
+            '{"first":"first-secret","second":"second-secret"}',
+            '["first-secret","https://safe.invalid/public","second-secret"]',
+        ]
         for container in containers:
             for encoding in [1, 2, 3]:
                 for location in ["path", "query", "routed-fragment"]:
@@ -291,13 +331,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "encoded-container", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "encoded-container", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             for secret in ["first-secret", "second-secret", "outer-secret"]:
                                 self.assertNotIn(secret, message)
                             self.assertIn("next=home", message)
@@ -319,16 +362,24 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         encoded = key + "=plain-secret"
                         literal = "password=second-secret"
                         component = encoded + ";" + literal if order == "encoded-first" else literal + ";" + encoded
-                        text = "before https://alice:outer-secret@example.invalid" + location + component + "&next=home after"
+                        text = (
+                            "before https://alice:outer-secret@example.invalid"
+                            + location
+                            + component
+                            + "&next=home after"
+                        )
                         raw = _raw_output()
                         raw["findings"][0]["message"] = text
-                        raw["commandOutcomes"] = [{"commandId": "mixed-secrets", "status": "FAIL", "exitCode": 7,
-                                                   "stderr": text}]
+                        raw["commandOutcomes"] = [
+                            {"commandId": "mixed-secrets", "status": "FAIL", "exitCode": 7, "stderr": text}
+                        ]
                         before = deepcopy(raw)
                         result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                        for message in [result["findings"][0]["message"],
-                                        result["crossCheckReceipt"]["findings"][0]["message"],
-                                        result["commandOutcomes"][0]["stderr"]]:
+                        for message in [
+                            result["findings"][0]["message"],
+                            result["crossCheckReceipt"]["findings"][0]["message"],
+                            result["commandOutcomes"][0]["stderr"],
+                        ]:
                             for secret in ["plain-secret", "second-secret", "outer-secret"]:
                                 self.assertNotIn(secret, message)
                             self.assertIn("next=home", message)
@@ -346,16 +397,24 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                     key = "%74oken"
                     for _ in range(encoding - 1):
                         key = quote(key, safe="")
-                    text = "before https://alice:outer-secret@example.invalid" + location + key + "=plain-secret&next=home after"
+                    text = (
+                        "before https://alice:outer-secret@example.invalid"
+                        + location
+                        + key
+                        + "=plain-secret&next=home after"
+                    )
                     raw = _raw_output()
                     raw["findings"][0]["message"] = text
-                    raw["commandOutcomes"] = [{"commandId": "encoded-query", "status": "FAIL", "exitCode": 7,
-                                               "stderr": text}]
+                    raw["commandOutcomes"] = [
+                        {"commandId": "encoded-query", "status": "FAIL", "exitCode": 7, "stderr": text}
+                    ]
                     before = deepcopy(raw)
                     result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                    for message in [result["findings"][0]["message"],
-                                    result["crossCheckReceipt"]["findings"][0]["message"],
-                                    result["commandOutcomes"][0]["stderr"]]:
+                    for message in [
+                        result["findings"][0]["message"],
+                        result["crossCheckReceipt"]["findings"][0]["message"],
+                        result["commandOutcomes"][0]["stderr"],
+                    ]:
                         self.assertNotIn("plain-secret", message)
                         self.assertNotIn("outer-secret", message)
                         self.assertIn("next=home", message)
@@ -382,13 +441,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                     text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                     raw = _raw_output()
                     raw["findings"][0]["message"] = text
-                    raw["commandOutcomes"] = [{"commandId": "mixed-url", "status": "FAIL", "exitCode": 7,
-                                               "stderr": text}]
+                    raw["commandOutcomes"] = [
+                        {"commandId": "mixed-url", "status": "FAIL", "exitCode": 7, "stderr": text}
+                    ]
                     before = deepcopy(raw)
                     result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                    for message in [result["findings"][0]["message"],
-                                    result["crossCheckReceipt"]["findings"][0]["message"],
-                                    result["commandOutcomes"][0]["stderr"]]:
+                    for message in [
+                        result["findings"][0]["message"],
+                        result["crossCheckReceipt"]["findings"][0]["message"],
+                        result["commandOutcomes"][0]["stderr"],
+                    ]:
                         self.assertNotIn("inner-secret", message)
                         self.assertNotIn("outer-secret", message)
                         self.assertIn("other.invalid/public", message)
@@ -411,13 +473,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                     text = "before https://alice:outer-secret@example.invalid" + suffix + " after"
                     raw = _raw_output()
                     raw["findings"][0]["message"] = text
-                    raw["commandOutcomes"] = [{"commandId": "nested-path", "status": "FAIL", "exitCode": 7,
-                                               "stderr": text}]
+                    raw["commandOutcomes"] = [
+                        {"commandId": "nested-path", "status": "FAIL", "exitCode": 7, "stderr": text}
+                    ]
                     before = deepcopy(raw)
                     result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                    for message in [result["findings"][0]["message"],
-                                    result["crossCheckReceipt"]["findings"][0]["message"],
-                                    result["commandOutcomes"][0]["stderr"]]:
+                    for message in [
+                        result["findings"][0]["message"],
+                        result["crossCheckReceipt"]["findings"][0]["message"],
+                        result["commandOutcomes"][0]["stderr"],
+                    ]:
                         self.assertNotIn("inner-secret", message)
                         self.assertNotIn("outer-secret", message)
                         self.assertIn("other.invalid/public", message)
@@ -438,13 +503,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                     text = "before https://alice:outer-secret@example.invalid/" + separator + nested + " after"
                     raw = _raw_output()
                     raw["findings"][0]["message"] = text
-                    raw["commandOutcomes"] = [{"commandId": "nested-url", "status": "FAIL", "exitCode": 7,
-                                               "stderr": text}]
+                    raw["commandOutcomes"] = [
+                        {"commandId": "nested-url", "status": "FAIL", "exitCode": 7, "stderr": text}
+                    ]
                     before = deepcopy(raw)
                     result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                    for message in [result["findings"][0]["message"],
-                                    result["crossCheckReceipt"]["findings"][0]["message"],
-                                    result["commandOutcomes"][0]["stderr"]]:
+                    for message in [
+                        result["findings"][0]["message"],
+                        result["crossCheckReceipt"]["findings"][0]["message"],
+                        result["commandOutcomes"][0]["stderr"],
+                    ]:
                         self.assertNotIn("inner-secret", message)
                         self.assertNotIn("outer-secret", message)
                         self.assertIn("other.invalid/public", message)
@@ -517,18 +585,21 @@ class ReviewMeshResultImportTests(unittest.TestCase):
         for key in ["Authorization", "Proxy-Authorization", "proxy_authorization"]:
             with self.subTest(key=key):
                 profile, assignment = _profile_and_assignment()
-                text = ("before " + key + ": AWS4-HMAC-SHA256 "
-                        "Credential=EXAMPLE/20261009/us-east-1/s3/aws4_request, "
-                        "SignedHeaders=host;x-amz-date, Signature=" + "e" * 64 + "; outcome=failed")
+                text = (
+                    "before " + key + ": AWS4-HMAC-SHA256 "
+                    "Credential=EXAMPLE/20261009/us-east-1/s3/aws4_request, "
+                    "SignedHeaders=host;x-amz-date, Signature=" + "e" * 64 + "; outcome=failed"
+                )
                 raw = _raw_output()
                 raw["findings"][0]["message"] = text
-                raw["commandOutcomes"] = [{"commandId": "signed-auth", "status": "FAIL", "exitCode": 7,
-                                           "stderr": text}]
+                raw["commandOutcomes"] = [{"commandId": "signed-auth", "status": "FAIL", "exitCode": 7, "stderr": text}]
                 before = deepcopy(raw)
                 result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                for message in [result["findings"][0]["message"],
-                                result["crossCheckReceipt"]["findings"][0]["message"],
-                                result["commandOutcomes"][0]["stderr"]]:
+                for message in [
+                    result["findings"][0]["message"],
+                    result["crossCheckReceipt"]["findings"][0]["message"],
+                    result["commandOutcomes"][0]["stderr"],
+                ]:
                     self.assertEqual(message, "before " + key + ": [REDACTED]; outcome=failed")
                 self.assertEqual(result["commandOutcomes"][0]["status"], "FAIL")
                 self.assertEqual(result["commandOutcomes"][0]["exitCode"], 7)
@@ -539,17 +610,27 @@ class ReviewMeshResultImportTests(unittest.TestCase):
             for gap in ["\n ", "\r\n ", "\r\n\t", "\t", "\u2003"]:
                 with self.subTest(key=key, gap=gap):
                     profile, assignment = _profile_and_assignment()
-                    text = ("before " + key + ": Digest username*=UTF-8''alice," + gap
-                            + 'nonce="nonce-secret",' + gap + 'response="opaque-auth-secret"; outcome=failed')
+                    text = (
+                        "before "
+                        + key
+                        + ": Digest username*=UTF-8''alice,"
+                        + gap
+                        + 'nonce="nonce-secret",'
+                        + gap
+                        + 'response="opaque-auth-secret"; outcome=failed'
+                    )
                     raw = _raw_output()
                     raw["findings"][0]["message"] = text
-                    raw["commandOutcomes"] = [{"commandId": "folded-auth", "status": "FAIL", "exitCode": 7,
-                                               "stderr": text}]
+                    raw["commandOutcomes"] = [
+                        {"commandId": "folded-auth", "status": "FAIL", "exitCode": 7, "stderr": text}
+                    ]
                     before = deepcopy(raw)
                     result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                    for message in [result["findings"][0]["message"],
-                                    result["crossCheckReceipt"]["findings"][0]["message"],
-                                    result["commandOutcomes"][0]["stderr"]]:
+                    for message in [
+                        result["findings"][0]["message"],
+                        result["crossCheckReceipt"]["findings"][0]["message"],
+                        result["commandOutcomes"][0]["stderr"],
+                    ]:
                         self.assertEqual(message, "before " + key + ": [REDACTED]; outcome=failed")
                     self.assertEqual(result["commandOutcomes"][0]["status"], "FAIL")
                     self.assertEqual(result["commandOutcomes"][0]["exitCode"], 7)
@@ -558,20 +639,26 @@ class ReviewMeshResultImportTests(unittest.TestCase):
     def test_import_authentication_headers_protect_all_outputs_and_bound_metadata(self) -> None:
         credential = "opaque-auth-secret"
         for key in ["Authorization", "Proxy-Authorization", "proxy_authorization"]:
-            for value in ["Basic " + credential, "Negotiate " + credential,
-                          'Digest username="alice", nonce="nonce-secret", response="' + credential + '"']:
+            for value in [
+                "Basic " + credential,
+                "Negotiate " + credential,
+                'Digest username="alice", nonce="nonce-secret", response="' + credential + '"',
+            ]:
                 with self.subTest(key=key, value=value):
                     profile, assignment = _profile_and_assignment()
                     text = "before " + key + ": " + value + "; outcome=failed"
                     raw = _raw_output()
                     raw["findings"][0]["message"] = text
-                    raw["commandOutcomes"] = [{"commandId": "auth-check", "status": "FAIL",
-                                               "exitCode": 7, "stderr": text, key: value}]
+                    raw["commandOutcomes"] = [
+                        {"commandId": "auth-check", "status": "FAIL", "exitCode": 7, "stderr": text, key: value}
+                    ]
                     before = deepcopy(raw)
                     result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                    for message in [result["findings"][0]["message"],
-                                    result["crossCheckReceipt"]["findings"][0]["message"],
-                                    result["commandOutcomes"][0]["stderr"]]:
+                    for message in [
+                        result["findings"][0]["message"],
+                        result["crossCheckReceipt"]["findings"][0]["message"],
+                        result["commandOutcomes"][0]["stderr"],
+                    ]:
                         self.assertNotIn(credential, message)
                         self.assertNotIn("nonce-secret", message)
                         self.assertIn("before ", message)
@@ -597,13 +684,16 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                 text = "before " + header + credential + "; outcome=failed"
                 raw = _raw_output()
                 raw["findings"][0]["message"] = text
-                raw["commandOutcomes"] = [{"commandId": "basic-auth-check", "status": "FAIL",
-                                           "exitCode": 7, "stderr": text}]
+                raw["commandOutcomes"] = [
+                    {"commandId": "basic-auth-check", "status": "FAIL", "exitCode": 7, "stderr": text}
+                ]
                 before = deepcopy(raw)
                 result = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
-                messages = [result["findings"][0]["message"],
-                            result["crossCheckReceipt"]["findings"][0]["message"],
-                            result["commandOutcomes"][0]["stderr"]]
+                messages = [
+                    result["findings"][0]["message"],
+                    result["crossCheckReceipt"]["findings"][0]["message"],
+                    result["commandOutcomes"][0]["stderr"],
+                ]
                 for message in messages:
                     self.assertNotIn(credential, message)
                     self.assertIn("before ", message)
@@ -638,7 +728,10 @@ class ReviewMeshResultImportTests(unittest.TestCase):
     def test_numeric_result_validator_requires_declared_nonempty_string_phase(self) -> None:
         profile, assignment = _profile_and_assignment()
         original = build_review_mesh_result(
-            profile=profile, assignment=assignment, budget_usage=_raw_output()["budgetUsage"], status="FAIL",
+            profile=profile,
+            assignment=assignment,
+            budget_usage=_raw_output()["budgetUsage"],
+            status="FAIL",
         )
         self.assertEqual(validate_review_mesh_result(original, profile=profile)["status"], "PASS")
         for mutation in ["ABSENT", "", None, False, 1, [], {}]:
@@ -656,7 +749,9 @@ class ReviewMeshResultImportTests(unittest.TestCase):
     def test_bound_profile_reviewer_class_applies_to_assignment_result_and_import(self) -> None:
         profile = build_review_mesh_profile(reviewer_model_classes=["specialist-review"], independence_required=False)
         assignment = build_review_mesh_assignment(
-            profile=profile, assignment_id="RM-specialist-only", subject={"taskId": "TASK-1"},
+            profile=profile,
+            assignment_id="RM-specialist-only",
+            subject={"taskId": "TASK-1"},
             reviewer={"role": "reviewer", "modelClass": "specialist-review"},
         )
         self.assertEqual(validate_review_mesh_assignment(assignment, profile=profile)["status"], "PASS")
@@ -679,10 +774,12 @@ class ReviewMeshResultImportTests(unittest.TestCase):
         self.assertIn("review-mesh-result-reviewer-class-not-profile", {r["code"] for r in validation["blockers"]})
 
     def test_import_redacts_every_serialized_sensitive_container_member(self) -> None:
-        for value in ['["first-secret","second-secret"]',
-                      '{"first":"first-secret","nested":["second-secret"]}',
-                      '["first-secret",\n"second-secret"]',
-                      '["first-secret", "second-secret"']:
+        for value in [
+            '["first-secret","second-secret"]',
+            '{"first":"first-secret","nested":["second-secret"]}',
+            '["first-secret",\n"second-secret"]',
+            '["first-secret", "second-secret"',
+        ]:
             with self.subTest(value=value):
                 profile, assignment = _profile_and_assignment()
                 raw = _raw_output()
@@ -697,11 +794,21 @@ class ReviewMeshResultImportTests(unittest.TestCase):
     def test_numeric_import_independence_relabel_never_validates_or_projects_as_proven(self) -> None:
         profile = build_review_mesh_profile(independence_required=True)
         assignment = build_review_mesh_assignment(
-            profile=profile, assignment_id="RM-relabel-import",
-            subject={"taskId": "TASK-1", "reviewMeshBlockingOptIn": True,
-                     "hostIdentityHash": "a" * 64, "modelIdentityHash": "b" * 64},
-            reviewer={"role": "reviewer", "modelClass": "strong-reasoning",
-                      "hostIdentityHash": "c" * 64, "modelIdentityHash": "d" * 64}, blocking=True,
+            profile=profile,
+            assignment_id="RM-relabel-import",
+            subject={
+                "taskId": "TASK-1",
+                "reviewMeshBlockingOptIn": True,
+                "hostIdentityHash": "a" * 64,
+                "modelIdentityHash": "b" * 64,
+            },
+            reviewer={
+                "role": "reviewer",
+                "modelClass": "strong-reasoning",
+                "hostIdentityHash": "c" * 64,
+                "modelIdentityHash": "d" * 64,
+            },
+            blocking=True,
         )
         raw = {**_raw_output(), "status": "PASS", "findings": []}
         original = import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
@@ -720,11 +827,17 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                     _repair_result_digests(result)
                     validation = validate_review_mesh_result(result, profile=profile)
                     self.assertEqual(validation["status"], "FAIL")
-                    self.assertIn("review-mesh-result-import-independence-not-proven",
-                                  {item["code"] for item in validation["blockers"]})
+                    self.assertIn(
+                        "review-mesh-result-import-independence-not-proven",
+                        {item["code"] for item in validation["blockers"]},
+                    )
                     self.assertEqual(project_review_result_for_optimization(result)["independenceStatus"], "NOT_PROVEN")
         ordinary = build_review_mesh_result(
-            profile=profile, assignment=assignment, budget_usage=raw["budgetUsage"], status="PASS", findings=[],
+            profile=profile,
+            assignment=assignment,
+            budget_usage=raw["budgetUsage"],
+            status="PASS",
+            findings=[],
         )
         self.assertEqual(validate_review_mesh_result(ordinary, profile=profile)["status"], "PASS")
         self.assertEqual(project_review_result_for_optimization(ordinary)["independenceStatus"], "INDEPENDENT")
@@ -745,8 +858,10 @@ class ReviewMeshResultImportTests(unittest.TestCase):
 
     def test_import_rejects_contradictory_bound_assignment_identities(self) -> None:
         for key, subject_value, top_value in [
-            ("taskId", "TASK-1", "TASK-2"), ("attempt", 1, True),
-            ("planRevision", 1, 1.0), ("sourceDigest", "a" * 64, "b" * 64),
+            ("taskId", "TASK-1", "TASK-2"),
+            ("attempt", 1, True),
+            ("planRevision", 1, 1.0),
+            ("sourceDigest", "a" * 64, "b" * 64),
         ]:
             for provide_bindings in [False, True]:
                 with self.subTest(key=key, provide_bindings=provide_bindings):
@@ -776,9 +891,11 @@ class ReviewMeshResultImportTests(unittest.TestCase):
         self.assertEqual(result["subject"]["taskId"], result["import"]["bindings"]["taskId"])
 
     def test_import_redacts_nested_string_assignments_in_both_finding_copies(self) -> None:
-        for text in ['payload={"api_key":"plain-secret"}',
-                     'outer={"payload":{"db_token":"plain-secret"}}',
-                     r'payload="{\"api_key\":\"plain secret\"}"']:
+        for text in [
+            'payload={"api_key":"plain-secret"}',
+            'outer={"payload":{"db_token":"plain-secret"}}',
+            r'payload="{\"api_key\":\"plain secret\"}"',
+        ]:
             with self.subTest(text=text):
                 profile, assignment = _profile_and_assignment()
                 raw = _raw_output()
@@ -804,7 +921,10 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                     import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=raw)
                 self.assertEqual(error.exception.code, "review-mesh-local-path-leakage")
                 result = import_review_mesh_result(
-                    profile=profile, assignment=assignment, reviewer_output=raw, allow_local_evidence_refs=True,
+                    profile=profile,
+                    assignment=assignment,
+                    reviewer_output=raw,
+                    allow_local_evidence_refs=True,
                 )
                 self.assertEqual(result["findings"][0]["message"], "[LOCAL_PATH]")
                 self.assertEqual(result["crossCheckReceipt"]["findings"][0]["message"], "[LOCAL_PATH]")
@@ -824,7 +944,9 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         before = deepcopy(assignment)
                         with self.assertRaises(LifecycleError) as error:
                             import_review_mesh_result(
-                                profile=profile, assignment=assignment, reviewer_output=_raw_output(),
+                                profile=profile,
+                                assignment=assignment,
+                                reviewer_output=_raw_output(),
                                 allow_local_evidence_refs=allow_local,
                             )
                         self.assertNotIn(text, str(error.exception))
@@ -985,7 +1107,11 @@ class ReviewMeshResultImportTests(unittest.TestCase):
                         import_review_mesh_result(profile=profile, assignment=assignment, reviewer_output=_raw_output())
 
     def test_import_rejects_unsafe_dictionary_keys_without_colliding_fields(self) -> None:
-        for key in ["api_key=plain-secret", "/" + "Users/example/private.txt", "https://[invalid/?api_key=plain-secret"]:
+        for key in [
+            "api_key=plain-secret",
+            "/" + "Users/example/private.txt",
+            "https://[invalid/?api_key=plain-secret",
+        ]:
             for allow_local in [False, True]:
                 with self.subTest(key=key, allow_local=allow_local):
                     profile, assignment = _profile_and_assignment()

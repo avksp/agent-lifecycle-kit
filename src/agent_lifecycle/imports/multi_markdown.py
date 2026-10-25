@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
-from itertools import islice
+import os
+import stat
+import time
+from collections.abc import Callable
+from fnmatch import fnmatch
+from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
-from agent_lifecycle.contracts.authority_io import open_authority_read
+from agent_lifecycle.contracts.authority_io import hold_authority_directory, open_authority_read
 from agent_lifecycle.imports.planning import (
     DEFAULT_MAX_INPUT_BYTES,
     DEFAULT_TARGET_TOKENS,
@@ -17,6 +22,11 @@ from agent_lifecycle.imports.planning import (
 
 MARKDOWN_COLLECTION_SCHEMA = "agent-markdown-source-collection.v1"
 DEFAULT_MAX_MARKDOWN_FILES = 32
+_MAX_DISCOVERY_ENTRIES = 4096
+_MAX_DISCOVERY_DIRECTORIES = 256
+_MAX_DISCOVERY_DEPTH = 32
+_DISCOVERY_SECONDS = 5.0
+_T = TypeVar("_T")
 
 
 def import_markdown_collection(
@@ -109,14 +119,115 @@ def collect_markdown_collection(
 
 
 def _collection_files(source_path: Path, *, max_files: int) -> tuple[list[Path], Path, str]:
-    if source_path.is_symlink():
-        raise LifecycleError("authority-input-not-regular", "import source must not be a symlink")
-    if source_path.is_file():
-        return [source_path], source_path.parent, "file"
-    if source_path.is_dir():
-        candidates = (path for path in source_path.rglob("*.md") if path.is_file() or path.is_symlink())
-        return list(islice(candidates, max_files + 1)), source_path, "directory"
-    return [], source_path.parent, "missing"
+    discovery = _MarkdownDiscovery(max_files)
+    try:
+        try:
+            info = discovery.operation(source_path.lstat)
+        except FileNotFoundError:
+            return [], source_path.parent, "missing"
+        _require_unlinked(info)
+        if stat.S_ISREG(info.st_mode):
+            return [source_path], source_path.parent, "file"
+        if stat.S_ISDIR(info.st_mode):
+            return discovery.collect(source_path, info), source_path, "directory"
+        return [], source_path.parent, "missing"
+    except OSError:
+        raise LifecycleError(
+            "markdown-collection-discovery-unavailable", "Markdown discovery metadata or directory is unavailable"
+        ) from None
+
+
+def _require_unlinked(info: os.stat_result) -> None:
+    if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+        raise LifecycleError(
+            "authority-input-not-regular", "Markdown discovery must not traverse links or reparse points"
+        )
+
+
+class _MarkdownDiscovery:
+    """Count all directory entries, with cooperative checks around filesystem I/O."""
+
+    def __init__(self, max_files: int) -> None:
+        self.max_files = max_files
+        self.deadline = time.monotonic() + _DISCOVERY_SECONDS
+        self.entries = 0
+        self.directories = 1  # The source directory is depth zero and counts toward the cap.
+        self.files: list[Path] = []
+        self.pending: list[tuple[Path, int, os.stat_result]] = []
+
+    def check(self) -> None:
+        if time.monotonic() >= self.deadline:
+            self.exceeded("seconds", _DISCOVERY_SECONDS)
+
+    def exceeded(self, limit: str, cap: int | float) -> None:
+        raise LifecycleError(
+            "markdown-collection-discovery-limit-exceeded",
+            "Markdown discovery exceeded its cooperative resource limit",
+            {"limit": limit, "cap": cap},
+        )
+
+    def operation(self, action: Callable[[], _T]) -> _T:
+        self.check()
+        try:
+            return action()
+        finally:
+            self.check()
+
+    def collect(self, root: Path, info: os.stat_result) -> list[Path]:
+        self.pending.append((root, 0, info))
+        while self.pending and len(self.files) <= self.max_files:
+            self.scan(*self.pending.pop())
+        return self.files
+
+    def scan(self, path: Path, depth: int, expected: os.stat_result) -> None:
+        self.check()
+        # Reopen one guarded directory at a time: the queue retains identities,
+        # never thousands of ancestor descriptors. The guard validates bindings
+        # on exit; fd-based scandir stays attached to the held POSIX directory.
+        with hold_authority_directory(path) as directory:
+            self.check()
+            if directory.fd is None:
+                actual = self.operation(directory.path.lstat)
+            else:
+                descriptor = directory.fd
+                actual = self.operation(lambda: os.fstat(descriptor))
+            expected_identity = (expected.st_dev, expected.st_ino, expected.st_mode)
+            actual_identity = (actual.st_dev, actual.st_ino, actual.st_mode)
+            if expected_identity != actual_identity:
+                raise LifecycleError("authority-input-changed", "authority input changed during I/O")
+            self.check()
+            with os.scandir(directory.fd if directory.fd is not None else directory.path) as entries:
+                self.check()
+                while len(self.files) <= self.max_files:
+                    try:
+                        entry = self.operation(lambda: next(entries))
+                    except StopIteration:
+                        break
+                    if self.entries >= _MAX_DISCOVERY_ENTRIES:
+                        # A sentinel detects overflow; do not inspect its metadata.
+                        self.exceeded("entries", _MAX_DISCOVERY_ENTRIES)
+                    self.entries += 1
+                    # DirEntry.stat caches metadata and has zero identity fields
+                    # on Windows 3.11. Use the held directory's fresh no-follow stat.
+                    info = self.operation(partial(directory.stat_child, entry.name))
+                    self.visit(path / entry.name, depth, info)
+                self.check()
+            self.check()
+        self.check()
+
+    def visit(self, path: Path, depth: int, info: os.stat_result) -> None:
+        _require_unlinked(info)
+        if stat.S_ISDIR(info.st_mode):
+            if depth >= _MAX_DISCOVERY_DEPTH:
+                self.exceeded("depth", _MAX_DISCOVERY_DEPTH)
+            if self.directories >= _MAX_DISCOVERY_DIRECTORIES:
+                self.exceeded("directories", _MAX_DISCOVERY_DIRECTORIES)
+            self.directories += 1
+            self.pending.append((path, depth + 1, info))
+        elif fnmatch(path.name, "*.md"):
+            if not stat.S_ISREG(info.st_mode):
+                raise LifecycleError("authority-input-not-regular", "Markdown input must be a regular file")
+            self.files.append(path)
 
 
 def _decode_markdown(data: bytes, label: str, blockers: list[dict[str, Any]]) -> str:

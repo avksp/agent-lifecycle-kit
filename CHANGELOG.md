@@ -4,6 +4,18 @@
 
 - No changes yet.
 
+## 2.26.0 - 2026-10-25
+
+- Bound Markdown discovery by all examined entries, directories, depth and a
+  cooperative deadline. Refuse unsafe or changed directory identities while
+  preserving file/byte caps, lexical ordering and draft-only import authority.
+- Reuse recognized bare-token families in tracked-source security checks.
+  Preserve existing marker/path rules and exact synthetic fixture values.
+- Separate combined and statement coverage floors at 76 percent. Validate
+  numeric counts and report branch coverage; retain legacy aggregate semantics.
+- Correct English/Russian typing and security control maps. Keep unavailable
+  provider usage null, current host limits and independent release gates.
+
 ## 2.25.0 - 2026-10-24
 
 - Reject recognized secrets before planning-import output and bound security

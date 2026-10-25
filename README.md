@@ -19,7 +19,7 @@ ALK provides a verifiable finish for external-agent work with proportionate cont
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md). Release 2.23 adds [compact S0/S1 authoring](docs/reference/tier-proportional-plan-packages.md) with explicit checklist completion and unchanged approval gates. Release 2.22 adds [conservative plan-review reuse](docs/reference/conservative-delta-review.md) with independent current applicability and no automatic full reruns. Release 2.21 adds [command accounting, bounded preparation and response recovery](docs/reference/source-native-workflow-accounting.md). Release 2.20 adds [target-bound initialization](docs/reference/cli.md#release-220-composed-initialization-and-digest-display), [bounded local continuation](docs/reference/workflow-continuation.md) and batched Git snapshots. Release 2.19 adds [safe artifact authoring and planning preflight](docs/reference/safe-artifact-authoring.md), [bounded review handoff](docs/reference/review-mesh.md#bounded-review-handoff) and thin skills with complete references. Release 2.18 bounds process/Git diagnostics, hardens signing and distinguishes OpenCode 1.x/2.x compatibility ([adapter notes](docs/adapters/opencode.md)); 2.17 strengthens [workflow validation and recovery](docs/reference/workflow-completeness.md). Release 2.16 introduced cumulative accounting within verified host capabilities; see [retention maintenance](docs/operations/retention-maintenance.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.25.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
+It includes macOS, Linux and Windows instructions, Python 3.11-3.14, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.26.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
 
 For a quick start, run:
 
@@ -172,9 +172,9 @@ Adapter installation and support-level details live in [Adapter install](docs/ad
 - Release assets: [Task templates](templates/tasks/README.md), [Neutrality scanning](docs/reference/neutrality.md), and [Release security](docs/security/release-security.md).
 Apache-2.0. See [LICENSE](LICENSE).
 
-## Release 2.25: focused security and maintainability
+## Release 2.26: bounded discovery and precise quality gates
 
-Release 2.25 hardens sensitive imports and launcher checks, repairs named ownership seams, and checks untyped Python function bodies with mypy. See the [current security
-controls](docs/security/release-security.md) and [architecture map](docs/architecture/system-architecture.md). The [staged reading
-pilot](docs/guides/controlled-technical-english.md) preserves full references and approval gates; byte/word measurements do not prove token savings. Existing OpenCode 1.x/2.x
-qualification and unsupported host routes remain unchanged. Local preparation, exact-candidate CI, native final proof and public publication are separate gates.
+Markdown imports bound examined entries, directories, depth and cooperative elapsed time; see the [security control map](docs/security/release-security.md). Tracked-source checks
+reuse the existing bare-token families. [Quality controls](docs/architecture/system-architecture.md)
+require both combined and statement coverage of 76 percent and retain legacy policy interpretation. The existing [reading pilot](docs/guides/controlled-technical-english.md) and host limits
+remain; measurements do not establish token savings or host enforcement.

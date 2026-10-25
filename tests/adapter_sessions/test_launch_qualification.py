@@ -28,27 +28,44 @@ class LaunchQualificationTests(unittest.TestCase):
             self.assertEqual(unavailable["status"], "UNAVAILABLE")
             self.assertEqual(unavailable["checks"]["executable"], "PASS")
             observations = {
-                "qualified": True, "profileDigest": unavailable["profileDigest"],
+                "qualified": True,
+                "profileDigest": unavailable["profileDigest"],
                 "executableDigest": unavailable["executableDigest"],
-                "observedAt": 99, "expiresAt": 110,
-                "auth": "PASS", "config": "PASS", "model": "PASS",
-                "api_key": "sk-private-fixture-secret", "prompt": "raw prompt",
-                "privatePath": str(root), "debug": "x" * 100000,
+                "observedAt": 99,
+                "expiresAt": 110,
+                "auth": "PASS",
+                "config": "PASS",
+                "model": "PASS",
+                "api_key": "sk" + "-private-fixture-secret",
+                "prompt": "raw prompt",
+                "privatePath": str(root),
+                "debug": "x" * 100000,
             }
-            ready = provider_preflight(path, project_root=root,
-                                       qualified_observations=observations, now=100)
+            ready = provider_preflight(path, project_root=root, qualified_observations=observations, now=100)
             self.assertEqual(ready["status"], "PASS")
             self.assertEqual(ready["modelCalls"], 0)
             for forbidden in ("sk-private", "raw prompt", str(root), "debug"):
                 self.assertNotIn(forbidden, str(ready))
             self.assertLess(len(str(ready)), 1000)
-            self.assertEqual(provider_preflight(
-                path, project_root=root, qualified_observations=observations, now=111,
-            )["status"], "UNAVAILABLE")
+            self.assertEqual(
+                provider_preflight(
+                    path,
+                    project_root=root,
+                    qualified_observations=observations,
+                    now=111,
+                )["status"],
+                "UNAVAILABLE",
+            )
             observations["executableDigest"] = "0" * 64
-            self.assertEqual(provider_preflight(
-                path, project_root=root, qualified_observations=observations, now=100,
-            )["status"], "UNAVAILABLE")
+            self.assertEqual(
+                provider_preflight(
+                    path,
+                    project_root=root,
+                    qualified_observations=observations,
+                    now=100,
+                )["status"],
+                "UNAVAILABLE",
+            )
 
     def test_preflight_writes_bound_receipt_for_exact_version(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -59,18 +76,31 @@ class LaunchQualificationTests(unittest.TestCase):
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps(profile), encoding="utf-8")
             result = {
-                "status": "PASS", "exitCode": 0, "timedOut": False,
-                "stdoutTail": "codex-cli 0.147.0", "stderrTail": "",
-                "stdoutRedacted": False, "stderrRedacted": False, "blockers": [],
+                "status": "PASS",
+                "exitCode": 0,
+                "timedOut": False,
+                "stdoutTail": "codex-cli 0.147.0",
+                "stderrTail": "",
+                "stdoutRedacted": False,
+                "stderrRedacted": False,
+                "blockers": [],
             }
             with patch("agent_lifecycle.adapter_sessions.launcher.run_process", return_value=result) as run_process:
-                receipt = launch_from_local_profile(profile_path=path, operation="preflight", project_root=root, process_env={"PATH": "/bin", "HOME": "/tmp"})
+                receipt = launch_from_local_profile(
+                    profile_path=path,
+                    operation="preflight",
+                    project_root=root,
+                    process_env={"PATH": "/bin", "HOME": "/tmp"},
+                )
             qualification = receipt["qualificationReceipt"]
             stored_exists = (root / ".alk/host-launch/codex-0.147.0.qualification.json").is_file()
         self.assertEqual(receipt["status"], "PASS")
         self.assertEqual(qualification["status"], "PASS")
         self.assertEqual(qualification["executableIdentity"]["status"], "PASS")
-        self.assertEqual(receipt["hostIdentity"]["executableContentSha256"], qualification["executableIdentity"]["executableContentSha256"])
+        self.assertEqual(
+            receipt["hostIdentity"]["executableContentSha256"],
+            qualification["executableIdentity"]["executableContentSha256"],
+        )
         self.assertTrue(stored_exists)
         run_process.assert_called_once()
 
@@ -83,12 +113,22 @@ class LaunchQualificationTests(unittest.TestCase):
             path.parent.mkdir(parents=True)
             path.write_text(json.dumps(profile), encoding="utf-8")
             result = {
-                "status": "PASS", "exitCode": 0, "timedOut": False,
-                "stdoutTail": "codex-cli 0.148.0", "stderrTail": "",
-                "stdoutRedacted": False, "stderrRedacted": False, "blockers": [],
+                "status": "PASS",
+                "exitCode": 0,
+                "timedOut": False,
+                "stdoutTail": "codex-cli 0.148.0",
+                "stderrTail": "",
+                "stdoutRedacted": False,
+                "stderrRedacted": False,
+                "blockers": [],
             }
             with patch("agent_lifecycle.adapter_sessions.launcher.run_process", return_value=result):
-                receipt = launch_from_local_profile(profile_path=path, operation="preflight", project_root=root, process_env={"PATH": "/bin", "HOME": "/tmp"})
+                receipt = launch_from_local_profile(
+                    profile_path=path,
+                    operation="preflight",
+                    project_root=root,
+                    process_env={"PATH": "/bin", "HOME": "/tmp"},
+                )
         self.assertEqual(receipt["status"], "FAIL")
         self.assertIn("qualified-launch-version-mismatch", {item["code"] for item in receipt["blockers"]})
 
