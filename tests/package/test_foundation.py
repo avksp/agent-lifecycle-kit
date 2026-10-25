@@ -19,7 +19,7 @@ class FoundationTests(unittest.TestCase):
         project = pyproject["project"]
         self.assertEqual(project["name"], "agent-lifecycle-kit")
         self.assertRegex(project["version"], r"^[0-9]+\.[0-9]+\.[0-9]+$")
-        self.assertEqual(project["requires-python"], ">=3.11,<3.15")
+        self.assertEqual(project["requires-python"], ">=3.11,<3.16")
         self.assertEqual(project["license"]["text"], "Apache-2.0")
         self.assertEqual(project["dependencies"], [])
         self.assertIn("Development Status :: 5 - Production/Stable", project["classifiers"])
@@ -73,7 +73,7 @@ class FoundationTests(unittest.TestCase):
     def test_uv_lock_declares_runtime_graph(self) -> None:
         lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
         self.assertEqual(lock["version"], 1)
-        self.assertEqual(lock["requires-python"], ">=3.11, <3.15")
+        self.assertEqual(lock["requires-python"], ">=3.11, <3.16")
         packages = {package["name"]: package for package in lock["package"]}
         self.assertIn("agent-lifecycle-kit", packages)
         project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))

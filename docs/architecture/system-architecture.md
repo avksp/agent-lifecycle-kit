@@ -1184,3 +1184,6 @@ probe is not platform qualification. The fresh-constructor test shares one
 admission-deadline refusal with `NOT_STARTED` can be retried there; the production
 1-second admission limit and negative refusal checks remain unchanged. The
 previous Windows holder/scheduler and sync-error causes remain unproven.
+
+`JournalHandle` retains the wider `_JournalStoragePort` composition contract;
+financial rules receive only `_FinancialTransactionPort`.
