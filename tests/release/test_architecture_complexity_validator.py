@@ -497,3 +497,53 @@ class SemanticFingerprintPortabilityTests(unittest.TestCase):
         policy["branchBaseline"] = []
         policy["branchBaselineDigest"] = canonical_digest([])
         self.assertTrue(branch_findings([original], policy))
+
+    def test_eager_import_flag_preserves_accepted_fingerprints(self):
+        import ast
+
+        from agent_lifecycle.quality.architecture_policy import semantic_fingerprint
+
+        # Captured from the accepted pre-3.15-field canonical serializer.
+        cases = (
+            (
+                "def f():\n    import os\n    return os.name\n",
+                "2ad991006b44b6e0ee9fb623990844b83f5a9e5296a73b1bd4cf71ef46abd746",
+            ),
+            (
+                "def f():\n    from os import path\n    return path\n",
+                "c011421bac42f77c4d87ab05f9979182b3bbfea2420404672f856514013ecfae",
+            ),
+        )
+        for source, expected in cases:
+            node = ast.parse(source).body[0]
+            statement = node.body[0]
+            if "is_lazy" not in statement._fields:
+                statement._fields = (*statement._fields, "is_lazy")
+            statement.is_lazy = 0
+            self.assertEqual(semantic_fingerprint(node), expected)
+            for flag in (1, 2, False, 0.0, "0"):
+                with self.subTest(source=source, flag=flag):
+                    statement.is_lazy = flag
+                    self.assertNotEqual(semantic_fingerprint(node), expected)
+
+    def test_eager_default_normalization_keeps_unknown_and_nonimport_zero_fields(self):
+        import ast
+
+        from agent_lifecycle.quality.architecture_policy import _canonical_ast_dump, semantic_fingerprint
+
+        node = ast.parse("def f():\n    import os\n    return os.name\n").body[0]
+        statement = node.body[0]
+        if "is_lazy" not in statement._fields:
+            statement._fields = (*statement._fields, "is_lazy")
+        statement.is_lazy = 0
+        before = semantic_fingerprint(node)
+        statement._fields = (*statement._fields, "future_field")
+        statement.future_field = 0
+        self.assertIn("future_field=0", _canonical_ast_dump(statement))
+        self.assertNotEqual(semantic_fingerprint(node), before)
+        other = ast.parse("def f():\n    return 1\n").body[0]
+        before = semantic_fingerprint(other)
+        other._fields = (*other._fields, "is_lazy")
+        other.is_lazy = 0
+        self.assertIn("is_lazy=0", _canonical_ast_dump(other))
+        self.assertNotEqual(semantic_fingerprint(other), before)

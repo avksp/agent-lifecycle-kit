@@ -1187,3 +1187,7 @@ previous Windows holder/scheduler and sync-error causes remain unproven.
 
 `JournalHandle` retains the wider `_JournalStoragePort` composition contract;
 financial rules receive only `_FinancialTransactionPort`.
+
+For Python 3.15, the fingerprint serializer omits only the known integer
+`is_lazy=0` field on eager import nodes. Nonzero flags, fields on other node
+types and unknown future fields remain. Baseline hashes and limits are unchanged.

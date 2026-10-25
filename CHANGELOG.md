@@ -6,6 +6,9 @@
 
 ## 2.27.0 - 2026-10-25
 
+- Preserve accepted AST fingerprints for Python 3.15 eager-import `is_lazy=0`;
+  retain nonzero flags and unknown fields, with no branch baseline rewrite.
+
 - Use one compatible private-file reader for declared-ledger and Codex input
   consumers, retaining their error codes, mode rules and Windows boundary.
 - Give reservation/claim rules a narrow financial capability contract. The
