@@ -83,7 +83,17 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
         self.assertNotIn("exclude", config)
         self.assertNotIn("follow_imports", config)
         self.assertNotIn("ignore_errors", config)
+        self.assertIs(config["check_untyped_defs"], True)
+        self.assertGreaterEqual(policy["coverage"]["minimumCombinedPercent"], 76.0)
         self.assertGreaterEqual(policy["coverage"]["minimumStatementLinePercent"], 76.0)
+        for name in ("docs/architecture/system-architecture.md", "docs/ru/architecture/system-architecture.md"):
+            document = (ROOT / name).read_text(encoding="utf-8")
+            for term in (
+                "check_untyped_defs = true",
+                "minimumCombinedPercent = 76",
+                "minimumStatementLinePercent = 76",
+            ):
+                self.assertIn(term, document)
 
     def test_cookbook_review_apply_examples_parse_and_invalid_result_refuses(self) -> None:
         parser = build_parser()

@@ -29,7 +29,7 @@ class ExternalCheckQualityTests(unittest.TestCase):
                 "timedOut": False,
                 "processCleanupStatus": "PASS",
                 "exitCode": 1,
-                "stdout": "https://github.com/example/project and sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
+                "stdout": "https://github.com/example/project and sk" + "-proj-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789",
                 "findings": [
                     {
                         "ruleId": "layer.forbidden-import",

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "agent-python-quality-policy.v1",
-  "revision": 4,
+  "revision": 5,
   "toolchain": {
     "ruff": "0.17.1",
     "mypy": "2.4.0",
@@ -3307,6 +3307,7 @@
     "baseline": []
   },
   "coverage": {
+    "minimumCombinedPercent": 76.0,
     "minimumStatementLinePercent": 76.0,
     "baseline": {
       "sourceRevision": "f05f77ab9a33dfbff52e877582a4dac351005b42",

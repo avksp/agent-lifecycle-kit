@@ -26,22 +26,28 @@ class AuditSampleTests(unittest.TestCase):
                 "packageId": "package",
                 "taskId": "task-1",
                 "taskShape": "feature",
-                "prompt": "Requirements: do the work\nSecret: sk-abcdefghijklmnopqrstuv",
+                "prompt": "Requirements: do the work\nSecret: sk" + "-abcdefghijklmnopqrstuv",
                 "provider": "private-provider",
                 "modelName": "private-model",
                 "status": "PASS",
-                "usage": {"inputTokens": 100, "outputTokens": 20, "billableTokens": 120, "wallSeconds": 4, "toolCalls": 2},
+                "usage": {
+                    "inputTokens": 100,
+                    "outputTokens": 20,
+                    "billableTokens": 120,
+                    "wallSeconds": 4,
+                    "toolCalls": 2,
+                },
             }
         )
 
         self.assertEqual(
             sample["request"]["promptBytes"],
-            len(b"Requirements: do the work\nSecret: sk-abcdefghijklmnopqrstuv"),
+            len(b"Requirements: do the work\nSecret: sk" + b"-abcdefghijklmnopqrstuv"),
         )
         self.assertTrue(sample["request"]["sectionFlags"]["requirements"])
         self.assertNotIn("Requirements: do the work", str(sample))
         self.assertNotIn("private-provider", str(sample))
-        self.assertNotIn("sk-abcdefghijklmnopqrstuv", str(sample))
+        self.assertNotIn("sk" + "-abcdefghijklmnopqrstuv", str(sample))
         self.assertFalse(sample["rawPromptStored"])
         self.assertEqual(sample["statisticalProvenance"]["sampleIdentity"], sample["sampleId"])
         self.assertEqual(sample["statisticalProvenance"]["sourceClass"], "UNDECLARED")
@@ -65,7 +71,13 @@ class AuditSampleTests(unittest.TestCase):
             },
             "usageReceipt": {
                 "schemaVersion": "agent-lifecycle-model-usage-receipt.v1",
-                "usage": {"inputTokens": 40, "outputTokens": 10, "billableTokens": 50, "wallSeconds": 3, "toolCalls": 1},
+                "usage": {
+                    "inputTokens": 40,
+                    "outputTokens": 10,
+                    "billableTokens": 50,
+                    "wallSeconds": 3,
+                    "toolCalls": 1,
+                },
                 "attestation": {"status": "ATTESTED"},
             },
             "processReceipt": {

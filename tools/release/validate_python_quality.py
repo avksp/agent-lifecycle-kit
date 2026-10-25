@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from collections import Counter
 from pathlib import Path
@@ -35,7 +36,7 @@ def validate_quality(
         blockers.extend(_validate_policy(policy))
         run = _read_object(run_receipt_path)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        body = _body(blockers + [{"code": "quality-input-invalid", "message": str(exc)}])
+        body = _body([*blockers, {"code": "quality-input-invalid", "message": str(exc)}])
         return {**body, "validationDigest": digest_value(body)}
 
     if run.get("schemaVersion") != "agent-python-quality-run.v1":
@@ -86,18 +87,22 @@ def validate_quality(
     )
 
     coverage_path = _artifact_path(repository_root, run, "coverage")
-    blockers.extend(_validate_coverage(policy, coverage_path))
+    coverage_metrics: dict[str, Any] = {}
+    blockers.extend(_validate_coverage(policy, coverage_path, metrics=coverage_metrics))
     blockers.extend(_validate_intentional_findings(policy, ruff, repository_root))
     body = _body(blockers)
-    body.update({
-        "changedPaths": sorted(changed_paths),
-        "runDigest": run.get("runDigest"),
-        "summary": {
-            "ruffCorrectness": len(_safe_json_findings(_artifact_path(repository_root, run, "ruffCorrectness"))),
-            "ruffMigration": len(_safe_json_findings(_artifact_path(repository_root, run, "ruffMigration"))),
-            "mypy": sum(mypy_current.values()),
-        },
-    })
+    body.update(
+        {
+            "changedPaths": sorted(changed_paths),
+            "runDigest": run.get("runDigest"),
+            "summary": {
+                "ruffCorrectness": len(_safe_json_findings(_artifact_path(repository_root, run, "ruffCorrectness"))),
+                "ruffMigration": len(_safe_json_findings(_artifact_path(repository_root, run, "ruffMigration"))),
+                "mypy": sum(mypy_current.values()),
+                "coverage": coverage_metrics,
+            },
+        }
+    )
     return {**body, "validationDigest": digest_value(body)}
 
 
@@ -105,16 +110,33 @@ def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
     blockers: list[dict[str, Any]] = []
     if policy.get("schemaVersion") != POLICY_SCHEMA:
         blockers.append({"code": "quality-policy-schema-invalid"})
-    allowed = {"schemaVersion", "revision", "toolchain", "ruff", "mypy", "coverage", "limits", "productionPromotionClaimed"}
+    allowed = {
+        "schemaVersion",
+        "revision",
+        "toolchain",
+        "ruff",
+        "mypy",
+        "coverage",
+        "limits",
+        "productionPromotionClaimed",
+    }
     blockers.extend({"code": "quality-policy-unknown-key", "key": key} for key in set(policy) - allowed)
     toolchain = policy.get("toolchain")
     if not isinstance(toolchain, dict) or set(toolchain) != {"ruff", "mypy", "coverage"}:
         blockers.append({"code": "quality-toolchain-invalid"})
     ruff = policy.get("ruff")
     required_ruff = {
-        "targetVersion", "lineLength", "sourceRoots", "firstParty", "correctnessSelectors",
-        "migrationSelectors", "intentionalFindings", "correctnessBaseline", "migrationBaseline",
-        "formatBaseline", "lineLengthBaseline",
+        "targetVersion",
+        "lineLength",
+        "sourceRoots",
+        "firstParty",
+        "correctnessSelectors",
+        "migrationSelectors",
+        "intentionalFindings",
+        "correctnessBaseline",
+        "migrationBaseline",
+        "formatBaseline",
+        "lineLengthBaseline",
     }
     if not isinstance(ruff, dict) or set(ruff) != required_ruff:
         blockers.append({"code": "quality-ruff-policy-invalid"})
@@ -122,7 +144,7 @@ def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(mypy, dict) or set(mypy) != {"strictClean", "baseline"}:
         blockers.append({"code": "quality-mypy-policy-invalid"})
     coverage = policy.get("coverage")
-    if not isinstance(coverage, dict) or set(coverage) != {"minimumStatementLinePercent", "baseline"}:
+    if not _valid_coverage_policy(coverage):
         blockers.append({"code": "quality-coverage-policy-invalid"})
     limits = policy.get("limits")
     if not isinstance(limits, dict) or set(limits) != {"maxWallSeconds", "maxOutputBytes", "maxBaselineEntries"}:
@@ -156,7 +178,14 @@ def _validate_baseline_shape(value: Any, label: str) -> list[dict[str, Any]]:
             continue
         key = (item["path"], item["code"])
         if key in seen:
-            blockers.append({"code": "quality-baseline-duplicate", "baseline": label, "path": item["path"], "errorCode": item["code"]})
+            blockers.append(
+                {
+                    "code": "quality-baseline-duplicate",
+                    "baseline": label,
+                    "path": item["path"],
+                    "errorCode": item["code"],
+                }
+            )
         seen.add(key)
         if not isinstance(item.get("count"), int) or item["count"] < 0:
             blockers.append({"code": "quality-baseline-count-invalid", "baseline": label, "path": item["path"]})
@@ -170,7 +199,9 @@ def _validate_intentional_shape(value: Any) -> list[dict[str, Any]]:
         return [{"code": "quality-intentional-not-array"}]
     blockers = []
     for item in value:
-        if not isinstance(item, dict) or not all(isinstance(item.get(key), str) and item[key] for key in ("path", "code", "owner", "reason")):
+        if not isinstance(item, dict) or not all(
+            isinstance(item.get(key), str) and item[key] for key in ("path", "code", "owner", "reason")
+        ):
             blockers.append({"code": "quality-intentional-entry-invalid"})
     return blockers
 
@@ -189,7 +220,11 @@ def _ruff_counts(path: Path | None, root: Path, blockers: list[dict[str, Any]], 
         return Counter()
     counts: Counter[tuple[str, str]] = Counter()
     for item in value:
-        if not isinstance(item, dict) or not isinstance(item.get("filename"), str) or not isinstance(item.get("code"), str):
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("filename"), str)
+            or not isinstance(item.get("code"), str)
+        ):
             blockers.append({"code": "ruff-finding-invalid", "artifact": label})
             continue
         path_value = _normal_path(item["filename"], root)
@@ -231,7 +266,8 @@ def _format_counts(path: Path | None, root: Path, blockers: list[dict[str, Any]]
                 else:
                     summary = re.fullmatch(
                         r"(\d+) files? would be reformatted"
-                        r"(?:, \d+ files? (?:already formatted|left unchanged))?", line
+                        r"(?:, \d+ files? (?:already formatted|left unchanged))?",
+                        line,
                     )
                     if summary is None:
                         raise ValueError("Unrecognized legacy format output")
@@ -257,8 +293,13 @@ def _format_command_blockers(run: dict[str, Any], counts: Counter[tuple[str, str
         return [{"code": "quality-format-command-missing-or-ambiguous"}]
     command = commands[0]
     code = command.get("returncode")
-    if (type(code) is not int or code not in (0, 1) or command.get("status") != "PASS"
-            or command.get("timedOut") or command.get("outputLimited")):
+    if (
+        type(code) is not int
+        or code not in (0, 1)
+        or command.get("status") != "PASS"
+        or command.get("timedOut")
+        or command.get("outputLimited")
+    ):
         return [{"code": "quality-format-command-invalid"}]
     if (code == 1) != bool(sum(counts.values())):
         return [{"code": "quality-format-exit-findings-mismatch"}]
@@ -274,8 +315,12 @@ def _run_directory_blockers(root: Path, work_root: Path, run: dict[str, Any]) ->
     if not isinstance(value, str) or not value or Path(value).is_absolute() or ".." in Path(value).parts:
         return [{"code": "quality-run-directory-invalid"}]
     directory = root / value
-    if (directory.is_symlink() or not directory.is_dir() or not directory.name.startswith("run-")
-            or directory.resolve().parent != work_root.resolve()):
+    if (
+        directory.is_symlink()
+        or not directory.is_dir()
+        or not directory.name.startswith("run-")
+        or directory.resolve().parent != work_root.resolve()
+    ):
         return [{"code": "quality-run-directory-invalid"}]
     for key in run.get("artifacts", {}):
         path = _artifact_path(root, run, key)
@@ -303,7 +348,7 @@ def _mypy_counts(path: Path | None, root: Path, blockers: list[dict[str, Any]]) 
     return counts
 
 
-def _baseline_counts(value: Any, root: Path, blockers: list[dict[str, Any]], label: str) -> Counter[tuple[str, str]]:
+def _baseline_counts(value: Any, root: Path, _blockers: list[dict[str, Any]], _label: str) -> Counter[tuple[str, str]]:
     counts: Counter[tuple[str, str]] = Counter()
     if not isinstance(value, list):
         return counts
@@ -327,11 +372,24 @@ def _compare_counts(
         old = baseline.get(key)
         path, code = key
         if old is None:
-            blockers.append({"code": "new-quality-finding", "kind": label, "path": path, "errorCode": code, "count": count})
+            blockers.append(
+                {"code": "new-quality-finding", "kind": label, "path": path, "errorCode": code, "count": count}
+            )
         elif count > old:
-            blockers.append({"code": "quality-finding-growth", "kind": label, "path": path, "errorCode": code, "baseline": old, "actual": count})
+            blockers.append(
+                {
+                    "code": "quality-finding-growth",
+                    "kind": label,
+                    "path": path,
+                    "errorCode": code,
+                    "baseline": old,
+                    "actual": count,
+                }
+            )
         if count and path in changed_paths:
-            blockers.append({"code": "changed-path-quality-finding", "kind": label, "path": path, "errorCode": code, "count": count})
+            blockers.append(
+                {"code": "changed-path-quality-finding", "kind": label, "path": path, "errorCode": code, "count": count}
+            )
     return blockers
 
 
@@ -350,7 +408,11 @@ def _source_digest_blockers(
             continue
         path = item.get("path")
         code = item.get("code")
-        if not isinstance(path, str) or not isinstance(code, str) or not current.get((_normal_path(path, root) or "", code)):
+        if (
+            not isinstance(path, str)
+            or not isinstance(code, str)
+            or not current.get((_normal_path(path, root) or "", code))
+        ):
             continue
         normalized = _normal_path(path, root)
         if normalized is None:
@@ -359,32 +421,123 @@ def _source_digest_blockers(
         actual = _file_digest(root / normalized)
         if actual is None or actual == expected or normalized in changed_paths:
             continue
-        blockers.append({
-            "code": "quality-baseline-source-drift",
-            "kind": label,
-            "path": normalized,
-            "errorCode": code,
-        })
+        blockers.append(
+            {
+                "code": "quality-baseline-source-drift",
+                "kind": label,
+                "path": normalized,
+                "errorCode": code,
+            }
+        )
     return blockers
 
 
-def _validate_coverage(policy: dict[str, Any], path: Path | None) -> list[dict[str, Any]]:
+def _valid_percent(value: Any) -> bool:
+    return type(value) in (int, float) and 0 <= value <= 100 and math.isfinite(value)
+
+
+def _valid_coverage_policy(coverage: Any) -> bool:
+    legacy = {"minimumStatementLinePercent", "baseline"}
+    if not isinstance(coverage, dict) or set(coverage) not in (legacy, legacy | {"minimumCombinedPercent"}):
+        return False
+    return isinstance(coverage["baseline"], dict) and all(
+        _valid_percent(coverage[key]) and ("minimumCombinedPercent" not in coverage or coverage[key] >= 76)
+        for key in coverage
+        if key != "baseline"
+    )
+
+
+def _coverage_percent(covered: int, total: int) -> float:
+    # Coverage.py defines an empty set of opportunities as fully covered.
+    return covered / total * 100.0 if total else 100.0
+
+
+def _modern_coverage_metrics(totals: dict[str, Any]) -> dict[str, float]:
+    counts = (
+        "num_statements",
+        "covered_lines",
+        "missing_lines",
+        "num_branches",
+        "covered_branches",
+        "missing_branches",
+    )
+    if any(type(totals.get(key)) is not int or totals[key] < 0 for key in counts):
+        raise ValueError("Coverage requires nonnegative integer statement and branch counts")
+    lines, branches = totals["num_statements"], totals["num_branches"]
+    covered, covered_branches = totals["covered_lines"], totals["covered_branches"]
+    if covered + totals["missing_lines"] != lines or covered_branches + totals["missing_branches"] != branches:
+        raise ValueError("Covered and missing counts must equal their opportunity totals")
+    if "num_partial_branches" in totals and (
+        type(totals["num_partial_branches"]) is not int or not 0 <= totals["num_partial_branches"] <= branches
+    ):
+        raise ValueError("Partial branch count is invalid")
+    computed = {
+        "statementLinePercent": _coverage_percent(covered, lines),
+        "branchPercent": _coverage_percent(covered_branches, branches),
+        "combinedPercent": _coverage_percent(covered + covered_branches, lines + branches),
+    }
+    # Check the raw numeric total, not the rounded display string. The small
+    # tolerance permits reports rounded to two decimal places, never a missing field.
+    for reported, key in (
+        ("percent_covered", "combinedPercent"),
+        ("percent_statements_covered", "statementLinePercent"),
+        ("percent_branches_covered", "branchPercent"),
+    ):
+        if reported != "percent_covered" and reported not in totals:
+            continue
+        if not _valid_percent(totals.get(reported)) or not math.isclose(
+            totals[reported], computed[key], rel_tol=0, abs_tol=0.005000001
+        ):
+            raise ValueError("Reported coverage percentage disagrees with counts")
+    return computed
+
+
+def _validate_coverage(
+    policy: dict[str, Any], path: Path | None, *, metrics: dict[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    if not _valid_coverage_policy(policy.get("coverage")):
+        return [{"code": "quality-coverage-policy-invalid"}]
     if path is None or not path.exists():
         return [{"code": "coverage-artifact-missing"}]
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
         totals = value["totals"]
-        percent = float(totals["percent_covered"])
-    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        coverage_policy = policy["coverage"]
+        modern = "minimumCombinedPercent" in coverage_policy
+        if not isinstance(totals, dict):
+            raise ValueError("Coverage totals must be an object")
+        if modern:
+            observed = _modern_coverage_metrics(totals)
+            thresholds = (
+                ("combinedPercent", coverage_policy["minimumCombinedPercent"]),
+                ("statementLinePercent", coverage_policy["minimumStatementLinePercent"]),
+            )
+        else:
+            # Historical policies used this name for the aggregate reported
+            # percentage. Do not reinterpret their immutable receipts as lines.
+            percent = float(totals["percent_covered"])
+            if not math.isfinite(percent) or not 0 <= percent <= 100:
+                raise ValueError("Coverage percentage must be finite and within 0..100")
+            observed = {"combinedPercent": percent}
+            thresholds = (("combinedPercent", coverage_policy["minimumStatementLinePercent"]),)
+        if metrics is not None:
+            metrics.update(observed)
+            metrics["interpretation"] = "explicit-combined-and-lines" if modern else "legacy-aggregate-alias"
+    except (OSError, KeyError, TypeError, ValueError, OverflowError, json.JSONDecodeError) as exc:
         return [{"code": "coverage-artifact-invalid", "message": str(exc)}]
-    minimum = float(policy.get("coverage", {}).get("minimumStatementLinePercent", 0))
-    if percent < minimum:
-        return [{"code": "coverage-floor-failed", "actual": percent, "minimum": minimum}]
-    return []
+    return [
+        {"code": "coverage-floor-failed", "metric": key, "actual": observed[key], "minimum": minimum}
+        for key, minimum in thresholds
+        if observed[key] < minimum
+    ]
 
 
-def _validate_intentional_findings(policy: dict[str, Any], ruff: dict[str, Any], root: Path) -> list[dict[str, Any]]:
-    allowed = {(item.get("path"), item.get("code")): item for item in ruff.get("intentionalFindings", []) if isinstance(item, dict)}
+def _validate_intentional_findings(_policy: dict[str, Any], ruff: dict[str, Any], _root: Path) -> list[dict[str, Any]]:
+    allowed = {
+        (item.get("path"), item.get("code")): item
+        for item in ruff.get("intentionalFindings", [])
+        if isinstance(item, dict)
+    }
     return [
         {"code": "intentional-finding-missing-owner", "path": path, "errorCode": code}
         for (path, code) in allowed

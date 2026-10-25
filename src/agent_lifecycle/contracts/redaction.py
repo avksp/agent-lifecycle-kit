@@ -152,6 +152,12 @@ def contains_local_absolute_path(value: str) -> bool:
     return bool(_LOCAL_PATH.search(protected))
 
 
+def contains_bare_secret_token(value: str) -> bool:
+    """Classify the existing bare-token forms without rewriting text or applying assignment rules."""
+
+    return bool(_BARE_TOKEN.search(value))
+
+
 def redact_value(value: Any) -> tuple[Any, bool]:
     """Redact nested receipt values while preserving JSON-compatible structure."""
 

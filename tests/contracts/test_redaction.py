@@ -6,6 +6,7 @@ from urllib.parse import quote
 from agent_lifecycle.contracts.redaction import (
     LOCAL_PATH_REDACTION,
     REDACTED_VALUE,
+    contains_bare_secret_token,
     contains_local_absolute_path,
     redact_text,
     redact_text_with_stats,
@@ -14,6 +15,63 @@ from agent_lifecycle.contracts.redaction import (
 
 
 class ReceiptRedactionTests(unittest.TestCase):
+    def test_bare_token_classifier_and_redactor_recognize_the_same_finite_families(self) -> None:
+        cases = [
+            ("api", "sk-" + "A" * 20),
+            ("project-api", "sk-proj-" + "B" * 20),
+            ("jwt", "ey" + "J" + "A" * 8 + "." + "B" * 8 + "." + "C" * 8),
+            ("gitlab", "glpat-" + "D" * 20),
+            ("npm", "npm_" + "E" * 20),
+            ("hugging-face", "hf_" + "F" * 20),
+            ("google", "AI" + "za" + "G" * 35),
+            ("aws", "AK" + "IA" + "H" * 16),
+        ]
+        cases.extend(("github-" + kind, "gh" + kind + "_" + "I" * 20) for kind in "pousr")
+        cases.extend(("slack-" + kind, "xox" + kind + "-" + "J" * 16) for kind in "baprs")
+        cases.extend(
+            ("payment-" + kind + "-" + mode, kind + "_" + mode + "_" + "K" * 16)
+            for kind in ("sk", "rk")
+            for mode in ("live", "test")
+        )
+        for family, token in cases:
+            for embedded in (False, True):
+                with self.subTest(family=family, embedded=embedded):
+                    value = "before: " + token + " after" if embedded else token
+                    self.assertIs(contains_bare_secret_token(value), True)
+                    redacted, changed, stats = redact_text_with_stats(value)
+                    self.assertTrue(changed)
+                    self.assertTrue(redacted == value.replace(token, REDACTED_VALUE))
+                    self.assertEqual(stats["secretLikeMarkersRedacted"], 1)
+                    self.assertIs(contains_bare_secret_token("x" + token), False)
+
+    def test_bare_token_classifier_preserves_short_placeholders_and_other_rule_categories(self) -> None:
+        cases = [
+            "",
+            "ordinary source text",
+            "api_key = 'ordinary-placeholder'",
+            "Bearer opaque-auth-placeholder",
+            "token=password-placeholder",
+            "-----BEGIN " + "PRIVATE KEY-----",
+            "/" + "home/example/document",
+            "sk-short",
+            "sk-" + "A" * 19,
+            "glpat-" + "B" * 19,
+            "npm_" + "C" * 19,
+            "gh" + "p_" + "D" * 19,
+            "sk_live_" + "E" * 15,
+            "rk_test_" + "F" * 15,
+            "hf_" + "G" * 19,
+            "AI" + "za" + "H" * 34,
+            "xox" + "a-" + "I" * 15,
+            "AK" + "IA" + "J" * 15,
+            "ey" + "J" + "K" * 7 + "." + "L" * 8 + "." + "M" * 8,
+            "pk_live_" + "N" * 24,
+            "pk_test_" + "O" * 24,
+        ]
+        for index, value in enumerate(cases):
+            with self.subTest(case=index):
+                self.assertIs(contains_bare_secret_token(value), False)
+
     def test_additional_provider_tokens_are_redacted_without_assignment_labels(self) -> None:
         tokens = [
             "glpat-" + "A" * 24,
@@ -34,8 +92,7 @@ class ReceiptRedactionTests(unittest.TestCase):
                     self.assertEqual(stats["secretLikeMarkersRedacted"], 1)
 
     def test_additional_provider_tokens_are_redacted_inside_encoded_public_urls(self) -> None:
-        tokens = ["glpat-" + "A" * 24, "npm_" + "B" * 36,
-                  "sk_live_" + "C" * 24, "hf_" + "D" * 34, "AIza" + "E" * 35]
+        tokens = ["glpat-" + "A" * 24, "npm_" + "B" * 36, "sk_live_" + "C" * 24, "hf_" + "D" * 34, "AIza" + "E" * 35]
         for token in tokens:
             for encoding in [0, 1, 2, 3]:
                 encoded = token
@@ -50,9 +107,17 @@ class ReceiptRedactionTests(unittest.TestCase):
                         self.assertGreater(stats["secretLikeMarkersRedacted"], 0)
 
     def test_signed_query_values_are_private_but_public_parameters_survive(self) -> None:
-        keys = ["sig", "Signature", "X-Amz-Signature", "X-Amz-Credential",
-                "X-Amz-Security-Token", "X-Goog-Signature", "X-Goog-Credential",
-                "AWSAccessKeyId", "GoogleAccessId"]
+        keys = [
+            "sig",
+            "Signature",
+            "X-Amz-Signature",
+            "X-Amz-Credential",
+            "X-Amz-Security-Token",
+            "X-Goog-Signature",
+            "X-Goog-Credential",
+            "AWSAccessKeyId",
+            "GoogleAccessId",
+        ]
         for key in keys:
             for component in ["?", "#", "#/report?"]:
                 for encoding in [0, 1, 2, 3]:
@@ -69,10 +134,13 @@ class ReceiptRedactionTests(unittest.TestCase):
                         self.assertGreater(stats["secretLikeMarkersRedacted"], 0)
 
     def test_public_signatures_publishable_keys_and_benign_query_keys_are_preserved(self) -> None:
-        for value in ["pk_live_" + "A" * 24, "pk_test_" + "B" * 24,
-                      "https://example.invalid/report?signature_version=4&signed=yes&algorithm=sha256",
-                      "https://example.invalid/glpat-guide?topic=npm&model=hf-transformers",
-                      "glpat-short npm-short hf-short AIza-short"]:
+        for value in [
+            "pk_live_" + "A" * 24,
+            "pk_test_" + "B" * 24,
+            "https://example.invalid/report?signature_version=4&signed=yes&algorithm=sha256",
+            "https://example.invalid/glpat-guide?topic=npm&model=hf-transformers",
+            "glpat-short npm-short hf-short AIza-short",
+        ]:
             with self.subTest(value=value):
                 redacted, changed, stats = redact_text_with_stats(value)
                 self.assertEqual(redacted, value)
@@ -82,7 +150,12 @@ class ReceiptRedactionTests(unittest.TestCase):
         self.assertEqual(redact_value(value), (value, False))
 
     def test_encoded_bearer_plus_keeps_the_complete_credential_private(self) -> None:
-        for marker in ["Bearer prefix+opaque-auth-secret", "Bearer prefix++opaque-auth-secret", "public+topic", "public topic+tail"]:
+        for marker in [
+            "Bearer prefix+opaque-auth-secret",
+            "Bearer prefix++opaque-auth-secret",
+            "public+topic",
+            "public topic+tail",
+        ]:
             for encoding, safe in [(1, ""), (2, ""), (3, ""), (1, "+"), (2, "+"), (3, "+")]:
                 for location in ["path", "query", "fragment", "routed-fragment"]:
                     with self.subTest(marker=marker, encoding=encoding, location=location, safe=safe):
@@ -96,7 +169,9 @@ class ReceiptRedactionTests(unittest.TestCase):
                             suffix = "/#note=" + encoded + "&keep=home"
                         elif location == "routed-fragment":
                             suffix = "/#/note/" + encoded + "?keep=home"
-                        authority = "alice:outer-secret@example.invalid" if marker.startswith("Bearer ") else "example.invalid"
+                        authority = (
+                            "alice:outer-secret@example.invalid" if marker.startswith("Bearer ") else "example.invalid"
+                        )
                         text = "before https://" + authority + suffix + " after"
                         redacted, changed, stats = redact_text_with_stats(text)
                         if not marker.startswith("Bearer "):
@@ -112,11 +187,16 @@ class ReceiptRedactionTests(unittest.TestCase):
                         self.assertGreater(stats["secretLikeMarkersRedacted"], 0)
 
     def test_decoded_uri_components_apply_all_common_secret_recognizers(self) -> None:
-        markers = [("Bearer opaque-auth-secret", "opaque-auth-secret"),
-                   ("sk-abcdefghijklmnopqrstuv", "abcdefghijklmnopqrstuv"),
-                   ("-----BEGIN " + "PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
-                   ("-----BEGIN " + "PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
-                    "private-key-body")]
+        markers = [
+            ("Bearer opaque-auth-secret", "opaque-auth-secret"),
+            ("sk" + "-abcdefghijklmnopqrstuv", "abcdefghijklmnopqrstuv"),
+            ("-----BEGIN " + "PRIVATE KEY-----\nprivate-key-body\n-----END PRIVATE KEY-----", "private-key-body"),
+            (
+                "-----BEGIN "
+                + "PRIVATE KEY-----\nhttps://safe.invalid/public\nprivate-key-body\n-----END PRIVATE KEY-----",
+                "private-key-body",
+            ),
+        ]
         for marker, secret in markers:
             for encoding in [1, 2, 3]:
                 for location in ["path", "query", "fragment", "routed-fragment"]:
@@ -239,8 +319,10 @@ class ReceiptRedactionTests(unittest.TestCase):
             self.assertFalse(changed)
 
     def test_mixed_encoded_container_and_literal_uri_redacts_complete_component(self) -> None:
-        containers = ['["first-secret","https://safe.invalid/public","second-secret"]',
-                      '{"first":"first-secret","url":"https://safe.invalid/public","second":"second-secret"}']
+        containers = [
+            '["first-secret","https://safe.invalid/public","second-secret"]',
+            '{"first":"first-secret","url":"https://safe.invalid/public","second":"second-secret"}',
+        ]
         for container in containers:
             for encoding in [1, 2, 3]:
                 for location in ["path", "query", "routed-fragment"]:
@@ -269,9 +351,11 @@ class ReceiptRedactionTests(unittest.TestCase):
         self.assertFalse(changed)
 
     def test_encoded_sensitive_containers_preserve_complete_value_boundary(self) -> None:
-        containers = ['["first-secret","second-secret"]',
-                      '{"first":"first-secret","second":"second-secret"}',
-                      '["first-secret","https://safe.invalid/public","second-secret"]']
+        containers = [
+            '["first-secret","second-secret"]',
+            '{"first":"first-secret","second":"second-secret"}',
+            '["first-secret","https://safe.invalid/public","second-secret"]',
+        ]
         for container in containers:
             for encoding in [1, 2, 3]:
                 for location in ["path", "query", "routed-fragment"]:
@@ -306,7 +390,12 @@ class ReceiptRedactionTests(unittest.TestCase):
                         encoded = key + "=plain-secret"
                         literal = "password=second-secret"
                         component = encoded + ";" + literal if order == "encoded-first" else literal + ";" + encoded
-                        text = "before https://alice:outer-secret@example.invalid" + location + component + "&next=home after"
+                        text = (
+                            "before https://alice:outer-secret@example.invalid"
+                            + location
+                            + component
+                            + "&next=home after"
+                        )
                         redacted, changed, stats = redact_text_with_stats(text)
                         self.assertTrue(changed)
                         for secret in ["plain-secret", "second-secret", "outer-secret"]:
@@ -419,8 +508,13 @@ class ReceiptRedactionTests(unittest.TestCase):
             for signed_headers in ["host;x-amz-date", "host;x-amz-date;x-amz-content-sha256"]:
                 with self.subTest(key=key, signed_headers=signed_headers):
                     signature = "e" * 64
-                    value = ("AWS4-HMAC-SHA256 Credential=EXAMPLE/20261009/us-east-1/s3/aws4_request, "
-                             + "SignedHeaders=" + signed_headers + ", Signature=" + signature)
+                    value = (
+                        "AWS4-HMAC-SHA256 Credential=EXAMPLE/20261009/us-east-1/s3/aws4_request, "
+                        + "SignedHeaders="
+                        + signed_headers
+                        + ", Signature="
+                        + signature
+                    )
                     original = "before " + key + ": " + value + "; outcome=failed"
                     redacted, changed, stats = redact_text_with_stats(original)
                     self.assertTrue(changed)
@@ -433,7 +527,7 @@ class ReceiptRedactionTests(unittest.TestCase):
             for gap in ["\n ", "\r\n ", "\r\n\t", "\t", "\u2003"]:
                 for placement in ["after-comma", "before-comma", "around-equals", "after-scheme"]:
                     with self.subTest(key=key, gap=gap, placement=placement):
-                        value = "Digest username*=UTF-8''alice, nonce=\"nonce-secret\", response=\"opaque-auth-secret\""
+                        value = 'Digest username*=UTF-8\'\'alice, nonce="nonce-secret", response="opaque-auth-secret"'
                         if placement == "after-comma":
                             value = value.replace(", ", "," + gap)
                         elif placement == "before-comma":
@@ -452,9 +546,12 @@ class ReceiptRedactionTests(unittest.TestCase):
     def test_authentication_headers_redact_proxy_opaque_and_digest_credentials(self) -> None:
         credential = "opaque-auth-secret"
         for key in ["Authorization", "Proxy-Authorization", "proxy_authorization"]:
-            for value in ["Basic " + credential, "Negotiate " + credential,
-                          "CustomScheme " + credential,
-                          'Digest username="alice", nonce="nonce-secret", response="' + credential + '"']:
+            for value in [
+                "Basic " + credential,
+                "Negotiate " + credential,
+                "CustomScheme " + credential,
+                'Digest username="alice", nonce="nonce-secret", response="' + credential + '"',
+            ]:
                 with self.subTest(key=key, value=value):
                     original = "before " + key + ": " + value + "; outcome=failed"
                     redacted, changed, stats = redact_text_with_stats(original)
@@ -469,8 +566,12 @@ class ReceiptRedactionTests(unittest.TestCase):
 
     def test_basic_authorization_redacts_complete_credential_and_preserves_diagnostics(self) -> None:
         credential = "dXNlcjpwYXNz"
-        for header in ["Authorization: Basic ", "authorization=basic\t",
-                       '"Authorization": "Basic ', "Authorization : BASIC "]:
+        for header in [
+            "Authorization: Basic ",
+            "authorization=basic\t",
+            '"Authorization": "Basic ',
+            "Authorization : BASIC ",
+        ]:
             with self.subTest(header=header):
                 quote = '"' if header.endswith('"Basic ') else ""
                 original = "before " + header + credential + quote + "; outcome=failed"
@@ -500,10 +601,12 @@ class ReceiptRedactionTests(unittest.TestCase):
         self.assertEqual(redact_text_with_stats(safe)[0], safe)
 
     def test_sensitive_serialized_containers_redact_every_member(self) -> None:
-        for value in ['["first-secret","second-secret"]',
-                      '{"first":"first-secret","nested":["second-secret"]}',
-                      '["first-secret", {"nested": ["second-secret"]}]',
-                      '["first-secret",\n"second-secret"]']:
+        for value in [
+            '["first-secret","second-secret"]',
+            '{"first":"first-secret","nested":["second-secret"]}',
+            '["first-secret", {"nested": ["second-secret"]}]',
+            '["first-secret",\n"second-secret"]',
+        ]:
             with self.subTest(value=value):
                 redacted, changed, stats = redact_text_with_stats("credentials=" + value + "; outcome=failed")
                 self.assertTrue(changed)
@@ -511,8 +614,11 @@ class ReceiptRedactionTests(unittest.TestCase):
                 self.assertNotIn("second-secret", redacted)
                 self.assertIn("outcome=failed", redacted)
                 self.assertEqual(stats["secretLikeMarkersRedacted"], 1)
-        for value in ['["first-secret", "second-secret"', "['first-secret','second-secret']",
-                      '{"first":"first-secret",\n"second":"second-secret"']:
+        for value in [
+            '["first-secret", "second-secret"',
+            "['first-secret','second-secret']",
+            '{"first":"first-secret",\n"second":"second-secret"',
+        ]:
             with self.subTest(ambiguous=value):
                 redacted, changed, _stats = redact_text_with_stats("credentials=" + value)
                 self.assertTrue(changed)
@@ -521,8 +627,12 @@ class ReceiptRedactionTests(unittest.TestCase):
 
     def test_url_path_assignments_redact_with_and_without_userinfo(self) -> None:
         for authority in ["example.invalid", "alice:login-secret@example.invalid"]:
-            for path in ["/report;api_key=plain-secret", "/api_key=plain-secret",
-                         "/report;%61pi_key=plain-secret", "/report;api_key%3Dplain-secret"]:
+            for path in [
+                "/report;api_key=plain-secret",
+                "/api_key=plain-secret",
+                "/report;%61pi_key=plain-secret",
+                "/report;api_key%3Dplain-secret",
+            ]:
                 with self.subTest(authority=authority, path=path):
                     redacted, changed, stats = redact_text_with_stats("https://" + authority + path)
                     self.assertTrue(changed)
@@ -536,12 +646,13 @@ class ReceiptRedactionTests(unittest.TestCase):
     def test_nested_assignments_do_not_hide_inner_secrets(self) -> None:
         for original, expected, count in [
             ('payload={"api_key":"plain-secret"}', 'payload={"api_key":"<redacted>"}', 1),
-            ('outer={"payload":{"db-password":"plain-secret"}}',
-             'outer={"payload":{"db-password":"<redacted>"}}', 1),
-            ('payload={"api_key":"first-secret","db_token":"second-secret"}',
-             'payload={"api_key":"<redacted>","db_token":"<redacted>"}', 2),
-            (r'payload="{\"api_key\":\"plain secret\"}"',
-             r'payload="{\"api_key\":\"<redacted>\"}"', 1),
+            ('outer={"payload":{"db-password":"plain-secret"}}', 'outer={"payload":{"db-password":"<redacted>"}}', 1),
+            (
+                'payload={"api_key":"first-secret","db_token":"second-secret"}',
+                'payload={"api_key":"<redacted>","db_token":"<redacted>"}',
+                2,
+            ),
+            (r'payload="{\"api_key\":\"plain secret\"}"', r'payload="{\"api_key\":\"<redacted>\"}"', 1),
         ]:
             with self.subTest(original=original):
                 redacted, changed, stats = redact_text_with_stats(original)
@@ -549,16 +660,32 @@ class ReceiptRedactionTests(unittest.TestCase):
                 self.assertTrue(changed)
                 self.assertEqual(stats["secretLikeMarkersRedacted"], count)
                 self.assertEqual(stats["localPathsRedacted"], 0)
-        for safe in ['payload={"message":"safe"}', "notpassword=safe",
-                     "payload=some_api_key_identifier", "notes=plain-secret"]:
+        for safe in [
+            'payload={"message":"safe"}',
+            "notpassword=safe",
+            "payload=some_api_key_identifier",
+            "notes=plain-secret",
+        ]:
             with self.subTest(safe=safe):
-                self.assertEqual(redact_text_with_stats(safe), (
-                    safe, False, {"secretLikeMarkersRedacted": 0, "localPathsRedacted": 0},
-                ))
+                self.assertEqual(
+                    redact_text_with_stats(safe),
+                    (
+                        safe,
+                        False,
+                        {"secretLikeMarkersRedacted": 0, "localPathsRedacted": 0},
+                    ),
+                )
 
     def test_unicode_absolute_paths_are_detected_and_fully_redacted(self) -> None:
-        for path in ["/секреты/ключи", "/秘密/鍵", "/🔐/данные", "/re\u0301sume\u0301/cle\u0301",
-                     r"C:\секреты\ключи", r"\секреты\ключи", r"\\сервер\секреты\ключи"]:
+        for path in [
+            "/секреты/ключи",
+            "/秘密/鍵",
+            "/🔐/данные",
+            "/re\u0301sume\u0301/cle\u0301",
+            r"C:\секреты\ключи",
+            r"\секреты\ключи",
+            r"\\сервер\секреты\ключи",
+        ]:
             with self.subTest(path=path):
                 self.assertTrue(contains_local_absolute_path(path))
                 redacted, changed, stats = redact_text_with_stats(path)

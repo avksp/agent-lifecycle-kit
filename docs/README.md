@@ -33,7 +33,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.14:
-  `python -m pip install agent-lifecycle-kit==2.25.0` from
+  `python -m pip install agent-lifecycle-kit==2.26.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -211,12 +211,11 @@ versus 10/64/184 in 2.19. Event validation still scans the complete log.
 
 [Compact DRAFT authoring](reference/tier-proportional-plan-packages.md) preserves checks, independent review and separate authorization. Explicit acceptance-criteria.md and planFiles completion are required before freeze; UNKNOWN metrics are never zero.
 
-## Release 2.25: focused security and maintainability
+## Release 2.26: bounded discovery and precise quality gates
 
-Release 2.25 hardens sensitive imports and launcher checks, repairs named
-ownership seams, and checks untyped Python function bodies with mypy. See the
-[current security controls](security/release-security.md) and [architecture map](architecture/system-architecture.md).
-The [staged reading pilot](guides/controlled-technical-english.md) preserves full references and approval gates;
-byte/word measurements do not prove token savings. Existing OpenCode 1.x/2.x
-qualification and unsupported host routes remain unchanged. Local preparation,
-exact-candidate CI, native final proof and public publication are separate gates.
+Markdown imports bound examined entries, directories, depth and cooperative
+elapsed time; see the [security control map](security/release-security.md). Tracked-source checks
+reuse the existing bare-token families. [Quality controls](architecture/system-architecture.md)
+require both combined and statement coverage of 76 percent and retain legacy
+policy interpretation. The existing [reading pilot](guides/controlled-technical-english.md) and host limits
+remain; measurements do not establish token savings or host enforcement.

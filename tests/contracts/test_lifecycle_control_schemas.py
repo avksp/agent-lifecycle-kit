@@ -88,6 +88,7 @@ class LifecycleControlSchemaTests(unittest.TestCase):
         codes = {item["code"] for item in validation["blockers"]}
         self.assertIn("adapter-action-evidence-lineage-mismatch", codes)
         self.assertIn("adapter-action-evidence-result-ref-private", codes)
+
     def test_schema_group_is_registered_and_closed_at_request_boundary(self) -> None:
         schema_ids = {item["id"] for item in list_schemas()["schemas"]}
 
@@ -313,7 +314,7 @@ class LifecycleControlSchemaTests(unittest.TestCase):
             producer_id="host-hook",
             outcome={"changed": True},
         )
-        event["outcome"] = {42: "value", "child_api_key": "sk-proj-raw-secret-value-1234567890"}
+        event["outcome"] = {42: "value", "child_api_key": "sk" + "-proj-raw-secret-value-1234567890"}
         event["eventDigest"] = "0" * 64
         self.assertEqual(validate_lifecycle_control_event(event)["status"], "FAIL")
         with self.assertRaises(LifecycleError):
