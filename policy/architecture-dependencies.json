@@ -55,27 +55,6 @@
       "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
     },
     {
-      "module": "agent_lifecycle.contracts.workflow_state_schemas",
-      "symbol": "_closing_instant",
-      "alias": "_closing_instant",
-      "consumer": "agent_lifecycle.accounting.closing_resource_recovery",
-      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
-    },
-    {
-      "module": "agent_lifecycle.accounting.declared_ledger",
-      "symbol": "_sync_directory",
-      "alias": "_sync_directory",
-      "consumer": "agent_lifecycle.adapter_sessions.attempt_authority",
-      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
-    },
-    {
-      "module": "agent_lifecycle.accounting.declared_ledger_records",
-      "symbol": "_require",
-      "alias": "_require",
-      "consumer": "agent_lifecycle.adapter_sessions.attempt_authority",
-      "reason": "Existing cross-package private dependency retained as visible debt; accepted parent 86ba753, no new consumers or aliases authorized."
-    },
-    {
       "module": "agent_lifecycle.accounting.host_bridge",
       "symbol": "_json",
       "alias": "_json",
@@ -652,7 +631,7 @@
       "reason": "Existing explicit compatibility reexport; accepted parent 86ba753, no new consumers or aliases authorized."
     }
   ],
-  "privateImportBaselineDigest": "6db3b374a7e32ff3767664201b83246f434f318e46af71b479399eda371f427b",
+  "privateImportBaselineDigest": "80f24d22baf9c56095f33f898eb54bc1e4a250b9c5ce51f24bd23cb5536ea1eb",
   "historicalObservation": {
     "explicitReexports": 31,
     "otherPrivateImports": 70,

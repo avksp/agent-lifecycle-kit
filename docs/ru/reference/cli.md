@@ -77,11 +77,11 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 
 ## Установка
 
-Поддерживаются Python 3.11-3.14. Установите точную версию из официального
+Поддерживаются Python 3.11-3.15. Установите точную версию из официального
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.26.0
+python -m pip install agent-lifecycle-kit==2.27.0
 ```
 
 ## Идентичность подтверждений задачи

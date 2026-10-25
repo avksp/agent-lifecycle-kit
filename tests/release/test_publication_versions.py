@@ -23,6 +23,22 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_architecture_publication_keeps_capability_and_proof_limits(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["bounded-architecture-and-python315"]
+        for field in (
+            "modernStoragePolicyChanged",
+            "newRuntimeDependencies",
+            "wholeHostAuthorityClaimed",
+            "allArchitectureDebtEliminated",
+        ):
+            self.assertFalse(feature[field], field)
+        self.assertTrue(feature["python315FullPlatformProofRequired"])
+        self.assertEqual(feature["narrowFinancialPort"], "_FinancialTransactionPort")
+        self.assertEqual(feature["productionAdmissionSeconds"], 1)
+        self.assertEqual(feature["fixtureSharedSeconds"], 10)
+        self.assertEqual(feature["publishingPython"], "3.14")
+
     def test_compact_authoring_publication_keeps_future_authority_and_honest_metrics(self):
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}["tier-proportional-plan-packages"]

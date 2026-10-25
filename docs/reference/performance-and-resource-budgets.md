@@ -94,7 +94,7 @@ turning a timing result into authority over a plan or release.
 
 ## Reproduce the checks
 
-Run from the repository checkout with Python 3.11-3.14:
+Run from the repository checkout with Python 3.11-3.15:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \

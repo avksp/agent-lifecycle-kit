@@ -126,17 +126,7 @@ AGENT_PLUGIN_QUALIFICATION_SCHEMAS: dict[str, dict[str, Any]] = {
 }
 
 
-def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
-    """Validate a data-only client profile and its self-digest."""
-
-    blockers: list[dict[str, Any]] = []
-    if not isinstance(profile, dict):
-        return _validation([_issue("profile-not-object")])
-    _required_text(profile, "schemaVersion", PROFILE_SCHEMA, blockers)
-    for field in ("profileId", "adapterId", "client", "host"):
-        if not isinstance(profile.get(field), str) or not profile[field].strip():
-            blockers.append(_issue("profile-field-invalid", field=field))
-
+def _profile_package(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     package = profile.get("package")
     if not isinstance(package, dict):
         blockers.append(_issue("profile-package-invalid"))
@@ -149,6 +139,8 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
         if skills != list(CANONICAL_SKILLS):
             blockers.append(_issue("profile-required-skills", expected=list(CANONICAL_SKILLS), actual=skills))
 
+
+def _profile_discovery(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     discovery = profile.get("discovery")
     if not isinstance(discovery, dict):
         blockers.append(_issue("profile-discovery-invalid"))
@@ -165,6 +157,8 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(markers, list) or not all(isinstance(item, str) and item for item in markers):
             blockers.append(_issue("profile-discovery-markers"))
 
+
+def _profile_installation(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     installation = profile.get("installation")
     if not isinstance(installation, dict):
         blockers.append(_issue("profile-installation-invalid"))
@@ -176,6 +170,8 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
         ):
             blockers.append(_issue("profile-installation-boundary"))
 
+
+def _profile_environment(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     environment = profile.get("environment")
     if not isinstance(environment, dict):
         blockers.append(_issue("profile-environment-invalid"))
@@ -187,6 +183,8 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
         if environment.get("allowPatterns"):
             blockers.append(_issue("profile-environment-wildcard"))
 
+
+def _profile_host_version(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     host_version_policy = profile.get("hostVersionPolicy")
     if not isinstance(host_version_policy, dict):
         blockers.append(_issue("profile-host-version-policy-invalid"))
@@ -205,6 +203,8 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
             except ValueError:
                 blockers.append(_issue("profile-host-version-policy-invalid", mode=mode))
 
+
+def _profile_qualification(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     qualification = profile.get("qualification")
     if not isinstance(qualification, dict):
         blockers.append(_issue("profile-qualification-invalid"))
@@ -222,6 +222,23 @@ def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
         if qualification.get("modelCalls") != 0 or qualification.get("hostLaunch") is not True:
             blockers.append(_issue("profile-qualification-safety"))
 
+
+def validate_qualification_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Validate a data-only client profile and its self-digest."""
+
+    blockers: list[dict[str, Any]] = []
+    if not isinstance(profile, dict):
+        return _validation([_issue("profile-not-object")])
+    _required_text(profile, "schemaVersion", PROFILE_SCHEMA, blockers)
+    for field in ("profileId", "adapterId", "client", "host"):
+        if not isinstance(profile.get(field), str) or not profile[field].strip():
+            blockers.append(_issue("profile-field-invalid", field=field))
+    _profile_package(profile, blockers)
+    _profile_discovery(profile, blockers)
+    _profile_installation(profile, blockers)
+    _profile_environment(profile, blockers)
+    _profile_host_version(profile, blockers)
+    _profile_qualification(profile, blockers)
     boundary = profile.get("descriptorBoundary")
     if (
         not isinstance(boundary, dict)

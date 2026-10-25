@@ -13,7 +13,12 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.cli.parsers import build_parser
-from agent_lifecycle.quality.architecture_policy import load_architecture_limits
+from agent_lifecycle.quality.architecture_policy import (
+    branch_findings,
+    function_branch_records,
+    load_architecture_limits,
+    private_import_findings,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -39,6 +44,53 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
             }
             with self.subTest(path=name):
                 self.assertFalse(imports & edges)
+
+    def test_removed_private_debt_cannot_authorize_reintroduction(self) -> None:
+        policy = json.loads((ROOT / "policy/architecture-dependencies.json").read_text())
+        for module, symbol, consumer in (
+            (
+                "agent_lifecycle.contracts.workflow_state_schemas",
+                "_closing_instant",
+                "agent_lifecycle.accounting.closing_resource_recovery",
+            ),
+            (
+                "agent_lifecycle.accounting.declared_ledger",
+                "_sync_directory",
+                "agent_lifecycle.adapter_sessions.attempt_authority",
+            ),
+            (
+                "agent_lifecycle.accounting.declared_ledger_records",
+                "_require",
+                "agent_lifecycle.adapter_sessions.attempt_authority",
+            ),
+        ):
+            record = {
+                "module": module,
+                "symbol": symbol,
+                "alias": symbol,
+                "consumer": consumer,
+                "explicitReexport": False,
+            }
+            with self.subTest(module=module, symbol=symbol):
+                findings = private_import_findings([record], policy)["blockers"]
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0]["code"], "architecture-private-import-unapproved")
+
+    def test_reduced_functions_and_helpers_cannot_restore_branch_debt(self) -> None:
+        policy = load_architecture_limits(ROOT / "policy/architecture-limits.json")
+        for path, entrypoint in (
+            ("contracts/preparation_policy.py", "evaluate_preparation_policy"),
+            ("contracts/agent_plugin_qualification_schemas.py", "validate_qualification_profile"),
+        ):
+            tree = ast.parse((ROOT / "src/agent_lifecycle" / path).read_text())
+            records = function_branch_records(tree, path)
+            with self.subTest(path=path):
+                self.assertTrue(records)
+                self.assertTrue(all(row["score"] <= 20 for row in records), records)
+                self.assertFalse(any(row["path"] == path for row in policy["branchBaseline"]))
+                self.assertFalse(any(row["path"] == path for row in policy["branchExceptions"]))
+                excess = {"path": path, "name": entrypoint, "score": 21, "fingerprint": "0" * 64}
+                self.assertEqual(len(branch_findings([excess], policy)), 1)
 
     def test_canonical_limits_and_ci_selection_cannot_drift(self) -> None:
         policy = load_architecture_limits(ROOT / "policy/architecture-limits.json")
@@ -69,7 +121,11 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
         self.assertIn("--policy policy/architecture-dependencies.json", ci)
         self.assertIn("--require-acyclic-modules", ci)
         self.assertIn("--require-acyclic-packages", ci)
-        self.assertIn('python: ["3.11", "3.12", "3.13", "3.14"]', ci)
+        versions = re.search(r"python: \[(.*?)\]", ci)
+        self.assertIsNotNone(versions)
+        supported = json.loads("[" + versions.group(1) + "]")
+        for version in ("3.11", "3.12", "3.13", "3.14"):
+            self.assertIn(version, supported)
         self.assertIn("os: [ubuntu-latest, macos-latest, windows-latest]", ci)
 
     def test_empty_mypy_baseline_keeps_normal_source_wide_configuration(self) -> None:

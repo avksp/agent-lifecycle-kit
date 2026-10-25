@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11", "3.12", "3.13", "3.14"]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
@@ -77,6 +77,11 @@ jobs:
                       sys.stdout.buffer.flush()
                       print(f"\nEND quality diagnostic {command.get('id')} {key}")
           PY_DIAGNOSTICS
+      - name: Check strict types in reduced contract modules
+        run: >-
+          uv run --frozen --group quality python -m mypy --strict
+          src/agent_lifecycle/contracts/preparation_policy.py
+          src/agent_lifecycle/contracts/agent_plugin_qualification_schemas.py
       - name: Validate quality evidence
         run: >-
           PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src

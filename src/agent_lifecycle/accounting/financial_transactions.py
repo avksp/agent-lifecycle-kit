@@ -6,11 +6,10 @@ These primitives confer no host, provider or dispatch authority.
 from dataclasses import asdict
 
 from .contracts import (
-    JournalUnavailable,
     Operation,
     RevisionConflict,
     _BindingConflict,
-    _JournalStoragePort,
+    _FinancialTransactionPort,
     _projection,
     digest,
     identity,
@@ -18,14 +17,12 @@ from .contracts import (
 )
 
 
-def _require_financial_transaction(journal: _JournalStoragePort) -> None:
-    journal._check_owner()
-    if not journal._db.in_transaction or journal._admission_depth != 1:
-        raise JournalUnavailable("Financial operation requires admitted transaction", write_outcome="NOT_STARTED")
+def _require_financial_transaction(journal: _FinancialTransactionPort) -> None:
+    journal._require_financial_transaction()
 
 
 def _reserve_in_transaction(
-    journal: _JournalStoragePort, operation: Operation, *, expected_revision: int | None = None
+    journal: _FinancialTransactionPort, operation: Operation, *, expected_revision: int | None = None
 ) -> str:
     """Apply ordinary reservation arithmetic inside the caller's admitted transaction."""
     _require_financial_transaction(journal)
@@ -61,25 +58,16 @@ def _reserve_in_transaction(
         return journal._conflict((scope,), "Scope/policy/task binding mismatch", op)
     if not _reservation_fits(state, revision, operation):
         return "DENY"
-    journal._db.execute("SAVEPOINT identity_batch")
     try:
-        for kind, key in (
-            ("operation", [scope, operation.operation_id]),
-            ("dispatch", [scope, operation.dispatch_key]),
-            ("permit", operation.permit_id),
-        ):
-            journal._key(kind, key, scope, operation.operation_id, operation.binding_digest)
-        journal._db.execute("RELEASE identity_batch")
+        journal._reserve_identity_keys(operation)
     except _BindingConflict as exc:
-        journal._db.execute("ROLLBACK TO identity_batch")
-        journal._db.execute("RELEASE identity_batch")
         return journal._conflict(exc.scopes, str(exc), op)
     journal._record(scope, state, revision, "RESERVE", {"operation": op})
     return "RESERVED"
 
 
 def _claim_in_transaction(
-    journal: _JournalStoragePort, scope: str, operation_id: str, binding_digest: str, claim_id: str
+    journal: _FinancialTransactionPort, scope: str, operation_id: str, binding_digest: str, claim_id: str
 ) -> str:
     """Claim once inside the caller's admitted transaction; no dispatch authority is conferred."""
     _require_financial_transaction(journal)

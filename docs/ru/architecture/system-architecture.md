@@ -27,7 +27,7 @@ C1 показывает участников и внешние границы; C
 | --- | --- | --- | --- |
 | Общие отказы по условию и UTC-время закрытия | [require_condition](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/contracts/errors.py), [closing_instant](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/contracts/closing_time.py) | [контракт времени](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/contracts/test_closing_time.py), [полномочия попытки](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/adapter_sessions/test_attempt_authority.py) | Публичные функции нижнего слоя сохраняют коды отказа вызывающего модуля; не дают полномочий workflow и не расширяют поддерживаемый корневой Python API. |
 | Долговечность каталога попытки | [attempt_authority.py](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/adapter_sessions/attempt_authority.py) делегирует [sync_authority_directory](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/contracts/authority_io.py). | [тесты полномочий попытки](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/adapter_sessions/test_attempt_authority.py) | Сохранён `r11-durable-storage-unavailable` при отсутствии POSIX-примитивов; защищённый authority I/O также может отклонять небезопасные пути. |
-| Резервирование и claim внутри допущенной транзакции | [financial_transactions.py](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/accounting/financial_transactions.py) использует существующие `_JournalStoragePort` и `JournalHandle` из [контрактов учёта](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/accounting/contracts.py). | [границы транзакций](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/accounting/test_financial_transaction_boundaries.py), [восстановление](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/accounting/test_closing_resources_recovery.py) | Нет новой схемы хранения, полномочий dispatch или финансовых полномочий. Сохранены отказы admission, revision, cap, replay и protected reserve; исторические импорты восстановления и записанные расходы читаются по-прежнему. |
+| Резервирование и claim внутри допущенной транзакции | [financial_transactions.py](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/accounting/financial_transactions.py) использует узкий `_FinancialTransactionPort` и существующий `JournalHandle` из [контрактов учёта](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/accounting/contracts.py). | [границы транзакций](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/accounting/test_financial_transaction_boundaries.py), [восстановление](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/accounting/test_closing_resources_recovery.py) | Нет новой схемы хранения, полномочий dispatch или финансовых полномочий. Сохранены отказы admission, revision, cap, replay и protected reserve; исторические импорты восстановления и записанные расходы читаются по-прежнему. |
 | Три удалённых межпакетных закрытых импорта | [attempt_authority.py](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/adapter_sessions/attempt_authority.py), [closing_resource_recovery.py](https://github.com/avksp/agent-lifecycle-kit/blob/main/src/agent_lifecycle/accounting/closing_resource_recovery.py) | [регрессия именных зависимостей](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/release/test_architecture_policy_integration.py) | Зависимости от accounting `_require`, accounting `_sync_directory` и workflow-state `_closing_instant` заменены общими владельцами; это не устранение всех закрытых зависимостей или технического долга. |
 | Правила зависимостей и сложности | [политика зависимостей](https://github.com/avksp/agent-lifecycle-kit/blob/main/policy/architecture-dependencies.json), [политика лимитов](https://github.com/avksp/agent-lifecycle-kit/blob/main/policy/architecture-limits.json) | [валидатор зависимостей](https://github.com/avksp/agent-lifecycle-kit/blob/main/tools/release/validate_module_dependencies.py), [валидатор сложности](https://github.com/avksp/agent-lifecycle-kit/blob/main/tools/release/validate_architecture_complexity.py) | Статическая ацикличность модулей/пакетов, точные исключения и запрет роста учтённого долга; не всеобщее соответствие SOLID или отсутствие ошибок. |
 | Типизация всего исходного пакета | [pyproject.toml](https://github.com/avksp/agent-lifecycle-kit/blob/main/pyproject.toml), [quality runner](https://github.com/avksp/agent-lifecycle-kit/blob/main/tools/release/run_python_quality.py) | Обычная команда `python -m mypy src/agent_lifecycle` использует сохранённую настройку `check_untyped_defs = true` (явный флаг `--check-untyped-defs` эквивалентен); [регрессионная проверка](https://github.com/avksp/agent-lifecycle-kit/blob/main/tests/release/test_architecture_policy_integration.py) требует эту настройку. | Проверяются и тела функций без аннотаций; это не строгая типизация всех значений и не runtime-валидация. |
@@ -1263,3 +1263,32 @@ baseline. Это не означает отсутствия всего архи�
 хуками хоста. Глобальные git hooks не устанавливаются. Итоговая совместимость
 требует текущих локальных тестов, независимого implementation review и полной
 OS/Python CI-матрицы на кандидате.
+
+
+### Ограниченные изменения архитектуры в 2.27
+
+`contracts/private_storage_compat.py` владеет совместимым чтением приватных файлов
+для старого declared-ledger и входа Codex. Современная политика private storage и
+границы полномочий хоста сохранены. Правила reserve/claim используют
+`_FinancialTransactionPort`; проверка допущенной транзакции SQLite и savepoint
+идентификаторов остаются у владельца `accounting/journal.py`.
+
+Оценки ветвления двух входных функций снижены до 10 и 13 при лимите 20. Каждый
+помощник также укладывается в этот лимит. Оба модуля проходят `mypy --strict`, а
+глобальная цель Python остаётся 3.11. Политика сохраняет 282 другие исторические
+записи о сложности. Удалены три отсутствующие приватные зависимости; тесты
+запрещают их возврат. Релиз не устраняет весь архитектурный долг или все `Any`.
+
+Python 3.11–3.15 проверяется полной матрицей трёх ОС. Локальная проба не доказывает
+поддержку платформы. У положительного теста свежих конструкторов один общий
+лимит 10 секунд и явные результаты процессов. Повторяется только точный отказ
+admission deadline с `NOT_STARTED`; производственный лимит 1 секунда и
+отрицательные проверки сохранены. Причины прежнего удержания lease/планирования
+и отдельной ошибки sync в Windows по-прежнему не доказаны.
+
+`JournalHandle` сохраняет широкий контракт композиции `_JournalStoragePort`;
+финансовые правила получают только узкий `_FinancialTransactionPort`.
+
+Для Python 3.15 сериализатор отпечатков опускает только известное целочисленное
+поле обычного импорта `is_lazy=0`. Ненулевые флаги, поля других типов узлов и
+неизвестные будущие поля сохраняются. Базовые отпечатки и лимиты не изменяются.

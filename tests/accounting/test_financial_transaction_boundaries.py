@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 from agent_lifecycle.accounting import closing_resource_recovery as recovery
 from agent_lifecycle.accounting.contracts import JournalHandle, JournalUnavailable, RevisionConflict
@@ -35,6 +36,7 @@ class FinancialTransactionBoundaryTests(unittest.TestCase):
                     self.journal._db.execute("BEGIN")
                 try:
                     for action in (
+                        lambda: self.journal._reserve_identity_keys(operation()),
                         lambda: _reserve_in_transaction(self.journal, operation()),
                         lambda: _claim_in_transaction(self.journal, "run", "op", "a" * 64, "claim"),
                     ):
@@ -46,6 +48,42 @@ class FinancialTransactionBoundaryTests(unittest.TestCase):
                     if begin:
                         self.journal._db.rollback()
         self.assertEqual(before, list(self.journal._db.iterdump()))
+
+    def test_rules_use_only_narrow_capabilities_on_real_storage(self):
+        journal = self.journal
+        port = SimpleNamespace(
+            **{
+                name: getattr(journal, name)
+                for name in (
+                    "_require_financial_transaction",
+                    "_reserve_identity_keys",
+                    "_closed_scope",
+                    "_conflict",
+                    "_key",
+                    "_load",
+                    "_record",
+                )
+            }
+        )
+        self.assertFalse(hasattr(port, "_db"))
+        op = operation()
+        with journal._transaction():
+            self.assertEqual(_reserve_in_transaction(port, op), "RESERVED")
+            self.assertEqual(_claim_in_transaction(port, "run", "op", op.binding_digest, "claim"), "CLAIM_GRANTED")
+        self.assertEqual(journal.rebuild("run"), journal.snapshot("run"))
+
+    def test_late_identity_collision_rolls_back_prefix_and_keeps_conflict(self):
+        first = operation()
+        self.assertEqual(self.journal.reserve(first), "RESERVED")
+        before = list(self.journal._db.execute("SELECT * FROM identities ORDER BY kind,key"))
+        colliding = replace(operation(name="other"), permit_id=first.permit_id)
+        with self.journal._transaction():
+            self.assertEqual(_reserve_in_transaction(self.journal, colliding), "CONFLICT")
+        self.assertEqual(before, list(self.journal._db.execute("SELECT * FROM identities ORDER BY kind,key")))
+        state, _ = self.journal._load("run")
+        self.assertNotIn("other", state["operations"])
+        self.assertEqual(self.journal.snapshot("run").gate_status, "CONFLICT")
+        self.assertEqual(self.journal.rebuild("run"), self.journal.snapshot("run"))
 
     def test_outer_rollback_reverts_events_keys_and_projection(self):
         before = list(self.journal._db.iterdump())

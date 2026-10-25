@@ -32,6 +32,7 @@ from .contracts import (
     EvidenceRef,
     JournalEvent,
     JournalHandle,
+    Operation,
     UsageOutcome,
     canonical,
     digest,
@@ -269,6 +270,29 @@ class Journal(
         if self._closed_scope(scope):
             return self._archive_state(scope)
         return None, 0
+
+    def _require_financial_transaction(self) -> None:
+        self._check_owner()
+        if not self._db.in_transaction or self._admission_depth != 1:
+            raise JournalUnavailable("Financial operation requires admitted transaction", write_outcome="NOT_STARTED")
+
+    def _reserve_identity_keys(self, operation: Operation) -> None:
+        """Keep a reservation's immutable identities atomic inside admission."""
+        self._require_financial_transaction()
+        scope = operation.budget_scope_id
+        self._db.execute("SAVEPOINT identity_batch")
+        try:
+            for kind, key in (
+                ("operation", [scope, operation.operation_id]),
+                ("dispatch", [scope, operation.dispatch_key]),
+                ("permit", operation.permit_id),
+            ):
+                self._key(kind, key, scope, operation.operation_id, operation.binding_digest)
+            self._db.execute("RELEASE identity_batch")
+        except _BindingConflict:
+            self._db.execute("ROLLBACK TO identity_batch")
+            self._db.execute("RELEASE identity_batch")
+            raise
 
     def _key(self, kind: str, key: object, scope: str, owner: str, value: str) -> bool:
         """Reserve/check a global immutable key inside the current transaction."""

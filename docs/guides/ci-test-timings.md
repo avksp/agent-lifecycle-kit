@@ -73,7 +73,7 @@ versions can differ even at the same SHA and runner label, so that comparison
 cannot certify the gate. Keep the recorded incomparable sample. Manual dispatch
 is available only for a separately authorized comparison. Ordinary pull requests
 do not automatically repeat this expensive measurement.
-The initial promotion gate requires all normal OS/Python3.11–3.14 checks plus the successful
+The initial promotion gate requires all normal OS/Python3.11–3.15 checks plus the successful
 control, identical full inventory/outcomes/skips, matching available environment
 identity and at least **15% lower provider test-step wall time**. Retain the
 original and failed samples. Do not rerun a pair merely to obtain a favorable

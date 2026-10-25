@@ -9,6 +9,21 @@ from release_common import digest_value, load_json
 
 PLUGIN_NAME = "agent-lifecycle-kit"
 
+ARCHITECTURE_PY315_DOCUMENTATION: dict[str, Any] = {
+    "id": "bounded-architecture-and-python315",
+    "englishPath": "docs/architecture/system-architecture.md",
+    "russianPath": "docs/ru/architecture/system-architecture.md",
+    "narrowFinancialPort": "_FinancialTransactionPort",
+    "modernStoragePolicyChanged": False,
+    "newRuntimeDependencies": False,
+    "wholeHostAuthorityClaimed": False,
+    "allArchitectureDebtEliminated": False,
+    "python315FullPlatformProofRequired": True,
+    "productionAdmissionSeconds": 1,
+    "fixtureSharedSeconds": 10,
+    "publishingPython": "3.14",
+}
+
 LIFECYCLE_CONTROL_DOCUMENTATION: dict[str, Any] = {
     "id": "optional-adapter-lifecycle-control",
     "status": "OPTIONAL",
@@ -389,6 +404,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "pluginName": PLUGIN_NAME,
         "entries": entries,
         "documentedFeatures": [
+            ARCHITECTURE_PY315_DOCUMENTATION,
             LIFECYCLE_CONTROL_DOCUMENTATION,
             DOMAIN_LANGUAGE_DOCUMENTATION,
             MULTI_RUN_DOCUMENTATION,

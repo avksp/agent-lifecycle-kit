@@ -4,9 +4,12 @@ import argparse
 import hashlib
 import json
 import shutil
+import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
+import zipfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
@@ -34,8 +37,6 @@ def main() -> int:
             args.python,
             "-m",
             "build",
-            "--wheel",
-            "--sdist",
             "--outdir",
             str(dist_dir.resolve()),
             str(ROOT),
@@ -52,21 +53,21 @@ def main() -> int:
         blockers.append({"code": "sdist-not-built", "message": "build did not produce a source distribution"})
     with tempfile.TemporaryDirectory() as tmp:
         artifact_root = Path(tmp)
-        if wheels:
-            artifact_checks.append(
-                _check_artifact("wheel", wheels[0], args.python, artifact_root / "wheel-venv", commands, blockers)
-            )
-        if source_distributions:
-            artifact_checks.append(
-                _check_artifact(
-                    "sdist",
-                    source_distributions[0],
-                    args.python,
-                    artifact_root / "sdist-venv",
-                    commands,
-                    blockers,
+        expected = _runtime_inventory(ROOT)
+        for kind, artifacts in (("wheel", wheels), ("sdist", source_distributions)):
+            if len(artifacts) > 1:
+                blockers.append({"code": "packaging-artifact-ambiguous", "artifactKind": kind})
+            if artifacts:
+                inventory = _check_runtime_members(kind, artifacts[0], expected)
+                if inventory["status"] != "PASS":
+                    blockers.append({"code": "packaging-runtime-members-differ", "artifactKind": kind, **inventory})
+                    artifact_checks.append({"kind": kind, "status": "FAIL", "runtimeInventory": inventory})
+                    continue
+                result = _check_artifact(
+                    kind, artifacts[0], args.python, artifact_root / f"{kind}-venv", commands, blockers
                 )
-            )
+                result["runtimeInventory"] = inventory
+                artifact_checks.append(result)
 
     status = "PASS" if not blockers else "FAIL"
     evidence = {
@@ -82,6 +83,75 @@ def main() -> int:
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return 0 if status == "PASS" else 1
+
+
+def _runtime_inventory(root: Path) -> dict[str, str]:
+    """Read the actual export or checkout source, independent of Git and caches."""
+    package = root / "src/agent_lifecycle"
+    inventory = {}
+    for path in sorted(package.rglob("*")):
+        if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+            continue
+        if path.is_symlink():
+            raise ValueError("Runtime source symlink refused")
+        if path.is_file():
+            name = path.relative_to(root / "src").as_posix()
+            inventory[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not inventory:
+        raise ValueError("Runtime source inventory required")
+    return inventory
+
+
+def _check_runtime_members(kind: str, artifact: Path, expected: dict[str, str]) -> dict[str, Any]:
+    """Reject stale, missing, changed or duplicate package members before install."""
+    actual: dict[str, str] = {}
+
+    def add(name: str, raw: bytes) -> None:
+        if name in actual:
+            raise ValueError("Duplicate runtime package member")
+        actual[name] = hashlib.sha256(raw).hexdigest()
+
+    try:
+        if kind == "wheel" or (kind == "sdist" and zipfile.is_zipfile(artifact)):
+            with zipfile.ZipFile(artifact) as archive:
+                for member in archive.infolist():
+                    name = member.filename
+                    if kind == "sdist":
+                        parts = name.split("/")
+                        name = "/".join(parts[2:]) if parts[1:3] == ["src", "agent_lifecycle"] else ""
+                    if name.startswith("agent_lifecycle/") and not member.is_dir():
+                        if stat.S_ISLNK(member.external_attr >> 16):
+                            raise ValueError("Runtime archive symlink refused")
+                        add(name, archive.read(member))
+        elif kind == "sdist":
+            with tarfile.open(artifact, "r:*") as archive:
+                for member in archive.getmembers():
+                    parts = member.name.split("/")
+                    if parts[1:3] == ["src", "agent_lifecycle"] and not member.isdir():
+                        if not member.isfile():
+                            raise ValueError("Runtime archive link refused")
+                        stream = archive.extractfile(member)
+                        if stream is None:
+                            raise ValueError("Runtime archive member unreadable")
+                        with stream:
+                            add("/".join(parts[2:]), stream.read())
+        else:
+            raise ValueError("Unsupported runtime artifact kind")
+    except (OSError, ValueError, tarfile.TarError, zipfile.BadZipFile) as exc:
+        return {"status": "FAIL", "errorType": type(exc).__name__}
+    missing = sorted(expected.keys() - actual.keys())
+    unexpected = sorted(actual.keys() - expected.keys())
+    changed = sorted(name for name in expected.keys() & actual.keys() if expected[name] != actual[name])
+    identity = hashlib.sha256(json.dumps(expected, sort_keys=True).encode()).hexdigest()
+    return {
+        "status": "FAIL" if missing or unexpected or changed else "PASS",
+        "sourceInventoryDigest": identity,
+        "sourceMemberCount": len(expected),
+        "artifactMemberCount": len(actual),
+        "missing": missing,
+        "unexpected": unexpected,
+        "changed": changed,
+    }
 
 
 def _check_artifact(

@@ -94,10 +94,21 @@ def _canonical_ast_dump(value: _AstValue) -> str:
 
     Unlike newer ast.dump defaults, empty lists remain explicit. Python 3.11
     declarations acquire the empty type_params field introduced in 3.12.
-    Optional None fields stay omitted; populated and future fields are retained.
+    Optional None fields stay omitted. Python 3.15 eager imports omit only the
+    known integer is_lazy=0 default; nonzero flags and future fields remain.
+    This preserves the accepted representation without ignoring lazy semantics.
     """
     if isinstance(value, ast.AST):
-        fields = list(ast.iter_fields(value))
+        fields = [
+            (name, child)
+            for name, child in ast.iter_fields(value)
+            if not (
+                name == "is_lazy"
+                and isinstance(value, (ast.Import, ast.ImportFrom))
+                and type(child) is int
+                and child == 0
+            )
+        ]
         if isinstance(value, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and not any(
             name == "type_params" for name, _ in fields
         ):
