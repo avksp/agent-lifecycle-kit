@@ -7,7 +7,7 @@ on:
         description: Timing route (fixture profile is feasibility only)
         type: choice
         default: suite
-        options: [suite, fixture-comparison, fixture-profile]
+        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility]
       baseline_sha:
         description: Exact accepted 2.27 baseline commit for fixture measurement
         type: string
@@ -115,8 +115,23 @@ jobs:
             work/ci/control-environment.json
           if-no-files-found: error
           retention-days: 14
+      - name: Profile baseline and candidate feasibility on this runner
+        id: fixture-feasibility
+        if: inputs.mode == 'fixture-profile-feasibility'
+        env:
+          BASELINE_SHA: ${{ inputs.baseline_sha }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
+        run: >-
+          uv run --frozen --group quality --python 3.11
+          python tools/ci/measure_limited_usage.py
+          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
+          --experiment "$env:EXPERIMENT_NUMBER" --mode feasibility
+          --out work/ci/limited-usage-feasibility.json
       - name: Retain bounded fixture measurement evidence
-        if: always() && (steps.fixture-pairs.outcome != 'skipped' || steps.fixture-profile.outcome != 'skipped')
+        if: >-
+          always() && (steps.fixture-pairs.outcome != 'skipped' || steps.fixture-profile.outcome != 'skipped'
+          || steps.fixture-feasibility.outcome != 'skipped')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: limited-usage-windows-py3.11-${{ inputs.mode }}-${{ inputs.experiment }}
@@ -125,6 +140,8 @@ jobs:
             work/ci/limited-usage-pairs/
             work/ci/limited-usage-profile.json
             work/ci/limited-usage-profile/
+            work/ci/limited-usage-feasibility.json
+            work/ci/limited-usage-feasibility/
             work/ci/control-environment.json
           if-no-files-found: error
           retention-days: 14

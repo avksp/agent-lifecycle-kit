@@ -167,6 +167,63 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
             self.assertTrue(value["inputMutation"])
             self.assertTrue((parent / "sample/stdout.log").exists())
 
+    def test_candidate_profile_keeps_true_source_role_and_refuses_baseline_relabelling(self):
+        module = subject()
+        body = """
+            import unittest
+            setups=[]
+            class LimitedUsageTests(unittest.TestCase):
+                def setUp(self): setups.append('fresh')
+                def test_current_registry_capacity_preserves_large_original_interval(self):
+                    self.assertEqual(len(setups),4)
+        """
+        with checkout(body) as (parent, root, head):
+            names = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().strip("\0").split("\0")
+            destination = parent / "profile"
+            destination.mkdir()
+            scratch = parent / "scratch"
+            scratch.mkdir()
+            request = {
+                "root": str(root),
+                "output": str(destination / "profile.json"),
+                "sourceHead": head,
+                "trackedInputs": names,
+                "inputSha256": module.input_manifest(root, names)["sha256"],
+                "testContract": module.test_contract(root),
+                "profileOnly": True,
+                "profileSourceRole": "candidate",
+                "profileMode": "PROFILE_FEASIBILITY",
+            }
+            path = destination / "request.json"
+            module.write_new(path, request)
+            records = []
+            with patch.dict(os.environ, GITHUB_SHA=head):
+                module.command(
+                    module.worker_argv(HELPER, path, root, scratch),
+                    root,
+                    time.monotonic() + 60,
+                    records,
+                    logs=destination,
+                )
+            value = module.read_object(destination / "profile.json")
+            self.assertEqual((value["sourceHead"], value["sourceRole"]), (head, "candidate"))
+            self.assertEqual(value["actualTestsRun"], 1)
+            self.assertFalse(value["performanceAcceptanceClaimed"])
+            denied = parent / "denied"
+            denied.mkdir()
+            bad = {**request, "output": str(denied / "profile.json"), "profileSourceRole": "baseline"}
+            bad_path = denied / "request.json"
+            module.write_new(bad_path, bad)
+            with patch.dict(os.environ, GITHUB_SHA=head), self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, bad_path, root, scratch),
+                    root,
+                    time.monotonic() + 60,
+                    records,
+                    logs=denied,
+                )
+            self.assertFalse((denied / "profile.json").exists())
+
     def test_three_pair_join_refuses_changed_outcomes_environment_roster_and_missing_samples(self):
         module = subject()
         join = {
@@ -263,6 +320,13 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
         self.assertEqual(value["status"], "FAIL")
         self.assertEqual(value["commands"], [])
         self.assertFalse(value["performanceAcceptanceClaimed"])
+        args.mode = "feasibility"
+        stream = io.StringIO()
+        with patch.object(module.platform, "system", return_value="Linux"):
+            self.assertEqual(module.execute(args, stream), 1)
+        feasibility = json.loads(stream.getvalue())
+        self.assertEqual(feasibility["experimentTimeoutSeconds"], 600)
+        self.assertEqual(feasibility["validationUnits"]["profileChildrenStarted"], 0)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "report.json"
             path.write_bytes(b"original")

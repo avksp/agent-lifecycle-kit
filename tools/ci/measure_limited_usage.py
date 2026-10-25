@@ -30,6 +30,7 @@ MAX_BYTES = 8_388_608
 SAMPLE_SECONDS = 2400
 EXPERIMENT_SECONDS = 18_000
 PROFILE_SECONDS = 1150
+FEASIBILITY_SECONDS = 600
 SLOW_CASE = "LimitedUsageTests.test_current_registry_capacity_preserves_large_original_interval"
 ORDER = ("baseline", "candidate", "candidate", "baseline", "baseline", "candidate")
 LINE_SELECTORS = {
@@ -48,6 +49,8 @@ OWNED = frozenset(
         "tools/ci/run_parallel_unittest.py",
         "tools/ci/measure_limited_usage.py",
         ".github/workflows/ci-timing-control.yml",
+        "src/agent_lifecycle/contracts/authority_io.py",
+        "tests/contracts/test_windows_authority_bindings.py",
     )
 )
 ENV_KEYS = (
@@ -389,18 +392,22 @@ def sample(request_path):
 
 
 def profile_sample(request_path):
-    """Feasibility evidence on the unchanged baseline; no A/B performance verdict."""
+    """Profile the requested detached role without a whole-module performance verdict."""
     import cProfile
     import pstats
 
     request = read_object(request_path)
     root = Path(request["root"]).resolve(strict=True)
+    expected = source_sha(request["sourceHead"])
+    role = request["profileSourceRole"]
     if (
         (root / ".git/HEAD").is_symlink()
-        or (root / ".git/HEAD").read_text(encoding="ascii").strip() != BASELINE
-        or request["sourceHead"] != BASELINE
+        or (root / ".git/HEAD").read_text(encoding="ascii").strip() != expected
+        or role not in ("baseline", "candidate")
+        or (role == "baseline" and expected != BASELINE)
+        or (role == "candidate" and (expected == BASELINE or expected != os.environ.get("GITHUB_SHA")))
     ):
-        raise ValueError("Profile requires the exact detached accepted baseline")
+        raise ValueError("Profile requires its exact detached baseline/candidate source role")
     before = input_manifest(root, request["trackedInputs"])
     if before["sha256"] != request["inputSha256"] or test_contract(root) != request["testContract"]:
         raise ValueError("Profile input or contract differs")
@@ -460,14 +467,20 @@ def profile_sample(request_path):
     unchanged = input_manifest(root, request["trackedInputs"]) == before
     value = {
         "schemaVersion": "alk-limited-usage-profile.v1",
-        "mode": "PROFILE_ONLY",
+        "mode": request["profileMode"],
+        "sourceRole": role,
         "status": "PROFILE_COMPLETE" if passed and unchanged else "FAIL",
-        "sourceHead": BASELINE,
+        "sourceHead": expected,
         "inputSha256": before["sha256"],
         "inputHashesUnchanged": unchanged,
         "testContract": request["testContract"],
         "environment": environment_identity(),
         "python": sys.version,
+        "runtimeProvenance": {
+            "packageFile": str(Path(package.__file__).resolve()),
+            "executable": sys.executable,
+            "installedVersion": importlib.metadata.version("agent-lifecycle-kit"),
+        },
         "phases": phases,
         "testId": f"{HOT_MODULE}.{SLOW_CASE}",
         "performanceAcceptanceClaimed": False,
@@ -562,7 +575,10 @@ def compare_samples(samples):
 
 def execute(args, report):
     started = time.perf_counter()
-    limit = PROFILE_SECONDS if args.mode == "profile" else EXPERIMENT_SECONDS
+    profile_mode = args.mode in ("profile", "feasibility")
+    limit = (
+        FEASIBILITY_SECONDS if args.mode == "feasibility" else PROFILE_SECONDS if profile_mode else EXPERIMENT_SECONDS
+    )
     deadline = time.monotonic() + limit
     source = Path.cwd().resolve()
     records, samples = [], []
@@ -572,7 +588,10 @@ def execute(args, report):
         "baseline": args.baseline,
         "candidate": args.candidate,
         "experiment": args.experiment,
-        "mode": "PROFILE_ONLY" if args.mode == "profile" else "PAIRED_COMPARISON",
+        "mode": {"profile": "PROFILE_ONLY", "feasibility": "PROFILE_FEASIBILITY", "paired": "PAIRED_COMPARISON"}[
+            args.mode
+        ],
+        "profiles": [],
         "environment": environment_identity(),
         "python": sys.version,
         "samples": samples,
@@ -616,7 +635,7 @@ def execute(args, report):
         with tempfile.TemporaryDirectory(prefix="alk-limited-pairs-") as directory:
             roots, inputs, contracts = {}, {}, {}
             sources = [("baseline", args.baseline)]
-            if args.mode == "paired":
+            if args.mode != "profile":
                 sources.append(("candidate", args.candidate))
             for side, sha in sources:
                 root = Path(directory).resolve() / side
@@ -631,15 +650,35 @@ def execute(args, report):
                     raise ValueError("Isolated checkout source differs")
                 names = git(["ls-files", "-z"], root, deadline, records).decode().strip("\0").split("\0")
                 inputs[side] = input_manifest(root, names)
+                materialization = []
+                for name in (".gitattributes", HOT_PATH, "src/agent_lifecycle/contracts/authority_io.py"):
+                    raw_blob = git(["show", sha + ":" + name], root, deadline, records)
+                    raw_file = (root / name).read_bytes()
+                    materialization.append(
+                        {
+                            "path": name,
+                            "sourceHead": sha,
+                            "gitBlobSha256": hashlib.sha256(raw_blob).hexdigest(),
+                            "gitBlobBytes": len(raw_blob),
+                            "worktree": reference(root / name),
+                            "blobCRLF": raw_blob.count(b"\r\n"),
+                            "worktreeCRLF": raw_file.count(b"\r\n"),
+                            "worktreeLF": raw_file.count(b"\n"),
+                            "normalized": False,
+                        }
+                    )
+                inputs[side]["materialization"] = materialization
                 contracts[side] = test_contract(root)
                 roots[side] = root
                 restore_fixture(root)
                 write_new(folder / f"{side}-inputs.json", inputs[side])
-            if args.mode == "paired" and contracts["baseline"] != contracts["candidate"]:
+            if args.mode != "profile" and contracts["baseline"] != contracts["candidate"]:
                 raise ValueError("Existing tests, assertions or post-initialization fixture behavior changed")
             payload["testContract"] = contracts["baseline"]
             payload["setupSeconds"] = time.perf_counter() - started
-            order = ("baseline",) if args.mode == "profile" else ORDER
+            order = (
+                ("baseline", "candidate") if args.mode == "feasibility" else ("baseline",) if profile_mode else ORDER
+            )
             for number, side in enumerate(order, 1):
                 root = roots[side]
                 destination = folder / str(number)
@@ -654,12 +693,14 @@ def execute(args, report):
                     "inputSha256": inputs[side]["sha256"],
                     "testContract": contracts[side],
                     "expectedTests": 78,
-                    "profileOnly": args.mode == "profile",
+                    "profileOnly": profile_mode,
+                    "profileSourceRole": side,
+                    "profileMode": payload["mode"],
                 }
                 request_path = destination / "request.json"
                 write_new(request_path, request)
                 argv = worker_argv(helper, request_path, root, scratch)
-                counter = "profileChildrenStarted" if args.mode == "profile" else "moduleChildrenStarted"
+                counter = "profileChildrenStarted" if profile_mode else "moduleChildrenStarted"
                 payload["validationUnits"][counter] += 1
                 try:
                     command(
@@ -667,23 +708,35 @@ def execute(args, report):
                         root,
                         deadline,
                         records,
-                        timeout=PROFILE_SECONDS if args.mode == "profile" else SAMPLE_SECONDS,
+                        timeout=min(limit if profile_mode else SAMPLE_SECONDS, deadline - time.monotonic()),
                         logs=destination,
                     )
                 finally:
                     payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
                 value = read_object(destination / "test-timings.json")
-                if args.mode == "profile":
+                if profile_mode:
                     if (
                         value["status"] != "PROFILE_COMPLETE"
-                        or value["sourceHead"] != args.baseline
+                        or value["sourceHead"] != request["sourceHead"]
+                        or value["sourceRole"] != side
+                        or value["mode"] != payload["mode"]
+                        or value["testContract"] != request["testContract"]
+                        or value["testId"] != f"{HOT_MODULE}.{SLOW_CASE}"
+                        or value["python"] != sys.version
                         or value["inputSha256"] != request["inputSha256"]
                         or value["environment"] != environment_identity()
                         or not value["inputHashesUnchanged"]
                         or value["performanceAcceptanceClaimed"]
                     ):
                         raise ValueError("Incomplete or wrong-source feasibility profile")
-                    payload.update(status="PROFILE_COMPLETE", profile=reference(destination / "test-timings.json"))
+                    payload["profiles"].append(
+                        {
+                            "side": side,
+                            "sourceHead": request["sourceHead"],
+                            "report": reference(destination / "test-timings.json"),
+                            "inputSha256": request["inputSha256"],
+                        }
+                    )
                     continue
                 join = validate_sample(value, request)
                 samples.append(
@@ -702,6 +755,8 @@ def execute(args, report):
             if args.mode == "paired":
                 payload.update(compare_samples(samples))
                 payload["performanceAcceptanceClaimed"] = payload["status"] == "MEASURED_IMPROVEMENT"
+            elif len(payload["profiles"]) == len(order):
+                payload["status"] = "FEASIBILITY_COMPLETE" if args.mode == "feasibility" else "PROFILE_COMPLETE"
     except BaseException as exc:
         payload.update(status="FAIL", failure=f"{type(exc).__name__}: {exc}")
         traceback.print_exc()
@@ -714,7 +769,7 @@ def execute(args, report):
         payload.update(status="FAIL", failure="Experiment deadline exceeded; partial evidence retained")
     json.dump(payload, report, sort_keys=True, allow_nan=False)
     report.write("\n")
-    return 0 if payload["status"] in ("MEASURED_IMPROVEMENT", "PROFILE_COMPLETE") else 1
+    return 0 if payload["status"] in ("MEASURED_IMPROVEMENT", "PROFILE_COMPLETE", "FEASIBILITY_COMPLETE") else 1
 
 
 def main(argv=None):
@@ -722,7 +777,7 @@ def main(argv=None):
     parser.add_argument("--baseline", required=True, type=source_sha)
     parser.add_argument("--candidate", required=True, type=source_sha)
     parser.add_argument("--experiment", required=True, type=int, choices=(1, 2))
-    parser.add_argument("--mode", choices=("paired", "profile"), default="paired")
+    parser.add_argument("--mode", choices=("paired", "profile", "feasibility"), default="paired")
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
     output = Path(args.out)
