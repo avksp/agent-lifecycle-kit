@@ -174,9 +174,7 @@ Apache-2.0. See [LICENSE](LICENSE).
 
 ## Release 2.26: bounded discovery and precise quality gates
 
-Markdown imports bound examined entries, directories, depth and cooperative
-elapsed time; see the [security control map](docs/security/release-security.md). Tracked-source checks
+Markdown imports bound examined entries, directories, depth and cooperative elapsed time; see the [security control map](docs/security/release-security.md). Tracked-source checks
 reuse the existing bare-token families. [Quality controls](docs/architecture/system-architecture.md)
-require both combined and statement coverage of 76 percent and retain legacy
-policy interpretation. The existing [reading pilot](docs/guides/controlled-technical-english.md) and host limits
+require both combined and statement coverage of 76 percent and retain legacy policy interpretation. The existing [reading pilot](docs/guides/controlled-technical-english.md) and host limits
 remain; measurements do not establish token savings or host enforcement.
