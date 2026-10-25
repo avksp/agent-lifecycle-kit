@@ -627,7 +627,24 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
     from typing import Protocol
 
-    class _JournalStoragePort(Protocol):
+    class _FinancialTransactionPort(Protocol):
+        """Only the capabilities used by admitted reservation and claim rules."""
+
+        def _require_financial_transaction(self) -> None: ...
+
+        def _reserve_identity_keys(self, operation: Operation) -> None: ...
+
+        def _closed_scope(self, scope: str) -> object | None: ...
+
+        def _conflict(self, scopes: tuple[str, ...], reason: str, payload: dict) -> str: ...
+
+        def _key(self, kind: str, key: object, scope: str, owner: str, value: str) -> bool: ...
+
+        def _load(self, scope: str) -> tuple[dict | None, int]: ...
+
+        def _record(self, scope: str, state: dict | None, revision: int, kind: str, payload: dict) -> int: ...
+
+    class _JournalStoragePort(_FinancialTransactionPort, Protocol):
         """Static view of the existing live Journal composition; no runtime base."""
 
         _admission_depth: int
@@ -669,8 +686,6 @@ if TYPE_CHECKING:
         @staticmethod
         def _compile_opening(scope: BudgetScope, policy: BudgetPolicy, value: OpeningImport) -> dict: ...
 
-        def _conflict(self, scopes: tuple[str, ...], reason: str, payload: dict) -> str: ...
-
         @staticmethod
         def _create_v4_schema(db: sqlite3.Connection, *, writer_version: int = 4) -> None: ...
 
@@ -697,11 +712,7 @@ if TYPE_CHECKING:
 
         def _index(self, table: str, key: str, scope: str, owner: str, payload: dict) -> dict: ...
 
-        def _key(self, kind: str, key: object, scope: str, owner: str, value: str) -> bool: ...
-
         def _live_facts(self, scope: str, *, restore: bool = False) -> tuple[dict, int, list, list]: ...
-
-        def _load(self, scope: str) -> tuple[dict | None, int]: ...
 
         _observation_scope: str | None
 
@@ -713,8 +724,6 @@ if TYPE_CHECKING:
         _path: Path
 
         def _preflight_supplied_finals(self, scope: str, receipts: list[dict]) -> None: ...
-
-        def _record(self, scope: str, state: dict | None, revision: int, kind: str, payload: dict) -> int: ...
 
         def _retained(self, table: str, key: str) -> dict | None: ...
 
@@ -755,6 +764,7 @@ if TYPE_CHECKING:
         writer: EvidenceRef
 else:
     # Preserve the exact nominal runtime bases and authority checks.
+    _FinancialTransactionPort = object
     _JournalStoragePort = object
 
 

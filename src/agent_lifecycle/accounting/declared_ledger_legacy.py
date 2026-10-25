@@ -21,6 +21,7 @@ from agent_lifecycle.accounting.declared_ledger_records import (
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.authority_io import normalize_authority_path, read_authority_bytes
 from agent_lifecycle.contracts.bounded_json import load_bounded_json as _r11_json
+from agent_lifecycle.contracts.private_storage_compat import read_compat_private_bytes
 
 _MAX_REQUEST_BYTES = 131_072
 
@@ -32,42 +33,15 @@ def _read_private(
     allowed_modes: tuple[int, ...] = (0o600,),
     max_bytes: int = _MAX_REQUEST_BYTES,
 ) -> bytes:
-    if os.name == "nt":
-        from agent_lifecycle.contracts.private_storage import read_private_bytes
-
-        try:
-            return read_private_bytes(path, root=root, modes=allowed_modes, max_bytes=max_bytes)
-        except LifecycleError as exc:
-            raise LifecycleError("codex-exact-private-path-unsafe", exc.message) from exc
-    if not path.is_relative_to(root):
-        raise LifecycleError("codex-exact-private-path-unsafe", "private artifact lies outside root")
-    current = path.parent
-    while current != root:
-        info = current.lstat()
-        relative = current.relative_to(root).parts
-        shared_parent = relative in {("work",), ("work", "release-2-16"), ("work", "release-2-16", "evidence")}
-        if not stat.S_ISDIR(info.st_mode) or (not shared_parent and stat.S_IMODE(info.st_mode) != 0o700):
-            raise LifecycleError("codex-exact-private-path-unsafe", "private parent is not mode 0700")
-        current = current.parent
-    info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) not in allowed_modes or info.st_size > max_bytes:
-        raise LifecycleError("codex-exact-private-path-unsafe", "private file has unsafe mode, type or size")
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-    fd = os.open(path, flags)
-    with os.fdopen(fd, "rb") as stream:
-        opened = os.fstat(stream.fileno())
-
-        def identity(item: os.stat_result) -> tuple[int, int, int, int, int]:
-            return (item.st_dev, item.st_ino, item.st_mode, item.st_size, item.st_mtime_ns)
-
-        if identity(opened) != identity(info):
-            raise LifecycleError("codex-exact-private-path-unsafe", "private file changed before reading")
-        raw = stream.read(max_bytes + 1)
-        if identity(os.fstat(stream.fileno())) != identity(opened):
-            raise LifecycleError("codex-exact-private-path-unsafe", "private file changed while reading")
-    if len(raw) > max_bytes:
-        raise LifecycleError("codex-exact-private-overflow", "private artifact exceeds byte limit")
-    return raw
+    return read_compat_private_bytes(
+        path,
+        root=root,
+        allowed_modes=allowed_modes,
+        max_bytes=max_bytes,
+        shared_parents=frozenset({("work",), ("work", "release-2-16"), ("work", "release-2-16", "evidence")}),
+        unsafe_code="codex-exact-private-path-unsafe",
+        overflow_code="codex-exact-private-overflow",
+    )
 
 
 def _r11_git(root: Path, *args: str) -> bytes:

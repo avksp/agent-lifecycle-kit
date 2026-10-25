@@ -3,7 +3,7 @@
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.26.0. Verify frozen plans before execution
+These instructions target ALK v2.27.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -96,7 +96,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.26.0
+python -m pip install agent-lifecycle-kit==2.27.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -107,13 +107,13 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.26.0
+python -m pip install agent-lifecycle-kit==2.27.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
 
 The [PyPI package](https://pypi.org/project/agent-lifecycle-kit/) supports
-Python 3.11-3.14. An exact version keeps the command, plugin metadata and
+Python 3.11-3.15. An exact version keeps the command, plugin metadata and
 documentation on the same release.
 
 ## Check the installation
@@ -144,7 +144,7 @@ Then match the message to the remedy:
 | --- | --- |
 | `command not found` or `is not recognized` | Activate `.venv`, then run `python -m pip install -e .` again. The command is installed inside the active environment. |
 | `No module named agent_lifecycle` | Change to the checkout and install it, or run `PYTHONPATH=src python -m agent_lifecycle version` from the checkout. |
-| `dataclass() got an unexpected keyword argument 'slots'` | The interpreter is too old. Use Python 3.11-3.14, recreate the environment and reinstall. |
+| `dataclass() got an unexpected keyword argument 'slots'` | The interpreter is too old. Use Python 3.11-3.15, recreate the environment and reinstall. |
 | The printed version is unexpected | Run `python -c "import sys; print(sys.executable)"` and `python -m pip show agent-lifecycle-kit`; another Python environment is active. |
 
 For a source checkout, the direct fallback is:

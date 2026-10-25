@@ -613,7 +613,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             with self.subTest(path=relative_path):
                 text = (ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertIn(package_url, text)
-                self.assertIn("Python 3.11-3.14", text)
+                self.assertIn("Python 3.11-3.15", text)
                 match = re.search(r"python -m pip install agent-lifecycle-kit==([0-9]+\.[0-9]+\.[0-9]+)", text)
                 self.assertIsNotNone(match)
                 package_pins.append(match.group(1))
@@ -952,11 +952,44 @@ def _assert_links_resolve(path: Path) -> None:
 def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     _write_text(
         root / "README.md",
-        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. `VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. `VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host conformance and usage/resource calibration are required. Public contracts live in docs/reference/public-contracts.md. docs/reference/project-workflow-profile.md. project profile init. https://pypi.org/project/agent-lifecycle-kit/ supports Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` requires `agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces `agent-objective-snapshot.v1`. `agent-runner-state.v1` produces `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` validates `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
+        "`VERIFIED` for Codex CLI 0.145.0. `VERIFIED` for Claude Code 2.1.220. "
+        "`VERIFIED` for OpenCode CLI 1.18.9. `VERIFIED` for Hermes Agent v0.19.0. "
+        "`VERIFIED` for Qwen Code 0.21.0. `EXPERIMENTAL` means bounded live host "
+        "conformance and usage/resource calibration are required. Public contracts live "
+        "in docs/reference/public-contracts.md. "
+        "docs/reference/project-workflow-profile.md. project profile init. "
+        "https://pypi.org/project/agent-lifecycle-kit/ supports Python 3.11-3.15. "
+        "agent-lifecycle start --adapter codex. `completionCheck` requires "
+        "`agent-completion-check-receipt.v1`. `agent-goal-record.v1` produces "
+        "`agent-objective-snapshot.v1`. `agent-runner-state.v1` produces "
+        "`agent-runner-snapshot.v1`. `agent-follow-up-register.v1` produces "
+        "`agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` validates "
+        "`agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` "
+        "validates `agent-adapter-event-capture-validation.v1`. "
+        "`agent-review-verdict.v1` produces `agent-review-routing-summary.v1`. "
+        "`agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. "
+        "`agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. "
+        "`agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
     _write_text(
         root / "docs/ru/README.md",
-        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. `VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. `VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки расхода продвижение запрещено. Список в Публичных контрактах: reference/public-contracts.md. reference/project-workflow-profile.md. project profile init. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python 3.11-3.14. agent-lifecycle start --adapter codex. `completionCheck` требует `agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт `agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт `agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт `agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет `agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` проверяет `agent-adapter-event-capture-validation.v1`. `agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. `agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. `agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. `agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
+        "`VERIFIED` для Codex CLI 0.145.0. `VERIFIED` для Claude Code 2.1.220. "
+        "`VERIFIED` для OpenCode CLI 1.18.9. `VERIFIED` для Hermes Agent v0.19.0. "
+        "`VERIFIED` для Qwen Code 0.21.0. `EXPERIMENTAL` означает, что без калибровки "
+        "расхода продвижение запрещено. Список в Публичных контрактах: "
+        "reference/public-contracts.md. reference/project-workflow-profile.md. project "
+        "profile init. https://pypi.org/project/agent-lifecycle-kit/ поддерживает Python "
+        "3.11-3.15. agent-lifecycle start --adapter codex. `completionCheck` требует "
+        "`agent-completion-check-receipt.v1`. `agent-goal-record.v1` создаёт "
+        "`agent-objective-snapshot.v1`. `agent-runner-state.v1` создаёт "
+        "`agent-runner-snapshot.v1`. `agent-follow-up-register.v1` создаёт "
+        "`agent-follow-up-summary.v1`. `agent-worktree-isolation-policy.v1` проверяет "
+        "`agent-worktree-attempt-receipt.v1`. `agent-adapter-event-stream-receipt.v1` "
+        "проверяет `agent-adapter-event-capture-validation.v1`. "
+        "`agent-review-verdict.v1` создаёт `agent-review-routing-summary.v1`. "
+        "`agent-optional-quality-pack.v1`. `agent-behavior-check-run.v1`. "
+        "`agent-diagnostic-bundle.v1`. `agent-readonly-status-view.v1`. "
+        "`agent-workflow-event-feed.v1`. `agent-lifecycle-progress-view.v1`.\n",
     )
     onboarding = (
         "git clone https://github.com/avksp/agent-lifecycle-kit.git. python3 -m venv .venv. "
@@ -1152,7 +1185,8 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "agent-project-workflow-profile.v1. agent-effective-project-workflow-profile.v1. "
         "agent-guided-action-receipt.v1. project profile init. project profile check. "
         "--project-profile. --no-project-profile. frozen plan and matching lock. "
-        "зафиксированный план и соответствующий lock-файл. provider, account, credential, secret. провайдере, аккаунте, учётных данных.\n"
+        "зафиксированный план и соответствующий lock-файл. provider, account, "
+        "credential, secret. провайдере, аккаунте, учётных данных.\n"
     )
     _write_text(root / "docs/reference/project-workflow-profile.md", project_profile)
     _write_text(root / "docs/ru/reference/project-workflow-profile.md", project_profile)
@@ -1880,17 +1914,32 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         adapter_doc = (
             "This adapter is `VERIFIED` for Codex CLI 0.145.0; live conformance exists for the tested host range.\n"
             if host == "codex"
-            else "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists for the tested host range.\n"
+            else (
+                "This adapter is `VERIFIED` for Claude Code 2.1.220; live conformance exists for "
+                "the tested host range.\n"
+            )
             if host == "claude"
             else "This adapter is `VERIFIED` for Goose `1.45.0`; live conformance exists for the tested host range.\n"
             if host == "goose"
-            else "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists for the tested host range.\n"
+            else (
+                "This adapter is `VERIFIED` for OpenCode CLI `1.18.9`; live conformance exists "
+                "for the tested host range.\n"
+            )
             if host == "opencode"
-            else "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists for the tested host range.\n"
+            else (
+                "This adapter is `VERIFIED` for Hermes Agent `v0.19.0`; live conformance exists "
+                "for the tested host range.\n"
+            )
             if host == "hermes"
-            else "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists for the tested host range.\n"
+            else (
+                "This adapter is `VERIFIED` for Qwen Code `0.21.0`; live conformance exists for "
+                "the tested host range.\n"
+            )
             if host == "qwen-code"
-            else "This adapter remains `EXPERIMENTAL`; probe and live conformance evidence are required before promotion.\n"
+            else (
+                "This adapter remains `EXPERIMENTAL`; probe and live conformance evidence are "
+                "required before promotion.\n"
+            )
             if host == "grok-build"
             else "This adapter remains `EXPERIMENTAL` until live conformance evidence exists.\n"
         )
@@ -1905,7 +1954,6 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
                 else "The command creates ALK intake for the task.\n"
             ),
         )
-
 
     # Keep the synthetic legacy fixture complete when mandatory documentation grows.
     # Test-specific negative pages and host evidence remain under each test's control.

@@ -4,6 +4,24 @@
 
 - No changes yet.
 
+## 2.27.0 - 2026-10-25
+
+- Use one compatible private-file reader for declared-ledger and Codex input
+  consumers, retaining their error codes, mode rules and Windows boundary.
+- Give reservation/claim rules a narrow financial capability contract. The
+  existing SQLite owner retains admission checks and atomic identity savepoints.
+- Reduce preparation and plugin-profile entrypoint branch scores from 60/61 to
+  10/13. Keep refusal ordering, enforce a strict type check of both selected
+  modules, and remove two obsolete branch and three unused private-edge entries.
+  Other recorded architectural debt remains visible.
+- Report each fresh-constructor child result or error. Retry only a valid
+  NOT_STARTED admission-deadline refusal within the existing shared ten-second
+  positive test budget; keep the production one-second refusal unchanged.
+- Build release wheels from a fresh sdist and compare runtime members and source
+  bytes before installed-consumer checks, including the stale build-cache case.
+- Add Python 3.15 to the existing runtime, quality and foundation matrices,
+  preserving Python 3.11–3.14. Keep the publishing interpreter at Python 3.14.
+
 ## 2.26.0 - 2026-10-25
 
 - Bound Markdown discovery by all examined entries, directories, depth and a

@@ -72,11 +72,11 @@ map is in [Commands by task](../guides/commands-by-task.md).
 
 ## Installation
 
-Python 3.11-3.14 is supported. Install the exact release from the official
+Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.26.0
+python -m pip install agent-lifecycle-kit==2.27.0
 ```
 
 ## Task evidence identity

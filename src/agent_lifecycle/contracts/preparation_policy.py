@@ -113,6 +113,128 @@ def _decision(reason: str, identity: str | None) -> dict[str, Any]:
     return {**body, "decisionDigest": canonical_digest(body)}
 
 
+def _authority_reason(context: dict[str, Any], usage: dict[str, Any], grant: dict[str, Any], now: int) -> str | None:
+    _digest(grant["digest"])
+    if grant["qualified"] is not True or now >= _uint(grant["expiresAt"]):
+        return "PREPARATION_AUTHORITY_UNAVAILABLE"
+    if now >= _uint(context["nativeDeadlineAt"]):
+        return "PREPARATION_NATIVE_DEADLINE_EXPIRED"
+    if context["quantity"] not in QUANTITIES:
+        return "PREPARATION_QUANTITY_UNSUPPORTED"
+    if usage["quantity"] != context["quantity"]:
+        return "PREPARATION_QUANTITY_UNSUPPORTED"
+    return None
+
+
+def _review_chain_reason(context: dict[str, Any], grant: dict[str, Any], now: int) -> str | None:
+    chain = context["chain"]
+    required = chain["required"]
+    slots = chain["slots"]
+    if (
+        not isinstance(required, list)
+        or not 1 <= len(required) <= 64
+        or len(set(required)) != len(required)
+        or not isinstance(slots, list)
+        or len(slots) > 64
+        or any(not isinstance(x, str) or len(x) > 64 for x in required)
+        or not {"integration", "final"}.issubset(required)
+    ):
+        return "REVIEW_CHAIN_NOT_READY"
+    ready = set()
+    for slot in slots:
+        if (
+            slot["qualified"] is True
+            and slot["authorizationDigest"] == grant["digest"]
+            and now < _uint(slot["expiresAt"])
+            and _uint(slot["remaining"], positive=True)
+        ):
+            ready.add(slot["stage"])
+    if not set(required).issubset(ready):
+        return "REVIEW_CHAIN_NOT_READY"
+    return None
+
+
+def _readiness_reason(context: dict[str, Any]) -> str | None:
+    readiness = context["readiness"]
+    if (
+        readiness["qualified"] is not True
+        or readiness["sourceDigest"] != context["sourceDigest"]
+        or not isinstance(readiness["checks"], dict)
+        or not 1 <= len(readiness["checks"]) <= 64
+        or any(value != "PASS" for value in readiness["checks"].values())
+    ):
+        return "PREPARATION_READINESS_UNAVAILABLE"
+    return None
+
+
+def _progress_reason(context: dict[str, Any], usage: dict[str, Any], grant: dict[str, Any], now: int) -> str | None:
+    progress = context["progress"]
+    if (
+        usage["qualified"] is not True
+        or progress["qualified"] is not True
+        or progress["journalPrefixDigest"] != usage["prefixDigest"]
+        or progress["goalDigest"] != context["goalDigest"]
+        or progress["phaseDigest"] != context["phaseDigest"]
+        or progress["sourceDigest"] != context["sourceDigest"]
+    ):
+        return "PREPARATION_HISTORY_UNAVAILABLE"
+    rounds = _uint(progress["completedRounds"])
+    streak = _uint(progress["nonproductiveRounds"])
+    if streak > rounds:
+        raise ValueError("Nonproductive rounds exceed completed history")
+    initial = progress.get("verifiedInitial") is True and rounds == 0
+    state = progress["status"]
+    if state not in {"ADVANCING", "STALLED", "EXPECTED_WAIT"} and not (
+        state == "UNAVAILABLE" and initial and usage.get("goalRequests", usage["requests"]) == 0
+    ):
+        return "PREPARATION_HISTORY_UNAVAILABLE"
+    if state == "EXPECTED_WAIT":
+        if now >= _uint(progress["waitUntil"]):
+            return "PREPARATION_HISTORY_UNAVAILABLE"
+        return "PROCESS_EXPECTED_WAIT"
+    limit = context.get("nonproductiveRoundLimit", 2)
+    _uint(limit, positive=True)
+    if limit != 2 and context.get("stallOverrideAuthorization") != grant:
+        return "PREPARATION_AUTHORITY_UNAVAILABLE"
+    if streak >= limit:
+        return "PROCESS_PROGRESS_STALLED"
+    return None
+
+
+def _repeat_reason(context: dict[str, Any]) -> str | None:
+    repeat = context["repeat"]
+    if type(repeat["required"]) is not bool:
+        raise ValueError("Repeat disposition required")
+    if repeat["required"] is True and (
+        repeat["qualified"] is not True
+        or repeat["disposition"] not in {"MISSING", "INVALIDATED"}
+        or not 1 <= len(repeat["inputDigests"]) <= 64
+        or any(not _digest(v) for v in repeat["inputDigests"])
+        or not _digest(repeat["benefitDigest"])
+    ):
+        return "REPEAT_NOT_JUSTIFIED"
+    return None
+
+
+def _budget_reason(context: dict[str, Any], usage: dict[str, Any]) -> str | None:
+    rounds = context["progress"]["completedRounds"]
+    bounds, request = context["limits"], context["request"]
+    for name in ("tokens", "chargedMilliseconds", "requests"):
+        used = _uint(usage[name])
+        amount = _uint(request[name], positive=True)
+        maximum = _uint(bounds[name], positive=True)
+        reserve = _uint(bounds["closeoutTokens"]) if name == "tokens" else 0
+        if used + amount + reserve > maximum:
+            return "PREPARATION_BUDGET_EXHAUSTED"
+    if request["requests"] != 1:
+        raise ValueError("One expensive request per admission")
+    round_bound = _uint(bounds["semanticRounds"], positive=True)
+    requested_round = _uint(request["semanticRound"], positive=True)
+    if max(rounds, usage["semanticRound"], requested_round) > round_bound:
+        return "PREPARATION_BUDGET_EXHAUSTED"
+    return None
+
+
 def evaluate_preparation_policy(
     context: dict[str, Any],
     usage: dict[str, Any],
@@ -130,103 +252,24 @@ def evaluate_preparation_policy(
         for name in ("goalDigest", "phaseDigest", "sourceDigest"):
             _digest(context[name])
         grant = context["authorization"]
-        _digest(grant["digest"])
-        if grant["qualified"] is not True or now >= _uint(grant["expiresAt"]):
-            return _decision("PREPARATION_AUTHORITY_UNAVAILABLE", identity)
-        if now >= _uint(context["nativeDeadlineAt"]):
-            return _decision("PREPARATION_NATIVE_DEADLINE_EXPIRED", identity)
-        if context["quantity"] not in QUANTITIES:
-            return _decision("PREPARATION_QUANTITY_UNSUPPORTED", identity)
-        if usage["quantity"] != context["quantity"]:
-            return _decision("PREPARATION_QUANTITY_UNSUPPORTED", identity)
-        chain = context["chain"]
-        required = chain["required"]
-        slots = chain["slots"]
-        if (
-            not isinstance(required, list)
-            or not 1 <= len(required) <= 64
-            or len(set(required)) != len(required)
-            or not isinstance(slots, list)
-            or len(slots) > 64
-            or any(not isinstance(x, str) or len(x) > 64 for x in required)
-            or not {"integration", "final"}.issubset(required)
-        ):
-            return _decision("REVIEW_CHAIN_NOT_READY", identity)
-        ready = set()
-        for slot in slots:
-            if (
-                slot["qualified"] is True
-                and slot["authorizationDigest"] == grant["digest"]
-                and now < _uint(slot["expiresAt"])
-                and _uint(slot["remaining"], positive=True)
-            ):
-                ready.add(slot["stage"])
-        if not set(required).issubset(ready):
-            return _decision("REVIEW_CHAIN_NOT_READY", identity)
-        readiness = context["readiness"]
-        if (
-            readiness["qualified"] is not True
-            or readiness["sourceDigest"] != context["sourceDigest"]
-            or not isinstance(readiness["checks"], dict)
-            or not 1 <= len(readiness["checks"]) <= 64
-            or any(value != "PASS" for value in readiness["checks"].values())
-        ):
-            return _decision("PREPARATION_READINESS_UNAVAILABLE", identity)
-        progress = context["progress"]
-        if (
-            usage["qualified"] is not True
-            or progress["qualified"] is not True
-            or progress["journalPrefixDigest"] != usage["prefixDigest"]
-            or progress["goalDigest"] != context["goalDigest"]
-            or progress["phaseDigest"] != context["phaseDigest"]
-            or progress["sourceDigest"] != context["sourceDigest"]
-        ):
-            return _decision("PREPARATION_HISTORY_UNAVAILABLE", identity)
-        rounds = _uint(progress["completedRounds"])
-        streak = _uint(progress["nonproductiveRounds"])
-        if streak > rounds:
-            raise ValueError("Nonproductive rounds exceed completed history")
-        initial = progress.get("verifiedInitial") is True and rounds == 0
-        state = progress["status"]
-        if state not in {"ADVANCING", "STALLED", "EXPECTED_WAIT"} and not (
-            state == "UNAVAILABLE" and initial and usage.get("goalRequests", usage["requests"]) == 0
-        ):
-            return _decision("PREPARATION_HISTORY_UNAVAILABLE", identity)
-        if state == "EXPECTED_WAIT":
-            if now >= _uint(progress["waitUntil"]):
-                return _decision("PREPARATION_HISTORY_UNAVAILABLE", identity)
-            return _decision("PROCESS_EXPECTED_WAIT", identity)
-        limit = context.get("nonproductiveRoundLimit", 2)
-        _uint(limit, positive=True)
-        if limit != 2 and context.get("stallOverrideAuthorization") != grant:
-            return _decision("PREPARATION_AUTHORITY_UNAVAILABLE", identity)
-        if streak >= limit:
-            return _decision("PROCESS_PROGRESS_STALLED", identity)
-        repeat = context["repeat"]
-        if type(repeat["required"]) is not bool:
-            raise ValueError("Repeat disposition required")
-        if repeat["required"] is True and (
-            repeat["qualified"] is not True
-            or repeat["disposition"] not in {"MISSING", "INVALIDATED"}
-            or not 1 <= len(repeat["inputDigests"]) <= 64
-            or any(not _digest(v) for v in repeat["inputDigests"])
-            or not _digest(repeat["benefitDigest"])
-        ):
-            return _decision("REPEAT_NOT_JUSTIFIED", identity)
-        bounds, request = context["limits"], context["request"]
-        for name in ("tokens", "chargedMilliseconds", "requests"):
-            used = _uint(usage[name])
-            amount = _uint(request[name], positive=True)
-            maximum = _uint(bounds[name], positive=True)
-            reserve = _uint(bounds["closeoutTokens"]) if name == "tokens" else 0
-            if used + amount + reserve > maximum:
-                return _decision("PREPARATION_BUDGET_EXHAUSTED", identity)
-        if request["requests"] != 1:
-            raise ValueError("One expensive request per admission")
-        round_bound = _uint(bounds["semanticRounds"], positive=True)
-        requested_round = _uint(request["semanticRound"], positive=True)
-        if max(rounds, usage["semanticRound"], requested_round) > round_bound:
-            return _decision("PREPARATION_BUDGET_EXHAUSTED", identity)
+        reason = _authority_reason(context, usage, grant, now)
+        if reason is not None:
+            return _decision(reason, identity)
+        reason = _review_chain_reason(context, grant, now)
+        if reason is not None:
+            return _decision(reason, identity)
+        reason = _readiness_reason(context)
+        if reason is not None:
+            return _decision(reason, identity)
+        reason = _progress_reason(context, usage, grant, now)
+        if reason is not None:
+            return _decision(reason, identity)
+        reason = _repeat_reason(context)
+        if reason is not None:
+            return _decision(reason, identity)
+        reason = _budget_reason(context, usage)
+        if reason is not None:
+            return _decision(reason, identity)
         return _decision("READY", identity)
     except (KeyError, TypeError, ValueError, OverflowError, RecursionError):
         return _decision("PREPARATION_INPUT_UNAVAILABLE", identity)

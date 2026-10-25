@@ -806,12 +806,6 @@
       "fingerprint": "fe00bcbc9c5bf38de9b9d9ab3806123f49948859d77da569b22bb6afef165fbe"
     },
     {
-      "path": "contracts/agent_plugin_qualification_schemas.py",
-      "name": "validate_qualification_profile",
-      "score": 61,
-      "fingerprint": "01c9217a19cd739f9e1499f7a4a63cb21ad39a1e842673a0b4f958d897fd810a"
-    },
-    {
       "path": "contracts/authority_io.py",
       "name": "_parent",
       "score": 26,
@@ -948,12 +942,6 @@
       "name": "validate_performance_policy",
       "score": 28,
       "fingerprint": "1e168670dafaf65a5c3693c1e36921829f5acd6b9384a3be6f631d34ecb3a7d9"
-    },
-    {
-      "path": "contracts/preparation_policy.py",
-      "name": "evaluate_preparation_policy",
-      "score": 60,
-      "fingerprint": "edf6ab39925bc1e0b6780269f20eeeea3a2a180df9fa6f58f9e90d92ec1b67ab"
     },
     {
       "path": "contracts/release_accounting_schemas.py",
@@ -1718,6 +1706,6 @@
       "fingerprint": "62fd5a8857305e6684349ad9c1eff2a25af86570deb85a9455062370b2befd3b"
     }
   ],
-  "branchBaselineDigest": "730afa70d5980b6107ec1cd2f605e59b12d334bcd1eb1cda9f2ea17e4a9190c1",
+  "branchBaselineDigest": "7acbd80342c99778c91c2f98a6cebe93e45d6c41e6ebb4505b761ab8847c975c",
   "branchExceptions": []
 }

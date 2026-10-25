@@ -24,7 +24,7 @@ sections below are historical design context, not current release proof.
 | --- | --- | --- | --- |
 | Shared condition failures and UTC closing timestamps | [require_condition](../../src/agent_lifecycle/contracts/errors.py), [closing_instant](../../src/agent_lifecycle/contracts/closing_time.py) | [closing-time contract tests](../../tests/contracts/test_closing_time.py), [attempt authority tests](../../tests/adapter_sessions/test_attempt_authority.py) | Public low-layer helpers preserve caller refusal codes; they confer no workflow authority and are not additions to the supported root Python API. |
 | Attempt-directory durability | [attempt_authority.py](../../src/agent_lifecycle/adapter_sessions/attempt_authority.py) delegates to [sync_authority_directory](../../src/agent_lifecycle/contracts/authority_io.py). | [attempt authority tests](../../tests/adapter_sessions/test_attempt_authority.py) | Retains `r11-durable-storage-unavailable` for missing POSIX primitives; guarded authority I/O can also refuse unsafe paths. |
-| Reservation and claim mutations inside an admitted transaction | [financial_transactions.py](../../src/agent_lifecycle/accounting/financial_transactions.py), using existing `_JournalStoragePort` and `JournalHandle` in [accounting contracts](../../src/agent_lifecycle/accounting/contracts.py) | [transaction boundary tests](../../tests/accounting/test_financial_transaction_boundaries.py), [recovery tests](../../tests/accounting/test_closing_resources_recovery.py) | No new storage schema, dispatch or financial authority. Admission, revision, cap, replay and protected-reserve refusals remain; historical recovery imports and recorded costs remain readable. |
+| Reservation and claim mutations inside an admitted transaction | [financial_transactions.py](../../src/agent_lifecycle/accounting/financial_transactions.py), using narrow `_FinancialTransactionPort` and existing `JournalHandle` in [accounting contracts](../../src/agent_lifecycle/accounting/contracts.py) | [transaction boundary tests](../../tests/accounting/test_financial_transaction_boundaries.py), [recovery tests](../../tests/accounting/test_closing_resources_recovery.py) | No new storage schema, dispatch or financial authority. Admission, revision, cap, replay and protected-reserve refusals remain; historical recovery imports and recorded costs remain readable. |
 | Three removed cross-package private imports | [attempt_authority.py](../../src/agent_lifecycle/adapter_sessions/attempt_authority.py), [closing_resource_recovery.py](../../src/agent_lifecycle/accounting/closing_resource_recovery.py) | [named-edge regression](../../tests/release/test_architecture_policy_integration.py) | Replaces accounting `_require`, accounting `_sync_directory` and workflow-state `_closing_instant` dependencies with their shared owners; does not eliminate all private dependencies or technical debt. |
 | Dependency and complexity rules | [dependency policy](../../policy/architecture-dependencies.json), [limits policy](../../policy/architecture-limits.json) | [dependency validator](../../tools/release/validate_module_dependencies.py), [complexity validator](../../tools/release/validate_architecture_complexity.py) | Static acyclic module/package checks, exact exceptions and existing debt ratchets; not universal SOLID compliance or absence of defects. |
 | Source-wide typing | [pyproject.toml](../../pyproject.toml), [quality runner](../../tools/release/run_python_quality.py) | Ordinary `python -m mypy src/agent_lifecycle` uses persisted `check_untyped_defs = true` (the explicit `--check-untyped-defs` flag is equivalent); the [regression check](../../tests/release/test_architecture_policy_integration.py) requires that setting. | Untyped function bodies are checked; this is not strict typing of every value or runtime input validation. |
@@ -1161,3 +1161,26 @@ baseline. This does not assert that all architecture/formatting debt is gone.
 Skills guide authoring and review; they are not enforced host hooks. No global
 git hook is installed. Final compatibility still requires current local tests,
 independent implementation review and the candidate's complete OS/Python CI.
+
+
+### Release 2.27 bounded architecture changes
+
+`contracts/private_storage_compat.py` owns compatible private-file reads for the
+legacy declared-ledger and Codex input adapters. The modern private-storage
+policy and host authority limits remain unchanged. Reservation and claim rules
+use `_FinancialTransactionPort`; `accounting/journal.py` owns the SQLite admitted
+transaction check and reservation identity savepoint.
+
+The preparation and qualification entrypoints now score 10 and 13 branches,
+respectively, against a limit of 20. Each helper also stays within that limit.
+The two modules pass `mypy --strict`; the global Python target remains 3.11.
+The branch policy retains 282 other historical entries. Three absent private
+import allowances were removed, with tests denying their reintroduction. This
+release does not claim to remove all architecture debt or all uses of `Any`.
+
+Python 3.11–3.15 uses the complete three-OS runtime matrix. A local compatibility
+probe is not platform qualification. The fresh-constructor test shares one
+10-second orchestration deadline and reports process outcomes. Only the exact
+admission-deadline refusal with `NOT_STARTED` can be retried there; the production
+1-second admission limit and negative refusal checks remain unchanged. The
+previous Windows holder/scheduler and sync-error causes remain unproven.

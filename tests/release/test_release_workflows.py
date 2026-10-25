@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import itertools
+import json
 import re
 import unittest
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[2]
 ACTION_USE_RE = re.compile(r"^\s*(?:-\s+)?uses:\s+[^@\s]+@([0-9a-f]{40})\s+#.*\bv\d")
@@ -18,6 +19,37 @@ class ReleaseWorkflowTests(unittest.TestCase):
         ]:
             workflow = (ROOT / relative_path).read_text(encoding="utf-8")
             self.assertIn('"3.14"', workflow, relative_path)
+
+    def test_complete_supported_runtime_and_quality_matrices(self) -> None:
+        versions = ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        platforms = ["ubuntu-latest", "macos-latest", "windows-latest"]
+        for name in ("ci.yml", "matrix.yml", "python-quality.yml", "neutrality.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text()
+            found = re.search(r"python(?:-version)?: \[(.*?)\]", workflow)
+            self.assertIsNotNone(found, name)
+            actual = json.loads("[" + found.group(1) + "]")
+            self.assertEqual(actual, versions, name)
+            self.assertNotIn("continue-on-error", workflow, name)
+            if name in ("ci.yml", "matrix.yml"):
+                operating_systems = re.search(r"os: \[(.*?)\]", workflow)
+                self.assertIsNotNone(operating_systems)
+                actual_platforms = [value.strip() for value in operating_systems.group(1).split(",")]
+                self.assertEqual(actual_platforms, platforms, name)
+                self.assertEqual(
+                    set(itertools.product(actual_platforms, actual)), set(itertools.product(platforms, versions)), name
+                )
+                self.assertNotIn("exclude:", workflow, name)
+                self.assertNotIn("include:", workflow, name)
+
+    def test_reduced_contract_modules_keep_strict_type_guard(self) -> None:
+        workflow = (ROOT / ".github/workflows/python-quality.yml").read_text()
+        step = workflow.split("- name: Check strict types in reduced contract modules\n", 1)[1].split(
+            "\n      - name:", 1
+        )[0]
+        self.assertIn("python -m mypy --strict", step)
+        for module in ("preparation_policy", "agent_plugin_qualification_schemas"):
+            self.assertIn("src/agent_lifecycle/contracts/" + module + ".py", step)
+        self.assertNotIn("ignore", step)
 
     def test_release_and_publication_use_python_3_14_packaging_smoke(self) -> None:
         for relative_path in [
@@ -37,16 +69,19 @@ class ReleaseWorkflowTests(unittest.TestCase):
 
     def test_all_actions_are_sha_pinned_and_checkout_credentials_are_disabled(self) -> None:
         workflow_paths = sorted((ROOT / ".github/workflows").glob("*.yml"))
-        self.assertEqual({path.name for path in workflow_paths}, {
-            "ci-timing-control.yml",
-            "ci.yml",
-            "codeql.yml",
-            "matrix.yml",
-            "neutrality.yml",
-            "publish.yml",
-            "python-quality.yml",
-            "release.yml",
-        })
+        self.assertEqual(
+            {path.name for path in workflow_paths},
+            {
+                "ci-timing-control.yml",
+                "ci.yml",
+                "codeql.yml",
+                "matrix.yml",
+                "neutrality.yml",
+                "publish.yml",
+                "python-quality.yml",
+                "release.yml",
+            },
+        )
         for path in workflow_paths:
             lines = path.read_text(encoding="utf-8").splitlines()
             action_lines = [line for line in lines if "uses:" in line]

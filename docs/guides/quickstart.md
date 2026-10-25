@@ -32,7 +32,7 @@ py -3.14 -m venv .venv
 python -m pip install -e .
 ```
 
-The detailed guide covers Python 3.11-3.14, PyPI installation, activation
+The detailed guide covers Python 3.11-3.15, PyPI installation, activation
 problems and common version errors. ALK is also published on
 [PyPI](https://pypi.org/project/agent-lifecycle-kit/).
 

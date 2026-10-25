@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +10,6 @@ from agent_lifecycle.contracts.agent_plugin_qualification_schemas import (
     validate_qualification_profile,
     validate_qualification_receipt,
 )
-
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -53,6 +51,51 @@ class AgentPluginQualificationSchemaTests(unittest.TestCase):
             write_json_create(path, receipt)
             with self.assertRaises(FileExistsError):
                 write_json_create(path, receipt)
+
+    def test_multiple_invalid_sections_keep_blocker_order_and_fields(self) -> None:
+        result = validate_qualification_profile({})
+        self.assertEqual(result["status"], "FAIL")
+        self.assertEqual(
+            [item["code"] for item in result["blockers"]],
+            ["schema-version-mismatch"]
+            + ["profile-field-invalid"] * 4
+            + [
+                "profile-package-invalid",
+                "profile-discovery-invalid",
+                "profile-installation-invalid",
+                "profile-environment-invalid",
+                "profile-host-version-policy-invalid",
+                "profile-qualification-invalid",
+                "profile-descriptor-boundary",
+                "profile-digest-mismatch",
+            ],
+        )
+        self.assertEqual(
+            [item["field"] for item in result["blockers"][1:5]], ["profileId", "adapterId", "client", "host"]
+        )
+        self.assertIsNone(result["checkedDigest"])
+        self.assertFalse(result["productionPromotionClaimed"])
+
+    def test_valid_sections_still_accumulate_ordered_negative_boundaries(self) -> None:
+        profile = read_json_object(ROOT / "adapters/codex/agent_plugin_profile.json")
+        profile["package"]["name"] = "unexpected"
+        profile["installation"]["automatic"] = True
+        profile["environment"]["allowPatterns"] = ["*"]
+        profile["qualification"]["modelCalls"] = 1
+        profile["managedLaunch"] = {}
+        profile["profileDigest"] = canonical_digest({k: v for k, v in profile.items() if k != "profileDigest"})
+        result = validate_qualification_profile(profile)
+        self.assertEqual(
+            [item["code"] for item in result["blockers"]],
+            [
+                "profile-package-name",
+                "profile-installation-boundary",
+                "profile-environment-wildcard",
+                "profile-qualification-safety",
+                "profile-descriptor-override",
+            ],
+        )
+        self.assertEqual(result["checkedDigest"], profile["profileDigest"])
 
 
 if __name__ == "__main__":

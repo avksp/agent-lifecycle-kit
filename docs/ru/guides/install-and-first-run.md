@@ -3,7 +3,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.26.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.27.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -97,7 +97,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.26.0
+python -m pip install agent-lifecycle-kit==2.27.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -108,13 +108,13 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.26.0
+python -m pip install agent-lifecycle-kit==2.27.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
 
 [Пакет в PyPI](https://pypi.org/project/agent-lifecycle-kit/) поддерживает
-Python 3.11-3.14. Точная версия синхронизирует команду, манифесты плагинов и
+Python 3.11-3.15. Точная версия синхронизирует команду, манифесты плагинов и
 документацию.
 
 ## Проверка установки
@@ -143,7 +143,7 @@ python -m agent_lifecycle version
 | --- | --- |
 | `command not found` или «команда не найдена» | Активируйте `.venv` и снова выполните `python -m pip install -e .`. Команда устанавливается в активное окружение. |
 | `No module named agent_lifecycle` | Перейдите в папку исходников и установите пакет либо выполните `PYTHONPATH=src python -m agent_lifecycle version`. |
-| `dataclass() got an unexpected keyword argument 'slots'` | Интерпретатор слишком старый. Используйте Python 3.11-3.14, создайте окружение заново и установите пакет. |
+| `dataclass() got an unexpected keyword argument 'slots'` | Интерпретатор слишком старый. Используйте Python 3.11-3.15, создайте окружение заново и установите пакет. |
 | Версия отличается от ожидаемой | Выполните `python -c "import sys; print(sys.executable)"` и `python -m pip show agent-lifecycle-kit`: активно другое окружение Python. |
 
 Для исходного дерева:
