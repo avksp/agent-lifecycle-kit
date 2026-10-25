@@ -2,6 +2,25 @@ name: ci-timing-control
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Timing route (fixture profile is feasibility only)
+        type: choice
+        default: suite
+        options: [suite, fixture-comparison, fixture-profile]
+      baseline_sha:
+        description: Exact accepted 2.27 baseline commit for fixture measurement
+        type: string
+        default: ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5
+      candidate_sha:
+        description: Exact dispatched candidate commit (required for fixture routes)
+        type: string
+        default: ""
+      experiment:
+        description: Bounded candidate experiment number
+        type: choice
+        default: "1"
+        options: ["1", "2"]
 
 permissions:
   contents: read
@@ -10,6 +29,7 @@ jobs:
   paired-windows311:
     name: windows-paired-control / py3.11
     runs-on: windows-latest
+    timeout-minutes: 330
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
@@ -46,15 +66,43 @@ jobs:
           p.write_text(json.dumps(v,indent=2),encoding='utf-8')"
       - name: Run parallel stdlib tests
         id: parallel-tests
+        if: inputs.mode == 'suite'
         run: >-
           uv run --frozen --group quality --python 3.11
           python tools/ci/run_parallel_unittest.py --start tests --top .
           --out work/ci/paired-parallel.json
       - name: Run serial stdlib tests
+        if: inputs.mode == 'suite'
         run: >-
           uv run --frozen --group quality --python 3.11
           python tools/ci/run_unittest.py --start tests --top .
           --out work/ci/paired-serial.json
+      - name: Measure three alternating serial fixture pairs
+        id: fixture-pairs
+        if: inputs.mode == 'fixture-comparison'
+        env:
+          BASELINE_SHA: ${{ inputs.baseline_sha }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
+        run: >-
+          uv run --frozen --group quality --python 3.11
+          python tools/ci/measure_limited_usage.py
+          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
+          --experiment "$env:EXPERIMENT_NUMBER" --mode paired
+          --out work/ci/limited-usage-pairs.json
+      - name: Profile unchanged baseline fixture feasibility
+        id: fixture-profile
+        if: inputs.mode == 'fixture-profile'
+        env:
+          BASELINE_SHA: ${{ inputs.baseline_sha }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
+        run: >-
+          uv run --frozen --group quality --python 3.11
+          python tools/ci/measure_limited_usage.py
+          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
+          --experiment "$env:EXPERIMENT_NUMBER" --mode profile
+          --out work/ci/limited-usage-profile.json
       - name: Retain paired control evidence
         if: always() && steps.parallel-tests.outcome != 'skipped'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -64,6 +112,19 @@ jobs:
             work/ci/paired-parallel.json
             work/ci/paired-parallel/
             work/ci/paired-serial.json
+            work/ci/control-environment.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain bounded fixture measurement evidence
+        if: always() && (steps.fixture-pairs.outcome != 'skipped' || steps.fixture-profile.outcome != 'skipped')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: limited-usage-windows-py3.11-${{ inputs.mode }}-${{ inputs.experiment }}
+          path: |
+            work/ci/limited-usage-pairs.json
+            work/ci/limited-usage-pairs/
+            work/ci/limited-usage-profile.json
+            work/ci/limited-usage-profile/
             work/ci/control-environment.json
           if-no-files-found: error
           retention-days: 14
