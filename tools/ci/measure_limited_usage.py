@@ -298,7 +298,10 @@ def command(argv, root, deadline, records, *, timeout=120, logs=None):
 def git(arguments, root, deadline, records):
     argv = ["git", *arguments]
     options = {"argv": argv, "environment": sanitized_environment(Path(tempfile.gettempdir()))}
-    bootstrap = "import json,os,sys;v=json.loads(sys.argv[1]);os.execvpe(v['argv'][0],v['argv'],v['environment'])"
+    bootstrap = (
+        "import json,subprocess,sys;v=json.loads(sys.argv[1]);"
+        "sys.exit(subprocess.run(v['argv'],env=v['environment'],shell=False).returncode)"
+    )
     try:
         return command([sys.executable, "-I", "-B", "-c", bootstrap, json.dumps(options)], root, deadline, records)
     finally:
