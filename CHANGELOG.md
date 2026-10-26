@@ -21,6 +21,8 @@
 - Use the existing guarded descriptor reader for source capture, reject
   nonregular files and file swaps, and check shared read deadlines. Preserve
   output limits, process cleanup and all required OS/Python quality gates.
+- Check annotations beneath cached decorators on Python 3.14 and later while
+  preserving source identity and rejection of live annotation changes.
 
 ## 2.27.0 - 2026-10-25
 

@@ -8,14 +8,11 @@
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.15-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and
-acceptance decisions connected while the external agent changes the project.
+**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and acceptance decisions connected while the external agent changes the project.
 
-The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling
-stay in adapters or host-local profiles.
+The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling stay in adapters or host-local profiles.
 
 ALK provides a verifiable finish for external-agent work with proportionate control. It adds only the checks and evidence needed for the task; most of the time remains for research, implementation and product verification.
-
 
 Release 2.28 adds [bounded lifecycle and accounting baselines](docs/reference/performance-and-resource-budgets.md#release-228-lifecycle-and-accounting-baselines). Repository tools measure real read-only operations and separate fixture preparation from operation and subprocess time. The Windows fixture comparison observed a 13.08% median reduction in one six-sample experiment; it is not a universal speed promise. All security and platform checks remain required.
 

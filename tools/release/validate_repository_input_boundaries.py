@@ -173,8 +173,8 @@ def _code_matches(code: CodeType, namespace: dict[str, Any], source_path: Path) 
         if value.co_name == "__annotate__" and value.co_name not in namespace:
             # Python 3.14 attaches annotation code to functions, not the module.
             annotations = [
-                getattr(inspect.unwrap(item), "__annotate__", None)
-                for item in namespace.values()
+                getattr(item, "__annotate__", None)
+                for item in map(inspect.unwrap, namespace.values())
                 if inspect.isfunction(item)
             ]
             if not any(_function_matches(item, value, source_path) for item in annotations):
