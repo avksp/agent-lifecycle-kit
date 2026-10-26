@@ -1,153 +1,130 @@
-name: ci-timing-control
-
+name: r228-legacy-git-observation
 on:
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Timing route (fixture profile is feasibility only)
-        type: choice
-        default: suite
-        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility]
-      baseline_sha:
-        description: Exact accepted 2.27 baseline commit for fixture measurement
-        type: string
-        default: ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5
-      candidate_sha:
-        description: Exact dispatched candidate commit (required for fixture routes)
-        type: string
-        default: ""
-      experiment:
-        description: Bounded candidate experiment number
-        type: choice
-        default: "1"
-        options: ["1", "2", "3", "4"]
-      deadline_utc:
-        description: Required for experiments3/4; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
-        type: string
-        default: ""
-
 permissions:
   contents: read
-
 jobs:
-  paired-windows311:
-    name: windows-paired-control / py3.11
+  observe:
+    name: Observe legacy Git transport (not qualification)
     runs-on: windows-latest
-    timeout-minutes: 330
+    timeout-minutes: 8
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
     steps:
+      - name: Enforce absolute admission before setup
+        shell: pwsh
+        run: |
+          if ([DateTimeOffset]::UtcNow -ge [DateTimeOffset]::Parse('2026-10-26T22:21:00Z')) {
+            throw 'Diagnostic admission closed; no tests may start'
+          }
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.11"
-      - name: Install pinned quality runner
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-        with:
-          version: "0.13.1"
-      - name: Restore versioned release test fixture
+          python-version: "3.14"
+      - name: Restore unchanged test fixture
         run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
-      - name: Install package
+      - name: Install unchanged candidate package
         run: python -m pip install -e .
-      - name: Validate repository hygiene
-        run: >-
-          python tools/release/validate_repository_hygiene.py
-          --root .
-          --policy policy/repository-hygiene.json
-          --ref HEAD
-          --require-history
-          --evidence work/ci/repository-hygiene.json
-      - name: Capture timing-control environment
-        run: >-
-          python -c "import json,os,pathlib,platform;
-          p=pathlib.Path('work/ci/control-environment.json');
-          v=dict(python=platform.python_version(),platform=platform.platform(),logicalCPUs=os.cpu_count(),
-          environment={k:os.environ.get(k) for k in
-          ('GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','RUNNER_OS','RUNNER_ARCH','ImageOS','ImageVersion')});
-          p.write_text(json.dumps(v,indent=2),encoding='utf-8')"
-      - name: Run parallel stdlib tests
-        id: parallel-tests
-        if: inputs.mode == 'suite'
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/run_parallel_unittest.py --start tests --top .
-          --out work/ci/paired-parallel.json
-      - name: Run serial stdlib tests
-        if: inputs.mode == 'suite'
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/run_unittest.py --start tests --top .
-          --out work/ci/paired-serial.json
-      - name: Measure three alternating serial fixture pairs
-        id: fixture-pairs
-        if: inputs.mode == 'fixture-comparison'
-        env:
-          BASELINE_SHA: ${{ inputs.baseline_sha }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
-          MEASUREMENT_DEADLINE: ${{ inputs.deadline_utc }}
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/measure_limited_usage.py
-          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
-          --experiment "$env:EXPERIMENT_NUMBER" --mode paired
-          --deadline-utc "$env:MEASUREMENT_DEADLINE"
-          --out work/ci/limited-usage-pairs.json
-      - name: Profile unchanged baseline fixture feasibility
-        id: fixture-profile
-        if: inputs.mode == 'fixture-profile'
-        env:
-          BASELINE_SHA: ${{ inputs.baseline_sha }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/measure_limited_usage.py
-          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
-          --experiment "$env:EXPERIMENT_NUMBER" --mode profile
-          --out work/ci/limited-usage-profile.json
-      - name: Retain paired control evidence
-        if: always() && steps.parallel-tests.outcome != 'skipped'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: Observe unchanged failing method
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force work/ci | Out-Null
+          @'
+          """Four bounded observations; no release qualification or speed comparison."""
+          from pathlib import Path
+          from datetime import datetime,timezone
+          from contextlib import ExitStack
+          from unittest.mock import patch
+          import ast,ctypes,hashlib,json,os,platform,subprocess,sys,tempfile,time,tracemalloc
+          import ctypes.wintypes
+          assert os.name=='nt' and sys.version_info[:2]==(3,14)
+          sys.path.insert(0,str(Path.cwd()))
+          from tests.changesets import test_snapshot_scaling as case
+          from agent_lifecycle.contracts import LifecycleError
+          
+          latest=datetime.fromisoformat('2026-10-26T22:21:00+00:00')
+          assert datetime.now(timezone.utc)<latest,'Absolute observation admission closed'
+          deadline=time.monotonic()+360;events=[];rows=[];before_states={};observed_code=None
+          out=Path('work/ci/legacy-git-observation.json');out.parent.mkdir(parents=True,exist_ok=True)
+          def poll(process):
+              try:return process.poll()
+              except OSError as exc:return {'observationErrorType':type(exc).__name__}
+          def local_trace(frame,event,arg):
+              if event=='line' and frame.f_lineno==assign_line:before_states[id(frame)]=poll(frame.f_locals['process'])
+              if event=='line' and frame.f_lineno==failure_line:
+                  code=ctypes.get_last_error()
+                  item={'win32Error':code,'childReturnCodeBeforeAssign':before_states.get(id(frame)),
+                        'childReturnCodeAfterFailure':poll(frame.f_locals['process'])}
+                  events.append(item);print(json.dumps({'legacyAttachFailure':item}),flush=True)
+              if event=='return':before_states.pop(id(frame),None)
+              return local_trace
+          def trace(frame,event,arg):
+              return local_trace if event=='call' and frame.f_code is observed_code else None
+          def chain(exc):
+              values=[]
+              while exc is not None and len(values)<6:
+                  values.append({'type':type(exc).__name__,'code':getattr(exc,'code',None),
+                                 'message':str(exc)[:300]})
+                  exc=exc.__cause__
+              return values
+          def capture(module,root,base,heap,observe):
+              children=[];original=subprocess.Popen
+              def counted(argv,*args,**kwargs):
+                  children.append(list(argv));return original(argv,*args,**kwargs)
+              old_trace=sys.gettrace();before=len(events)
+              if heap:tracemalloc.start()
+              try:
+                  if observe:sys.settrace(trace)
+                  with patch.object(subprocess,'Popen',counted):
+                      try:
+                          result=module.capture_task_change_set(root,baseline=base,write_paths=['src'])
+                          outcome={'kind':'RESULT','changedFileCount':result['changedFileCount']}
+                      except LifecycleError as exc:outcome={'kind':'REFUSAL','chain':chain(exc)}
+                  peak=tracemalloc.get_traced_memory()[1] if heap else None
+              finally:
+                  sys.settrace(old_trace)
+                  if heap:tracemalloc.stop()
+              return {'heapTracingEnabled':heap,'lineObservationEnabled':observe,'outcome':outcome,
+                      'gitChildren':len(children),'peakPythonBytes':peak,'attachEvents':events[before:]}
+          
+          with ExitStack() as stack:
+              historical=case._historical_module(stack)
+              transport=sys.modules['agent_lifecycle._release219_reference.git_io']
+              observed_code=transport._windows_cleanup.__code__
+              source=subprocess.run(['git','show',case.BASELINE+':src/agent_lifecycle/changesets/git_io.py'],
+                                    cwd=case.REPOSITORY,capture_output=True,check=True,timeout=30).stdout
+              tree=ast.parse(source)
+              fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='_windows_cleanup')
+              guard=next(n for n in ast.walk(fn) if isinstance(n,ast.If) and 'AssignProcessToJobObject(handle,' in ast.unparse(n.test))
+              assign_line=guard.lineno;failure_line=guard.body[0].lineno
+              with tempfile.TemporaryDirectory() as temporary:
+                  root=Path(temporary);base=case._fixture(root,60)
+                  for name,module,heap,observe in [('legacy_heap',historical,True,False),
+                          ('legacy_no_heap',historical,False,False),('current_heap',case.snapshot,True,False),
+                          ('legacy_api_observation',historical,True,True)]:
+                      if time.monotonic()>=deadline or datetime.now(timezone.utc)>=latest:break
+                      row={'name':name,**capture(module,root,base,heap,observe)}
+                      rows.append(row);print(json.dumps(row),flush=True)
+                      out.write_text(json.dumps({'status':'OBSERVATION_ONLY','rows':rows,'events':events,
+                          'sourceHead':os.environ.get('GITHUB_SHA'),'runId':os.environ.get('GITHUB_RUN_ID'),
+                          'python':platform.python_version(),'historicalRef':case.BASELINE,
+                          'legacyTransportSha256':hashlib.sha256(source).hexdigest(),
+                          'imageVersion':os.environ.get('ImageVersion'),'qualificationClaimed':False,
+                          'oldRunCauseClaimed':False,'speedComparisonClaimed':False,
+                          'loop360SecondsIsAdmissionOnly':True,'hardOuterJobTimeoutMinutes':8,
+                          'actualTokens':None,'actualCost':None},indent=2)+'\n',encoding='utf-8')
+          '@ | Set-Content -Encoding utf8 work/ci/group-observation.py
+          python -B work/ci/group-observation.py
+      - name: Retain observation only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: test-timings-windows-paired-control-py3.11
-          path: |
-            work/ci/paired-parallel.json
-            work/ci/paired-parallel/
-            work/ci/paired-serial.json
-            work/ci/control-environment.json
-          if-no-files-found: error
-          retention-days: 14
-      - name: Profile baseline and candidate feasibility on this runner
-        id: fixture-feasibility
-        if: inputs.mode == 'fixture-profile-feasibility'
-        env:
-          BASELINE_SHA: ${{ inputs.baseline_sha }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/measure_limited_usage.py
-          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
-          --experiment "$env:EXPERIMENT_NUMBER" --mode feasibility
-          --out work/ci/limited-usage-feasibility.json
-      - name: Retain bounded fixture measurement evidence
-        if: >-
-          always() && (steps.fixture-pairs.outcome != 'skipped' || steps.fixture-profile.outcome != 'skipped'
-          || steps.fixture-feasibility.outcome != 'skipped')
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: limited-usage-windows-py3.11-${{ inputs.mode }}-${{ inputs.experiment }}
-          path: |
-            work/ci/limited-usage-pairs.json
-            work/ci/limited-usage-pairs/
-            work/ci/limited-usage-profile.json
-            work/ci/limited-usage-profile/
-            work/ci/limited-usage-feasibility.json
-            work/ci/limited-usage-feasibility/
-            work/ci/control-environment.json
-          if-no-files-found: error
+          name: legacy-git-observation
+          path: work/ci/legacy-git-observation.json
+          if-no-files-found: warn
           retention-days: 14
