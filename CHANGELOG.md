@@ -14,6 +14,8 @@
   per-test state, complete test discovery and exact outcomes.
 - Run complete Windows qualification with the serial test driver. Keep the hour
   limit, optional bounded parallel runner and all checks.
+- Isolate the complete Windows historical snapshot comparison in a bounded
+  process. Keep the original oracle, assertions and memory measurements.
 - Extend repository performance tooling with real workflow status and persistent
   journal reads at 1/100 tasks or reservations. Report setup, operation and
   subprocess costs separately; keep read-only fixture invariants.
