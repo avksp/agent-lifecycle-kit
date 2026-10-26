@@ -189,11 +189,20 @@ def utc_datetime_repr(text):
 
 
 def clock_ast_dump(value):
-    """Keep the bound 3.11 representation; ignore only empty type parameters."""
+    """Keep the bound 3.11 shape, omitting only proven default schema fields."""
     if isinstance(value, ast.AST):
         fields = []
         for name, child in ast.iter_fields(value):
-            if (child is None and getattr(type(value), name, ...) is None) or (name == "type_params" and child == []):
+            if (
+                (name != "is_lazy" and child is None and getattr(type(value), name, ...) is None)
+                or (name == "type_params" and child == [])
+                or (
+                    name == "is_lazy"
+                    and isinstance(value, (ast.Import, ast.ImportFrom))
+                    and type(child) is int
+                    and child == 0
+                )
+            ):
                 continue
             fields.append(f"{name}={clock_ast_dump(child)}")
         return f"{type(value).__name__}({', '.join(fields)})"

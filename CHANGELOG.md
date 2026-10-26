@@ -23,6 +23,8 @@
   output limits, process cleanup and all required OS/Python quality gates.
 - Check annotations beneath cached decorators on Python 3.14 and later while
   preserving source identity and rejection of live annotation changes.
+- Preserve the original clock-proof hashes for eager imports on Python 3.15;
+  keep nonzero lazy-import flags and unknown AST fields visible to the guard.
 
 ## 2.27.0 - 2026-10-25
 

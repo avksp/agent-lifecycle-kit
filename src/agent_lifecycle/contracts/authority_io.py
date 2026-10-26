@@ -166,7 +166,7 @@ class _Directory:
     def stat_child(self, name: str) -> os.stat_result:
         if self.fd is not None:
             return os.stat(name, dir_fd=self.fd, follow_symlinks=False)
-        return os.stat(os.path.join(self.path, name), follow_symlinks=False)
+        return os.stat(os.path.join(self.path, name), follow_symlinks=False)  # noqa: PTH116, PTH118
 
     def open_child(self, name: str) -> int:
         if self.fd is not None:

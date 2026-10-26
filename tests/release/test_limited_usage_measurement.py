@@ -395,6 +395,60 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.canonical_clock_events(tree, events)
 
+    def test_clock_binding_normalizes_only_eager_import_defaults(self):
+        module = subject()
+        tree = ast.parse((ROOT / module.HOT_PATH).read_bytes())
+        events = clock_events(module)
+        expected = module.canonical_clock_events(tree, events)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                if "is_lazy" not in node._fields:
+                    node._fields = (*node._fields, "is_lazy")
+                node.is_lazy = 0
+        self.assertEqual(expected, module.canonical_clock_events(tree, events))
+        for flag in (1, False, None):
+            variant = deepcopy(tree)
+            method = next(
+                node
+                for node in ast.walk(variant)
+                if isinstance(node, ast.FunctionDef) and node.name == module.CLOCK_METHOD
+            )
+            node = next(item for item in ast.walk(method) if isinstance(item, (ast.Import, ast.ImportFrom)))
+            node.is_lazy = flag
+            with self.subTest(flag=flag), self.assertRaises(ValueError):
+                module.canonical_clock_events(variant, events)
+        for target in ("import", "method"):
+            variant = deepcopy(tree)
+            method = next(
+                node
+                for node in ast.walk(variant)
+                if isinstance(node, ast.FunctionDef) and node.name == module.CLOCK_METHOD
+            )
+            if target == "import":
+                node = next(item for item in ast.walk(method) if isinstance(item, (ast.Import, ast.ImportFrom)))
+                node._fields = (*node._fields, "future_semantics")
+                node.future_semantics = []
+            else:
+                method._fields = (*method._fields, "is_lazy")
+                method.is_lazy = 0
+            with self.subTest(target=target), self.assertRaises(ValueError):
+                module.canonical_clock_events(variant, events)
+
+        class OptionalImport(ast.Import):
+            is_lazy = None
+
+        optional = OptionalImport(names=[])
+        optional._fields = ("names", "is_lazy")
+        optional.is_lazy = None
+        self.assertIn("is_lazy=None", module.clock_ast_dump(optional))
+
+    def test_measured_authority_stat_has_only_the_approved_migration_exception(self):
+        source = (ROOT / "src/agent_lifecycle/contracts/authority_io.py").read_text()
+        expected = "return os.stat(os.path.join(self.path, name), follow_symlinks=False)  # noqa: PTH116, PTH118"
+        self.assertEqual(source.count("# noqa:"), 1)
+        self.assertEqual([line.strip() for line in source.splitlines() if "# noqa:" in line], [expected])
+        self.assertNotIn("# ruff: noqa", source)
+
     def test_full_trial_uses_all_pairs_without_accepting_a_diagnostic_prefix(self):
         module = subject()
         samples = []
