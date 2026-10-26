@@ -15,9 +15,12 @@ import time
 import unittest
 from contextlib import contextmanager
 from copy import deepcopy
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+
+from agent_lifecycle.contracts import LifecycleError
 
 ROOT = Path(__file__).resolve().parents[2]
 HELPER = ROOT / "tools/ci/measure_limited_usage.py"
@@ -28,6 +31,14 @@ def subject():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def clock_events(module, first=None):
+    first = first or datetime(2026, 10, 25, 23, 59, 59, 123456, tzinfo=UTC)
+    return [
+        {"id": f"{module.CLOCK_ID} (observed={observed!r})", "caseIndex": 46, "outcome": "subtest:success"}
+        for observed in (first, first + timedelta(seconds=1))
+    ] + [{"id": module.CLOCK_ID, "caseIndex": 46, "outcome": "success"}]
 
 
 @contextmanager
@@ -287,7 +298,8 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
                                         "caseIndex": 0,
                                     }
                                 )
-            joined = module.canonical_events(root, events)
+            clock = clock_events(module)
+            joined = module.canonical_events(root, events + clock)
             path.write_text("\n\n" + original)
             shifted = [
                 {
@@ -296,7 +308,7 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
                 }
                 for event in events
             ]
-            self.assertEqual(joined, module.canonical_events(root, shifted))
+            self.assertEqual(joined, module.canonical_events(root, shifted + clock))
             self.assertEqual(before, module.test_contract(root))
             with self.assertRaises(ValueError):
                 module.canonical_events(root, events)
@@ -304,6 +316,118 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
                 original.replace("def denied(self, callback, code=None):", "def denied(self, callback, code=False):")
             )
             self.assertNotEqual(before, module.test_contract(root))
+
+    def test_exact_clock_channel_preserves_raw_events_and_rejects_other_shapes(self):
+        module = subject()
+        original = (ROOT / module.HOT_PATH).read_bytes()
+        tree = ast.parse(original)
+        events = clock_events(module)
+        saved = deepcopy(events)
+        joined = module.canonical_clock_events(tree, events)
+        self.assertEqual(events, saved)
+        self.assertEqual(
+            [item["id"] for item in joined[:2]],
+            [module.CLOCK_ID + " (observed=deadline)", module.CLOCK_ID + " (observed=deadline+1s)"],
+        )
+        self.assertEqual(joined[-1], events[-1])
+        self.assertEqual(
+            joined, module.canonical_clock_events(tree, clock_events(module, datetime(2026, 1, 1, 0, 0, tzinfo=UTC)))
+        )
+        malformed = [
+            events[:1] + events[2:],
+            [events[1], events[0], events[2]],
+            [events[0], events[0], events[2]],
+            events + [events[1]],
+            [events[0], {"id": "other", "outcome": "success", "caseIndex": 45}, *events[1:]],
+        ]
+        for change in (
+            {"caseIndex": 45},
+            {"outcome": "skip"},
+            {"id": events[0]["id"].replace("observed=", "unexpected=")},
+            {"id": events[0]["id"].replace(module.CLOCK_ID, "unexpected.method")},
+            {"id": module.CLOCK_ID + " (observed=__import__('os').system('bad'))"},
+        ):
+            variant = deepcopy(events)
+            variant[0].update(change)
+            malformed.append(variant)
+        wrong_delta = deepcopy(events)
+        wrong_delta[1]["id"] = wrong_delta[1]["id"].replace("0, 0, 0, 123456", "0, 0, 1, 123456")
+        malformed.append(wrong_delta)
+        for variant in malformed:
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                module.canonical_clock_events(tree, variant)
+        changed = ast.parse(
+            original.replace(b"with self.subTest(observed=observed)", b"with self.subTest(observed=False)")
+        )
+        with self.assertRaises(ValueError):
+            module.canonical_clock_events(changed, events)
+        for text in (
+            "datetime.datetime(2026, 1, 1, 0, 0)",
+            "datetime.datetime(True, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)",
+            "datetime.datetime(2026, 99, 1, 0, 0, tzinfo=datetime.timezone.utc)",
+            "datetime.datetime(2026,1,1,0,0,tzinfo=datetime.timezone.utc)",
+            "(lambda: 1)()",
+            "datetime.datetime(*[2026,1,1,0,0],tzinfo=datetime.timezone.utc)",
+        ):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                module.utc_datetime_repr(text)
+
+    def test_clock_binding_preserves_empty_schema_fields_and_rejects_new_semantics(self):
+        module = subject()
+        tree = ast.parse((ROOT / module.HOT_PATH).read_bytes())
+        events = clock_events(module)
+        expected = module.canonical_clock_events(tree, events)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                if "type_params" not in node._fields:
+                    node._fields = (*node._fields, "type_params")
+                node.type_params = []
+        self.assertEqual(expected, module.canonical_clock_events(tree, events))
+        method = next(
+            node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == module.CLOCK_METHOD
+        )
+        method.type_params = [ast.Name(id="Unreviewed", ctx=ast.Load())]
+        with self.assertRaises(ValueError):
+            module.canonical_clock_events(tree, events)
+        method.type_params = []
+        method._fields = (*method._fields, "unreviewed_field")
+        method.unreviewed_field = []
+        with self.assertRaises(ValueError):
+            module.canonical_clock_events(tree, events)
+
+    def test_prefix_is_continuation_only_and_deadline_is_finite_and_native_capped(self):
+        module = subject()
+        samples = [
+            {"side": "baseline", "wallSeconds": 10, "join": {"events": ["same"]}},
+            {"side": "candidate", "wallSeconds": 8, "join": {"events": ["same"]}},
+        ]
+        prefix = module.viability_prefix(samples)
+        self.assertEqual(prefix["status"], "PREFIX_ELIGIBLE_TO_CONTINUE")
+        self.assertFalse(prefix["performanceAcceptanceClaimed"])
+        with self.assertRaises(ValueError):
+            module.compare_samples(samples)
+        samples[1]["wallSeconds"] = 8.01
+        self.assertEqual(module.viability_prefix(samples)["status"], "INCOMPLETE")
+        samples[1]["join"] = {"events": ["changed"]}
+        self.assertEqual(module.viability_prefix(samples)["reason"], "prefix-join-mismatch")
+        with self.assertRaises(ValueError):
+            module.viability_prefix(list(reversed(samples)))
+
+        class FixedClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime(2026, 10, 26, 7, tzinfo=UTC)
+
+        with patch.object(module, "datetime", FixedClock):
+            self.assertEqual(module.experiment3_seconds("2026-10-26T14:46:31Z"), 18000)
+            self.assertEqual(module.experiment3_seconds("2026-10-26T08:00:00Z"), 3600)
+            for value in (None, "", "2026-10-26T14:46:32Z", "2026-10-26T06:00:00Z", "2026-10-26T08:00:00+00:00", "bad"):
+                with self.subTest(value=value), self.assertRaises(ValueError):
+                    module.experiment3_seconds(value)
+        records = []
+        with self.assertRaises(LifecycleError):
+            module.command(["must-not-launch"], ROOT, time.monotonic() - 1, records)
+        self.assertIs(records[0]["processStarted"], False)
 
     def test_shell_refs_non_windows_and_stale_reports_refuse_without_measurement(self):
         module = subject()

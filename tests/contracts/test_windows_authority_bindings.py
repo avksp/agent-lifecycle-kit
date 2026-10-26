@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ctypes
+import os
+import stat
 import sys
 import tempfile
 import threading
@@ -20,6 +22,60 @@ def fake_api():
     return SimpleNamespace(
         **{name: Mock() for name in ("CreateFileW", "CloseHandle", "GetFileInformationByHandleEx", "FlushFileBuffers")}
     )
+
+
+class DirectoryFreshStatTests(unittest.TestCase):
+    def test_path_branch_observes_mutation_and_missing_file_freshly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            child = root / "child"
+            child.write_bytes(b"a")
+            parent = authority_io._Directory(root, None)
+            self.assertEqual(parent.stat_child("child").st_size, 1)
+            child.write_bytes(b"changed")
+            self.assertEqual(parent.stat_child("child").st_size, 7)
+            child.unlink()
+            with self.assertRaises(FileNotFoundError) as raised:
+                parent.stat_child("child")
+            self.assertEqual(raised.exception.filename, str(child))
+
+    def test_path_branch_preserves_symlink_observation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "target"
+            target.write_bytes(b"value")
+            link = root / "link"
+            try:
+                link.symlink_to(target)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"native symlink creation unavailable: {exc}")
+            parent = authority_io._Directory(root, None)
+            self.assertTrue(stat.S_ISLNK(parent.stat_child("link").st_mode))
+
+    def test_path_branch_preserves_os_error(self):
+        parent = authority_io._Directory(Path("unused"), None)
+        error = PermissionError(13, "denied", "unchanged")
+        with patch.object(authority_io.os, "stat", side_effect=error), self.assertRaises(PermissionError) as raised:
+            parent.stat_child("child")
+        self.assertIs(raised.exception, error)
+
+    @unittest.skipIf(os.name == "nt", "POSIX directory descriptor contract")
+    def test_posix_descriptor_still_selects_held_directory_instead_of_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            held, other = root / "held", root / "other"
+            held.mkdir()
+            other.mkdir()
+            (held / "child").write_bytes(b"held")
+            (other / "child").write_bytes(b"different")
+            fd = os.open(held, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                parent = authority_io._Directory(other, fd)
+                with patch.object(authority_io.os, "stat", wraps=os.stat) as observed:
+                    self.assertEqual(parent.stat_child("child").st_size, 4)
+                observed.assert_called_once_with("child", dir_fd=fd, follow_symlinks=False)
+            finally:
+                os.close(fd)
 
 
 class WindowsAuthorityBindingTests(unittest.TestCase):

@@ -20,7 +20,11 @@ on:
         description: Bounded candidate experiment number
         type: choice
         default: "1"
-        options: ["1", "2"]
+        options: ["1", "2", "3"]
+      deadline_utc:
+        description: Required for experiment3; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -84,11 +88,13 @@ jobs:
           BASELINE_SHA: ${{ inputs.baseline_sha }}
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
           EXPERIMENT_NUMBER: ${{ inputs.experiment }}
+          MEASUREMENT_DEADLINE: ${{ inputs.deadline_utc }}
         run: >-
           uv run --frozen --group quality --python 3.11
           python tools/ci/measure_limited_usage.py
           --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
           --experiment "$env:EXPERIMENT_NUMBER" --mode paired
+          --deadline-utc "$env:MEASUREMENT_DEADLINE"
           --out work/ci/limited-usage-pairs.json
       - name: Profile unchanged baseline fixture feasibility
         id: fixture-profile

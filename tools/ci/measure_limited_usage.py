@@ -19,6 +19,7 @@ import tempfile
 import time
 import traceback
 import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path, PurePosixPath
 
 BASELINE = "ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5"
@@ -33,6 +34,11 @@ PROFILE_SECONDS = 1150
 FEASIBILITY_SECONDS = 600
 SLOW_CASE = "LimitedUsageTests.test_current_registry_capacity_preserves_large_original_interval"
 ORDER = ("baseline", "candidate", "candidate", "baseline", "baseline", "candidate")
+CLOCK_METHOD = "test_expired_admission_live_run_task_and_exact_deadline_refuse"
+CLOCK_ID = f"{HOT_MODULE}.ProspectiveAdmissionProcedureTests.{CLOCK_METHOD}"
+CLOCK_METHOD_SHA256 = "5a8e553113f598b415429e13bca8d75e50c390d02dcb6239aeba9f369b6a4aa6"
+CLOCK_LOOP_SHA256 = "5bc591fa37ac1a27dedc4822fc55fca1e666597d069366050f8d24aaa6ceca89"
+EXPERIMENT3_DEADLINE = datetime(2026, 10, 26, 14, 46, 31, tzinfo=UTC)
 LINE_SELECTORS = {
     (
         f"{HOT_MODULE}.AccountingOnlyClockTests."
@@ -156,6 +162,94 @@ def test_contract(root):
     }
 
 
+def utc_datetime_repr(text):
+    """Parse only the canonical UTC datetime repr produced by the bound test."""
+    if not isinstance(text, str) or len(text) > 200:
+        raise ValueError("Invalid UTC datetime label")
+    try:
+        value = ast.parse(text, mode="eval").body
+        expected = ast.parse("datetime.datetime", mode="eval").body
+        utc = ast.parse("datetime.timezone.utc", mode="eval").body
+        if (
+            not isinstance(value, ast.Call)
+            or ast.dump(value.func) != ast.dump(expected)
+            or not 5 <= len(value.args) <= 7
+            or len(value.keywords) != 1
+            or value.keywords[0].arg != "tzinfo"
+            or ast.dump(value.keywords[0].value) != ast.dump(utc)
+            or any(not isinstance(arg, ast.Constant) or type(arg.value) is not int for arg in value.args)
+        ):
+            raise ValueError("Unrecognized datetime expression")
+        observed = datetime(*(arg.value for arg in value.args), tzinfo=UTC)
+        if repr(observed) != text:
+            raise ValueError("Datetime label is not canonical")
+        return observed
+    except (SyntaxError, TypeError, OverflowError) as exc:
+        raise ValueError("Malformed UTC datetime label") from exc
+
+
+def clock_ast_dump(value):
+    """Keep the bound 3.11 representation; ignore only empty type parameters."""
+    if isinstance(value, ast.AST):
+        fields = []
+        for name, child in ast.iter_fields(value):
+            if (child is None and getattr(type(value), name, ...) is None) or (name == "type_params" and child == []):
+                continue
+            fields.append(f"{name}={clock_ast_dump(child)}")
+        return f"{type(value).__name__}({', '.join(fields)})"
+    if isinstance(value, list):
+        return "[" + ", ".join(clock_ast_dump(child) for child in value) + "]"
+    return repr(value)
+
+
+def canonical_clock_events(tree, events):
+    """Normalize only the two exact, AST-bound deadline observations."""
+    classes = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "ProspectiveAdmissionProcedureTests"
+    ]
+    indices = [index for index, event in enumerate(events) if event["id"].split(" (", 1)[0] == CLOCK_ID]
+    if any(" (observed=" in event["id"] and event["id"].split(" (", 1)[0] != CLOCK_ID for event in events):
+        raise ValueError("Datetime observations occurred in an unexpected method")
+    if not classes:
+        if indices:
+            raise ValueError("Clock events have no source method")
+        return events
+    methods = [node for node in classes[0].body if isinstance(node, ast.FunctionDef) and node.name == CLOCK_METHOD]
+    if len(classes) != 1 or len(methods) != 1:
+        raise ValueError("Clock method is missing or duplicated")
+    method = methods[0]
+    loops = [node for node in method.body if isinstance(node, ast.For)]
+    if (
+        hashlib.sha256(clock_ast_dump(method).encode()).hexdigest() != CLOCK_METHOD_SHA256
+        or len(loops) != 1
+        or hashlib.sha256(clock_ast_dump(loops[0]).encode()).hexdigest() != CLOCK_LOOP_SHA256
+    ):
+        raise ValueError("Clock method/loop AST changed")
+    if len(indices) != 3 or indices != list(range(indices[0], indices[0] + 3)):
+        raise ValueError("Clock events are missing, duplicated, extra or reordered")
+    selected = [events[index] for index in indices]
+    if (
+        any(item["caseIndex"] != 46 for item in selected)
+        or [item["outcome"] for item in selected] != ["subtest:success", "subtest:success", "success"]
+        or selected[2]["id"] != CLOCK_ID
+    ):
+        raise ValueError("Clock case/order/outcomes changed")
+    observed = []
+    for item in selected[:2]:
+        prefix = CLOCK_ID + " (observed="
+        if not item["id"].startswith(prefix) or not item["id"].endswith(")"):
+            raise ValueError("Clock parameters changed")
+        observed.append(utc_datetime_repr(item["id"][len(prefix) : -1]))
+    if observed[1] - observed[0] != timedelta(seconds=1):
+        raise ValueError("Clock observations are not ordered one second apart")
+    result = [dict(item) for item in events]
+    for index, label in zip(indices[:2], ("deadline", "deadline+1s"), strict=True):
+        result[index]["id"] = f"{CLOCK_ID} (observed={label})"
+    return result
+
+
 def canonical_events(root, events):
     """Join proven lambda selectors by AST when formatting changes source lines."""
     tree = ast.parse((root / HOT_PATH).read_bytes())
@@ -204,7 +298,7 @@ def canonical_events(root, events):
         result.append(item)
     if any(positions.get(base, 0) != len(choices) for base, (_, choices) in selectors.items()):
         raise ValueError("Missing source-line subtest selector outcomes")
-    return result
+    return canonical_clock_events(tree, result)
 
 
 def input_manifest(root, names):
@@ -250,6 +344,7 @@ def command(argv, root, deadline, records, *, timeout=120, logs=None):
         "cwd": str(root),
         "exitCode": None,
         "timeoutSeconds": min(timeout, deadline - time.monotonic()),
+        "processStarted": None,
     }
     records.append(record)
     chunks, process = [], None
@@ -261,6 +356,7 @@ def command(argv, root, deadline, records, *, timeout=120, logs=None):
             max_stdout_bytes=MAX_BYTES,
             max_stderr_bytes=MAX_BYTES,
         )
+        record["processStarted"] = True
         while data := process.stdout.read(65536):
             chunks.append(data)
         record["exitCode"] = process.wait()
@@ -268,6 +364,12 @@ def command(argv, root, deadline, records, *, timeout=120, logs=None):
             raise ValueError("Measurement child command failed; retained exit and output hashes")
         return b"".join(chunks)
     except BaseException as exc:
+        if (
+            getattr(exc, "code", None)
+            in ("bounded-process-timeout", "bounded-process-argv-invalid", "bounded-process-limit-invalid")
+            and process is None
+        ):
+            record["processStarted"] = False
         record["transportError"] = f"{type(exc).__name__}: {exc}"
         raise
     finally:
@@ -526,6 +628,7 @@ def validate_sample(value, request):
         or not value["coverage"]["complete"]
         or value["coverage"]["notStarted"]
         or value["testsRun"] != request["expectedTests"]
+        or (request["expectedTests"] == 78 and (len(value["events"]) != 376 or len(value["comparisonEvents"]) != 376))
         or len(value["inventory"]) != request["expectedTests"]
         or len(value["cases"]) != request["expectedTests"]
         or [item["id"] for item in value["cases"]] != [item["id"] for item in value["inventory"]]
@@ -537,6 +640,8 @@ def validate_sample(value, request):
         or value["wallSeconds"] <= 0
     ):
         raise ValueError("Incomplete, mutated, wrong-source or failing hot-module sample")
+    if value["comparisonEvents"] != canonical_events(Path(request["root"]), value["events"]):
+        raise ValueError("Canonical events differ from the preserved raw source-bound events")
     return {
         "inventory": value["inventory"],
         "events": value["comparisonEvents"],
@@ -573,6 +678,36 @@ def compare_samples(samples):
     }
 
 
+def viability_prefix(samples):
+    """The prefix permits continuation only; it cannot establish a median verdict."""
+    if len(samples) != 2 or tuple(item["side"] for item in samples) != ORDER[:2]:
+        raise ValueError("Viability requires the first baseline/candidate full-module pair")
+    if samples[0]["join"] != samples[1]["join"]:
+        return {"status": "INCOMPLETE", "reason": "prefix-join-mismatch"}
+    if any(not math.isfinite(item["wallSeconds"]) or item["wallSeconds"] <= 0 for item in samples):
+        raise ValueError("Invalid viability wall time")
+    ratio = samples[1]["wallSeconds"] / samples[0]["wallSeconds"]
+    return {
+        "status": "PREFIX_ELIGIBLE_TO_CONTINUE" if ratio <= 0.80 else "INCOMPLETE",
+        "candidateBaselineRatio": ratio,
+        "targetRatio": 0.80,
+        "performanceAcceptanceClaimed": False,
+        "reason": "prefix-ratio",
+    }
+
+
+def experiment3_seconds(deadline_text):
+    if not isinstance(deadline_text, str) or re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", deadline_text) is None:
+        raise ValueError("Experiment3 requires an explicit UTC absolute deadline")
+    requested = datetime.strptime(deadline_text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    if requested > EXPERIMENT3_DEADLINE:
+        raise ValueError("Experiment3 deadline exceeds the native authorized ceiling")
+    remaining = (requested - datetime.now(UTC)).total_seconds()
+    if remaining <= 0:
+        raise ValueError("Experiment3 absolute deadline expired")
+    return min(EXPERIMENT_SECONDS, remaining)
+
+
 def execute(args, report):
     started = time.perf_counter()
     profile_mode = args.mode in ("profile", "feasibility")
@@ -601,11 +736,22 @@ def execute(args, report):
         "sampleTimeoutSeconds": SAMPLE_SECONDS,
         "experimentTimeoutSeconds": limit,
         "performanceAcceptanceClaimed": False,
-        "validationUnits": {"outer": 1, "moduleChildrenStarted": 0, "profileChildrenStarted": 0},
+        "validationUnits": {
+            "outer": 1,
+            "moduleChildrenStarted": 0,
+            "profileChildrenStarted": 0,
+            "unknownChildStartHolds": 0,
+        },
     }
     try:
-        if args.baseline != BASELINE or source_sha(args.candidate) == BASELINE or args.experiment not in (1, 2):
-            raise ValueError("Exact accepted baseline and one of two candidate experiments required")
+        if args.baseline != BASELINE or source_sha(args.candidate) == BASELINE or args.experiment not in (1, 2, 3):
+            raise ValueError("Exact accepted baseline and a declared candidate experiment required")
+        if args.experiment == 3:
+            if args.mode != "paired":
+                raise ValueError("Experiment3 permits no additional profiles")
+            limit = experiment3_seconds(args.deadline_utc)
+            deadline = min(deadline, time.monotonic() + limit)
+            payload.update(absoluteDeadlineUtc=args.deadline_utc, experimentTimeoutSeconds=limit)
         source_sha(args.baseline)
         if (
             platform.system() != "Windows"
@@ -701,7 +847,6 @@ def execute(args, report):
                 write_new(request_path, request)
                 argv = worker_argv(helper, request_path, root, scratch)
                 counter = "profileChildrenStarted" if profile_mode else "moduleChildrenStarted"
-                payload["validationUnits"][counter] += 1
                 try:
                     command(
                         argv,
@@ -712,6 +857,10 @@ def execute(args, report):
                         logs=destination,
                     )
                 finally:
+                    if records[-1]["processStarted"] is True:
+                        payload["validationUnits"][counter] += 1
+                    elif records[-1]["processStarted"] is None:
+                        payload["validationUnits"]["unknownChildStartHolds"] += 1
                     payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
                 value = read_object(destination / "test-timings.json")
                 if profile_mode:
@@ -752,21 +901,33 @@ def execute(args, report):
                 )
                 if git(["status", "--porcelain", "--untracked-files=all"], root, deadline, records):
                     raise ValueError("Sample mutated its isolated source checkout")
+                if args.experiment == 3 and len(samples) == 2:
+                    payload["viabilityPrefix"] = viability_prefix(samples)
+                    if payload["viabilityPrefix"]["status"] == "INCOMPLETE":
+                        payload["status"] = "INCOMPLETE"
+                        break
             if args.mode == "paired":
-                payload.update(compare_samples(samples))
-                payload["performanceAcceptanceClaimed"] = payload["status"] == "MEASURED_IMPROVEMENT"
+                if payload["status"] != "INCOMPLETE":
+                    payload.update(compare_samples(samples))
+                    payload["performanceAcceptanceClaimed"] = payload["status"] == "MEASURED_IMPROVEMENT"
             elif len(payload["profiles"]) == len(order):
                 payload["status"] = "FEASIBILITY_COMPLETE" if args.mode == "feasibility" else "PROFILE_COMPLETE"
     except BaseException as exc:
-        payload.update(status="FAIL", failure=f"{type(exc).__name__}: {exc}")
+        payload.update(status="INCOMPLETE" if args.experiment == 3 else "FAIL", failure=f"{type(exc).__name__}: {exc}")
         traceback.print_exc()
     payload["totalSeconds"] = time.perf_counter() - started
     payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
     payload["validationUnits"]["total"] = (
-        1 + payload["validationUnits"]["moduleChildrenStarted"] + payload["validationUnits"]["profileChildrenStarted"]
+        1
+        + payload["validationUnits"]["moduleChildrenStarted"]
+        + payload["validationUnits"]["profileChildrenStarted"]
+        + payload["validationUnits"]["unknownChildStartHolds"]
     )
     if payload["totalSeconds"] > limit:
-        payload.update(status="FAIL", failure="Experiment deadline exceeded; partial evidence retained")
+        payload.update(
+            status="INCOMPLETE" if args.experiment == 3 else "FAIL",
+            failure="Experiment deadline exceeded; partial evidence retained",
+        )
     json.dump(payload, report, sort_keys=True, allow_nan=False)
     report.write("\n")
     return 0 if payload["status"] in ("MEASURED_IMPROVEMENT", "PROFILE_COMPLETE", "FEASIBILITY_COMPLETE") else 1
@@ -776,7 +937,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline", required=True, type=source_sha)
     parser.add_argument("--candidate", required=True, type=source_sha)
-    parser.add_argument("--experiment", required=True, type=int, choices=(1, 2))
+    parser.add_argument("--experiment", required=True, type=int, choices=(1, 2, 3))
+    parser.add_argument("--deadline-utc")
     parser.add_argument("--mode", choices=("paired", "profile", "feasibility"), default="paired")
     parser.add_argument("--out", required=True)
     args = parser.parse_args(argv)
