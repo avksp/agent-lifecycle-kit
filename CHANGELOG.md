@@ -16,6 +16,8 @@
   limit, optional bounded parallel runner and all checks.
 - Isolate the complete Windows historical snapshot comparison in a bounded
   process. Keep the original oracle, assertions and memory measurements.
+- Separate positive queue-test coordination from the production admission
+  deadline. Keep default timeout, refusal and dead-waiter checks.
 - Extend repository performance tooling with real workflow status and persistent
   journal reads at 1/100 tasks or reservations. Report setup, operation and
   subprocess costs separately; keep read-only fixture invariants.

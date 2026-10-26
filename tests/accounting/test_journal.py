@@ -13,7 +13,7 @@ import sys
 import tempfile
 import time
 import unittest
-from contextlib import closing
+from contextlib import closing, nullcontext
 from dataclasses import replace
 from pathlib import Path
 from unittest import mock
@@ -142,7 +142,7 @@ def crash_worker(path, stage):
         os._exit(17)
 
 
-def admission_worker(path, ready, start, output, name, crash=False):
+def admission_worker(path, ready, start, output, name, crash=False, fixture_queue_seconds=None):
     with Journal(path, PROOF) as journal:
         ready.set()
         if not start.wait(10):
@@ -154,7 +154,20 @@ def admission_worker(path, ready, start, output, name, crash=False):
                 output.join_thread()
                 time.sleep(10)
         else:
-            result = journal.reserve(operation(name=name, upper=1))
+            original_slot = journal._queue.slot
+
+            def fixture_slot(observation, *, timeout):
+                if timeout != 1.0 or fixture_queue_seconds != 10.0:
+                    raise AssertionError("Expected real1second request and explicit10second fixture allowance")
+                observation.update(product_requested_seconds=timeout, fixture_queue_seconds=fixture_queue_seconds)
+                return original_slot(observation, timeout=fixture_queue_seconds)
+
+            scope = (
+                mock.patch.object(journal._queue, "slot", side_effect=fixture_slot)
+                if fixture_queue_seconds is not None else nullcontext()
+            )
+            with scope:
+                result = journal.reserve(operation(name=name, upper=1))
             output.put((name, result, journal.last_write_admission))
 
 
@@ -516,11 +529,21 @@ class JournalTests(unittest.TestCase):
         self.assertFalse(target.exists())
 
     def test_write_admission_dead_waiter_and_live_successor(self):
+        self._check_dead_waiter_and_live_successor(coordinator_pause=0)
+
+    def test_write_admission_dead_waiter_with_delayed_coordinator(self):
+        self._check_dead_waiter_and_live_successor(coordinator_pause=1.2)
+
+    def _check_dead_waiter_and_live_successor(self, coordinator_pause):
         ctx = multiprocessing.get_context("spawn")
         output = ctx.Queue()
         ready, starts = [ctx.Event() for _ in range(2)], [ctx.Event() for _ in range(2)]
         children = [
-            ctx.Process(target=admission_worker, args=(str(self.path), ready[i], starts[i], output, "waiter" + str(i)))
+            ctx.Process(
+                target=admission_worker,
+                args=(str(self.path), ready[i], starts[i], output, "waiter" + str(i)),
+                kwargs={"fixture_queue_seconds": 10.0},
+            )
             for i in range(2)
         ]
         try:
@@ -528,18 +551,23 @@ class JournalTests(unittest.TestCase):
                 child.start()
             self.assertTrue(all(event.wait(10) for event in ready))
             with self.j._write_admission():
+                deadline = time.monotonic() + 5
                 for i in (0, 1):
                     starts[i].set()
-                    deadline = time.monotonic() + 0.7
                     while len(list(self.j._queue.directory.glob("*-*"))) < i + 2:
                         self.assertLess(time.monotonic(), deadline)
                         time.sleep(0.002)
+                    if i == 0 and coordinator_pause:
+                        time.sleep(coordinator_pause)
                 children[0].kill()
                 children[0].join(2)
+                self.assertFalse(children[0].is_alive())
                 self.assertTrue(children[1].is_alive())
             name, result, observation = output.get(timeout=10)
             self.assertEqual((name, result), ("waiter1", "RESERVED"))
             self.assertEqual(observation["status"], "ADMITTED")
+            self.assertEqual(observation["product_requested_seconds"], 1.0)
+            self.assertEqual(observation["fixture_queue_seconds"], 10.0)
             self.assertEqual(set(self.j._load("run")[0]["operations"]), {"waiter1"})
             self.assertEqual(self.j.snapshot("run").active_reservations, 1)
         finally:
