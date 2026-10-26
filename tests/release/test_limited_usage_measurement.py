@@ -395,6 +395,26 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.canonical_clock_events(tree, events)
 
+    def test_full_trial_uses_all_pairs_without_accepting_a_diagnostic_prefix(self):
+        module = subject()
+        samples = []
+        for side, seconds in zip(module.ORDER, (10, 9, 7, 10, 10, 7.5), strict=False):
+            samples.append({"side": side, "wallSeconds": seconds, "join": {"events": ["same"]}})
+        self.assertEqual(module.viability_prefix(samples[:2])["status"], "INCOMPLETE")
+        observed = module.viability_prefix(samples[:2], ratio_stop=False)
+        self.assertEqual(observed["status"], "PREFIX_OBSERVED_ONLY")
+        self.assertFalse(observed["performanceAcceptanceClaimed"])
+        self.assertFalse(observed["ratioGateEnforced"])
+        with self.assertRaises(ValueError):
+            module.compare_samples(samples[:2])
+        self.assertEqual(module.compare_samples(samples)["status"], "MEASURED_IMPROVEMENT")
+        for item in samples:
+            if item["side"] == "candidate":
+                item["wallSeconds"] = 9
+        self.assertEqual(module.compare_samples(samples)["status"], "NO_IMPROVEMENT")
+        samples[1]["join"] = {"events": ["different"]}
+        self.assertEqual(module.viability_prefix(samples[:2], ratio_stop=False)["status"], "INCOMPLETE")
+
     def test_prefix_is_continuation_only_and_deadline_is_finite_and_native_capped(self):
         module = subject()
         samples = [
@@ -421,7 +441,8 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
         with patch.object(module, "datetime", FixedClock):
             self.assertEqual(module.experiment3_seconds("2026-10-26T14:46:31Z"), 18000)
             self.assertEqual(module.experiment3_seconds("2026-10-26T08:00:00Z"), 3600)
-            for value in (None, "", "2026-10-26T14:46:32Z", "2026-10-26T06:00:00Z", "2026-10-26T08:00:00+00:00", "bad"):
+            ceiling_exceeded = (module.EXPERIMENT3_DEADLINE + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            for value in (None, "", ceiling_exceeded, "2026-10-26T06:00:00Z", "2026-10-26T08:00:00+00:00", "bad"):
                 with self.subTest(value=value), self.assertRaises(ValueError):
                     module.experiment3_seconds(value)
         records = []

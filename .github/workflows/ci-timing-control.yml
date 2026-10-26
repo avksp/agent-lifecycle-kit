@@ -20,9 +20,9 @@ on:
         description: Bounded candidate experiment number
         type: choice
         default: "1"
-        options: ["1", "2", "3"]
+        options: ["1", "2", "3", "4"]
       deadline_utc:
-        description: Required for experiment3; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
+        description: Required for experiments3/4; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
         type: string
         default: ""
 

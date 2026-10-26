@@ -38,7 +38,7 @@ CLOCK_METHOD = "test_expired_admission_live_run_task_and_exact_deadline_refuse"
 CLOCK_ID = f"{HOT_MODULE}.ProspectiveAdmissionProcedureTests.{CLOCK_METHOD}"
 CLOCK_METHOD_SHA256 = "5a8e553113f598b415429e13bca8d75e50c390d02dcb6239aeba9f369b6a4aa6"
 CLOCK_LOOP_SHA256 = "5bc591fa37ac1a27dedc4822fc55fca1e666597d069366050f8d24aaa6ceca89"
-EXPERIMENT3_DEADLINE = datetime(2026, 10, 26, 14, 46, 31, tzinfo=UTC)
+EXPERIMENT3_DEADLINE = datetime(2026, 10, 26, 16, 4, 34, tzinfo=UTC)
 LINE_SELECTORS = {
     (
         f"{HOT_MODULE}.AccountingOnlyClockTests."
@@ -678,7 +678,7 @@ def compare_samples(samples):
     }
 
 
-def viability_prefix(samples):
+def viability_prefix(samples, *, ratio_stop=True):
     """The prefix permits continuation only; it cannot establish a median verdict."""
     if len(samples) != 2 or tuple(item["side"] for item in samples) != ORDER[:2]:
         raise ValueError("Viability requires the first baseline/candidate full-module pair")
@@ -687,13 +687,16 @@ def viability_prefix(samples):
     if any(not math.isfinite(item["wallSeconds"]) or item["wallSeconds"] <= 0 for item in samples):
         raise ValueError("Invalid viability wall time")
     ratio = samples[1]["wallSeconds"] / samples[0]["wallSeconds"]
-    return {
+    result = {
         "status": "PREFIX_ELIGIBLE_TO_CONTINUE" if ratio <= 0.80 else "INCOMPLETE",
         "candidateBaselineRatio": ratio,
         "targetRatio": 0.80,
         "performanceAcceptanceClaimed": False,
         "reason": "prefix-ratio",
     }
+    if not ratio_stop:
+        result.update(status="PREFIX_OBSERVED_ONLY", ratioGateEnforced=False)
+    return result
 
 
 def experiment3_seconds(deadline_text):
@@ -744,9 +747,9 @@ def execute(args, report):
         },
     }
     try:
-        if args.baseline != BASELINE or source_sha(args.candidate) == BASELINE or args.experiment not in (1, 2, 3):
+        if args.baseline != BASELINE or source_sha(args.candidate) == BASELINE or args.experiment not in (1, 2, 3, 4):
             raise ValueError("Exact accepted baseline and a declared candidate experiment required")
-        if args.experiment == 3:
+        if args.experiment in (3, 4):
             if args.mode != "paired":
                 raise ValueError("Experiment3 permits no additional profiles")
             limit = experiment3_seconds(args.deadline_utc)
@@ -901,8 +904,8 @@ def execute(args, report):
                 )
                 if git(["status", "--porcelain", "--untracked-files=all"], root, deadline, records):
                     raise ValueError("Sample mutated its isolated source checkout")
-                if args.experiment == 3 and len(samples) == 2:
-                    payload["viabilityPrefix"] = viability_prefix(samples)
+                if args.experiment in (3, 4) and len(samples) == 2:
+                    payload["viabilityPrefix"] = viability_prefix(samples, ratio_stop=args.experiment == 3)
                     if payload["viabilityPrefix"]["status"] == "INCOMPLETE":
                         payload["status"] = "INCOMPLETE"
                         break
@@ -913,7 +916,9 @@ def execute(args, report):
             elif len(payload["profiles"]) == len(order):
                 payload["status"] = "FEASIBILITY_COMPLETE" if args.mode == "feasibility" else "PROFILE_COMPLETE"
     except BaseException as exc:
-        payload.update(status="INCOMPLETE" if args.experiment == 3 else "FAIL", failure=f"{type(exc).__name__}: {exc}")
+        payload.update(
+            status="INCOMPLETE" if args.experiment in (3, 4) else "FAIL", failure=f"{type(exc).__name__}: {exc}"
+        )
         traceback.print_exc()
     payload["totalSeconds"] = time.perf_counter() - started
     payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
@@ -925,7 +930,7 @@ def execute(args, report):
     )
     if payload["totalSeconds"] > limit:
         payload.update(
-            status="INCOMPLETE" if args.experiment == 3 else "FAIL",
+            status="INCOMPLETE" if args.experiment in (3, 4) else "FAIL",
             failure="Experiment deadline exceeded; partial evidence retained",
         )
     json.dump(payload, report, sort_keys=True, allow_nan=False)
@@ -937,7 +942,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline", required=True, type=source_sha)
     parser.add_argument("--candidate", required=True, type=source_sha)
-    parser.add_argument("--experiment", required=True, type=int, choices=(1, 2, 3))
+    parser.add_argument("--experiment", required=True, type=int, choices=(1, 2, 3, 4))
     parser.add_argument("--deadline-utc")
     parser.add_argument("--mode", choices=("paired", "profile", "feasibility"), default="paired")
     parser.add_argument("--out", required=True)
