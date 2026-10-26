@@ -59,6 +59,23 @@ class PerformanceBaselineTests(unittest.TestCase):
             self.assertTrue(output.is_file())
             self.assertEqual(result["productionPromotionClaimed"], False)
 
+    def test_short_real_operation_uses_high_resolution_with_stationary_deadline_clock(self) -> None:
+        operation = {"id": "canonical-digest", "kind": "in-process", "argv": ["canonical_digest"]}
+        with mock.patch("tools.performance.run_performance_baseline.time.monotonic", return_value=123.0):
+            result = _invoke(operation, Path.cwd(), 5, 4096, 124.0)
+        self.assertEqual(result["status"], "PASS")
+        self.assertGreater(result["wallSeconds"], 0)
+
+    def test_true_zero_operation_duration_is_not_floored(self) -> None:
+        operation = {"id": "canonical-digest", "kind": "in-process", "argv": ["canonical_digest"]}
+        with (
+            mock.patch("tools.performance.run_performance_baseline.time.monotonic", return_value=123.0),
+            mock.patch("tools.performance.run_performance_baseline.time.perf_counter_ns", return_value=5),
+        ):
+            result = _invoke(operation, Path.cwd(), 5, 4096, 124.0)
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["wallSeconds"], 0)
+
     def test_nearest_rank_p95_uses_the_largest_of_seven_samples(self) -> None:
         self.assertEqual(_p95([4, 1, 7, 2, 5, 3, 6]), 7)
         self.assertIsNone(_p95([]))

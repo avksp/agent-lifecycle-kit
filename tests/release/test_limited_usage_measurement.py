@@ -272,12 +272,12 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
 
     def test_contract_binds_full_methods_and_normalizes_only_proven_line_selectors(self):
         module = subject()
-        original = (ROOT / module.HOT_PATH).read_text()
+        original = (ROOT / module.HOT_PATH).read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / module.HOT_PATH
             path.parent.mkdir(parents=True)
-            path.write_text(original)
+            path.write_text(original, encoding="utf-8")
             before = module.test_contract(root)
             tree = ast.parse(original)
             events = []
@@ -300,7 +300,7 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
                                 )
             clock = clock_events(module)
             joined = module.canonical_events(root, events + clock)
-            path.write_text("\n\n" + original)
+            path.write_text("\n\n" + original, encoding="utf-8")
             shifted = [
                 {
                     **event,
@@ -313,7 +313,8 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.canonical_events(root, events)
             path.write_text(
-                original.replace("def denied(self, callback, code=None):", "def denied(self, callback, code=False):")
+                original.replace("def denied(self, callback, code=None):", "def denied(self, callback, code=False):"),
+                encoding="utf-8",
             )
             self.assertNotEqual(before, module.test_contract(root))
 
@@ -443,7 +444,7 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
         self.assertIn("is_lazy=None", module.clock_ast_dump(optional))
 
     def test_measured_authority_stat_has_only_the_approved_migration_exception(self):
-        source = (ROOT / "src/agent_lifecycle/contracts/authority_io.py").read_text()
+        source = (ROOT / "src/agent_lifecycle/contracts/authority_io.py").read_text(encoding="utf-8")
         expected = "return os.stat(os.path.join(self.path, name), follow_symlinks=False)  # noqa: PTH116, PTH118"
         self.assertEqual(source.count("# noqa:"), 1)
         self.assertEqual([line.strip() for line in source.splitlines() if "# noqa:" in line], [expected])

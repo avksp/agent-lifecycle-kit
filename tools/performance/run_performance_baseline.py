@@ -260,12 +260,12 @@ def _invoke(operation: dict[str, Any], root: Path, timeout: int, max_output: int
     if remaining <= 0:
         return _failed_sample("performance-total-deadline-exceeded")
     if operation["kind"] == "in-process":
-        started = time.monotonic()
+        started = time.perf_counter_ns()
         payload = {"kind": "performance", "values": list(range(512)), "source": "deterministic"}
         canonical_digest(payload)
         return {
             "status": "PASS",
-            "wallSeconds": round(time.monotonic() - started, 6),
+            "wallSeconds": (time.perf_counter_ns() - started) / 1_000_000_000,
             "maxRssBytes": _self_rss_bytes(),
             "stdoutBytes": 0,
             "stderrBytes": 0,

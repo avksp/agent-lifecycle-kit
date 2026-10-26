@@ -123,10 +123,18 @@ class PerformanceEvidenceValidatorTests(unittest.TestCase):
                 candidate_path=baseline,
                 repository_root=Path.cwd(),
             )
-            self.assertEqual(result["status"], "COMPARABLE")
+            self.assertEqual(
+                result["status"],
+                "COMPARABLE",
+                {
+                    "baselineStatus": original.get("status"),
+                    "baselineBlockers": original.get("blockers", [])[:4],
+                    "comparisonBlockers": result.get("blockers", [])[:4],
+                },
+            )
             self.assertTrue(result["selfComparison"])
             self.assertEqual(result["operations"][0]["wallMedianRatio"], 1.0)
-            for field in ("source", "workload", "metric", "environment", "summary"):
+            for field in ("source", "workload", "metric", "environment", "summary", "zero-reference"):
                 with self.subTest(field=field):
                     value = json.loads(json.dumps(original))
                     if field == "source":
@@ -137,6 +145,9 @@ class PerformanceEvidenceValidatorTests(unittest.TestCase):
                         value["metricDefinitions"]["p95"] = "unqualified"
                     elif field == "environment":
                         value["environment"]["python"] = "different"
+                    elif field == "zero-reference":
+                        value["operations"][0]["samples"][0]["wallSeconds"] = 0
+                        value["operations"][0]["summary"].update(medianWallSeconds=0, p95WallSeconds=0)
                     else:
                         value["operations"][0]["summary"]["medianWallSeconds"] += 1
                     value["baselineDigest"] = canonical_digest(
@@ -146,7 +157,7 @@ class PerformanceEvidenceValidatorTests(unittest.TestCase):
                     changed.write_text(json.dumps(value), encoding="utf-8")
                     result = compare_performance_baselines(
                         policy_path=policy,
-                        baseline_path=baseline,
+                        baseline_path=changed if field == "zero-reference" else baseline,
                         candidate_path=changed,
                         repository_root=Path.cwd(),
                     )
