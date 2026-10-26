@@ -76,7 +76,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.27.0
+python -m pip install agent-lifecycle-kit==2.28.0
 ```
 
 ## Task evidence identity
@@ -815,3 +815,8 @@ reuse the existing bare-token families. [Quality controls](../architecture/syste
 require both combined and statement coverage of 76 percent and retain legacy
 policy interpretation. The existing [reading pilot](../guides/controlled-technical-english.md) and host limits
 remain; measurements do not establish token savings or host enforcement.
+
+
+## Release 2.28 performance measurements
+
+Release 2.28 adds [bounded lifecycle and accounting baselines](performance-and-resource-budgets.md#release-228-lifecycle-and-accounting-baselines). Repository tools measure real read-only operations and separate fixture preparation from operation and subprocess time. The Windows fixture comparison observed a 13.08% median reduction in one six-sample experiment; it is not a universal speed promise. All security and platform checks remain required.

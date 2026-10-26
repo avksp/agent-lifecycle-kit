@@ -13,9 +13,12 @@ Agent Lifecycle Kit (ALK) координирует работу кодового
 Задача проекта — обеспечить проверяемое завершение работы внешнего агента с соразмерным уровнем контроля. ALK добавляет только необходимые проверки и подтверждения, а основное
 время остаётся на исследование, реализацию и проверку продукта.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.27.0 · Python 3.11-3.15
+**Лицензия:** Apache-2.0 · **Версия:** 2.28.0 · Python 3.11-3.15
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
+
+
+В 2.28 добавлены [ограниченные замеры lifecycle и журнала расходов](reference/performance-and-resource-budgets.md). Инструменты из репозитория измеряют реальные операции чтения и отдельно показывают подготовку данных, саму операцию и запуск процесса. Сравнение Windows-фикстур показало снижение медианы на 13,08% в одном эксперименте из шести измерений; это не универсальная гарантия скорости. Проверки безопасности и платформ сохраняются.
 
 ## Быстрый старт
 
@@ -23,7 +26,7 @@ Agent Lifecycle Kit (ALK) координирует работу кодового
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.27.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.28.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
 
 Для быстрого старта выполните:
 

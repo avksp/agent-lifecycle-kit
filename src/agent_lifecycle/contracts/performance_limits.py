@@ -32,7 +32,7 @@ class PerformanceLimits:
     max_simple_literal_rules: int = 64
     max_linux_group_samples_per_second: int = 4
     max_ed25519_optimized_to_reference_median_ratio_bps: int = 2_000
-    max_benchmark_samples_per_case: int = 31
+    max_benchmark_samples_per_case: int = 7
     max_benchmark_output_bytes: int = 16 * 1024 * 1024
     max_evidence_bytes_per_run: int = 96 * 1024 * 1024
 
@@ -126,7 +126,26 @@ def validate_performance_policy(policy: Mapping[str, Any]) -> PerformanceLimits:
     if not isinstance(raw_limits, Mapping):
         raise LifecycleError("performance-policy-limits-invalid", "performance policy limits must be an object")
     limits = performance_limits_from_json(raw_limits)
-    benchmark = policy.get("benchmark")
+    _validate_benchmark_policy(policy.get("benchmark"), limits)
+    operations = policy.get("operations")
+    if (
+        not isinstance(operations, list)
+        or not operations
+        or not all(isinstance(item, str) and item for item in operations)
+    ):
+        raise LifecycleError(
+            "performance-policy-operations-invalid", "performance policy operations must be non-empty strings"
+        )
+    if len(set(operations)) != len(operations):
+        raise LifecycleError("performance-policy-operations-invalid", "performance policy operations must be unique")
+    if policy.get("productionPromotionClaimed") is not False:
+        raise LifecycleError(
+            "performance-policy-promotion-invalid", "performance policy cannot claim production promotion"
+        )
+    return limits
+
+
+def _validate_benchmark_policy(benchmark: Any, limits: PerformanceLimits) -> None:
     if not isinstance(benchmark, Mapping):
         raise LifecycleError("performance-policy-benchmark-invalid", "performance policy benchmark must be an object")
     benchmark_allowed = {
@@ -153,22 +172,27 @@ def validate_performance_policy(policy: Mapping[str, Any]) -> PerformanceLimits:
         raise LifecycleError("performance-policy-benchmark-exceeds-limit", "samplesPerCase exceeds the typed ceiling")
     if benchmark["maxOutputBytes"] > limits.max_benchmark_output_bytes:
         raise LifecycleError("performance-policy-benchmark-exceeds-limit", "maxOutputBytes exceeds the typed ceiling")
-    operations = policy.get("operations")
-    if (
-        not isinstance(operations, list)
-        or not operations
-        or not all(isinstance(item, str) and item for item in operations)
-    ):
+    _validate_benchmark_caps(benchmark, limits)
+
+
+def _validate_benchmark_caps(benchmark: Mapping[str, Any], limits: PerformanceLimits) -> None:
+    hard_caps = {
+        "warmupSamples": 2,
+        "samplesPerCase": 7,
+        "maxCommandWallSeconds": 120,
+        "maxTotalWallSeconds": 600,
+        "maxOutputBytes": 16 * 1024 * 1024,
+    }
+    if any(benchmark[name] > cap for name, cap in hard_caps.items()):
         raise LifecycleError(
-            "performance-policy-operations-invalid", "performance policy operations must be non-empty strings"
+            "performance-policy-benchmark-exceeds-limit",
+            "Benchmark exceeds an immutable sampling, wall or output ceiling",
         )
-    if len(set(operations)) != len(operations):
-        raise LifecycleError("performance-policy-operations-invalid", "performance policy operations must be unique")
-    if policy.get("productionPromotionClaimed") is not False:
+    if limits.max_benchmark_samples_per_case > 7 or limits.max_benchmark_output_bytes > 16 * 1024 * 1024:
         raise LifecycleError(
-            "performance-policy-promotion-invalid", "performance policy cannot claim production promotion"
+            "performance-policy-benchmark-exceeds-limit",
+            "Typed benchmark ceilings cannot exceed the hard limits",
         )
-    return limits
 
 
 __all__ = [

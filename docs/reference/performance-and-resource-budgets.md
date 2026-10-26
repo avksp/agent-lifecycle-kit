@@ -5,6 +5,54 @@ the security, compatibility and evidence boundaries of the lifecycle. The
 figures collected by the performance harness describe one environment; they
 are not a universal speed promise.
 
+## Release 2.28: lifecycle and accounting baselines
+
+The collector also measures `workflow-status-small`, `workflow-status-growing`,
+`accounting-read-small` and `accounting-read-growing`. Workflow fixtures have
+1 or 100 tasks in canonical v4 state. Journal fixtures use one owned persistent
+SQLite handle and 1 or 100 reservations made through public APIs. Timed journal
+reads validate the expected event count and digest. These are isolated local
+fixtures. They do not qualify a host, dispatch a model, or grant authority.
+
+The report keeps fixture setup, the named operation, validation, worker time
+and total subprocess time separate. Existing `wallSeconds` still includes the
+whole subprocess. The difference between subprocess and worker time is reported
+as overhead. Fixture files must have identical bytes before and after the read.
+Unmeasured syscall counts, I/O bytes and provider usage are null. RSS is null
+where the platform cannot report it; a reported high-water mark is not an
+operation-specific memory increment.
+
+Sampling is bounded to seven samples and two warmups per case, 120 seconds per
+command, 600 seconds total including setup and cleanup, and 16 MiB per output
+stream. p50 is the sample median. p95 uses nearest rank; with seven samples it
+is the largest sample, not a precise population estimate. Warmup and subprocess
+counts are explicit. The source binding includes current tracked and nonignored
+files, their hashes and dirty state, as well as the policy and environment.
+Python workers replace inherited PYTHONPATH and remove PYTHONHOME.
+
+Use the current revision 2 policy with its seven-sample ceiling. Earlier
+policies that declare a higher ceiling are refused. Legacy reports without
+the complete source binding and metric definitions are not comparable.
+
+Validate a saved baseline, then make a controlled self-comparison:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+python3 tools/release/validate_performance_evidence.py \
+  --policy policy/performance-budgets.json \
+  --input work/performance-baseline.json \
+  --compare-input work/performance-baseline.json \
+  --evidence work/performance-self-comparison.json
+```
+
+A self-comparison checks the comparison route and proves no speed gain.
+Changed source, environment, policy, workload or metric definitions returns
+`NO_RECOMMENDATION`; no comparison rows are published. The Windows fixture
+comparison measured a 13.08% median reduction in one six-sample experiment.
+Release 2.28 does not promise a universal 20% reduction. Security checks and the
+complete required CI matrix remain mandatory.
+
+
 ## What Release 1.78 measures
 
 The revision-bound baseline records the source revision, dirty-tree state,

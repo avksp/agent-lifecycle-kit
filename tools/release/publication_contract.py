@@ -9,6 +9,34 @@ from release_common import digest_value, load_json
 
 PLUGIN_NAME = "agent-lifecycle-kit"
 
+PERFORMANCE_BASELINE_DOCUMENTATION: dict[str, Any] = {
+    "id": "bounded-lifecycle-performance-baseline",
+    "status": "ADVISORY",
+    "englishPath": "docs/reference/performance-and-resource-budgets.md",
+    "russianPath": "docs/ru/reference/performance-and-resource-budgets.md",
+    "repositoryCheckoutRequired": True,
+    "operations": [
+        "cli-version",
+        "neutrality-tracked",
+        "canonical-digest",
+        "workflow-status-small",
+        "workflow-status-growing",
+        "accounting-read-small",
+        "accounting-read-growing",
+    ],
+    "maxSamplesPerCase": 7,
+    "maxWarmupSamples": 2,
+    "maxCommandWallSeconds": 120,
+    "maxTotalWallSeconds": 600,
+    "sourceIdentityIncludesWorktreeFiles": True,
+    "guardedDescriptorReadsRequired": True,
+    "setupAndOperationTimingsSeparated": True,
+    "readOnlyFixtures": True,
+    "universalSpeedupPromised": False,
+    "wholeHostAuthorityClaimed": False,
+    "missingTelemetryIsZero": False,
+}
+
 ARCHITECTURE_PY315_DOCUMENTATION: dict[str, Any] = {
     "id": "bounded-architecture-and-python315",
     "englishPath": "docs/architecture/system-architecture.md",
@@ -404,6 +432,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "pluginName": PLUGIN_NAME,
         "entries": entries,
         "documentedFeatures": [
+            PERFORMANCE_BASELINE_DOCUMENTATION,
             ARCHITECTURE_PY315_DOCUMENTATION,
             LIFECYCLE_CONTROL_DOCUMENTATION,
             DOMAIN_LANGUAGE_DOCUMENTATION,
