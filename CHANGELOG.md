@@ -12,6 +12,8 @@
   this release makes no universal 20% speed promise.
 - Reuse one immutable test seed per fixture worker while preserving isolated
   per-test state, complete test discovery and exact outcomes.
+- Run complete Windows qualification with the serial test driver. Keep the hour
+  limit, optional bounded parallel runner and all checks.
 - Extend repository performance tooling with real workflow status and persistent
   journal reads at 1/100 tasks or reservations. Report setup, operation and
   subprocess costs separately; keep read-only fixture invariants.

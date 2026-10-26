@@ -51,9 +51,10 @@ jobs:
           python -m unittest tests.adapters.test_opencode_projection_runtime -v
       - name: Run stdlib tests
         id: stdlib-tests
+        timeout-minutes: ${{ runner.os == 'Windows' && 60 || 360 }}
         run: >-
           uv run --frozen --group quality --python ${{ matrix.python }}
-          python tools/ci/${{ runner.os == 'Windows' && 'run_parallel_unittest.py' || 'run_unittest.py' }}
+          python tools/ci/run_unittest.py
           --start tests --top .
           --out work/ci/test-timings.json
       - name: Retain test timing evidence
