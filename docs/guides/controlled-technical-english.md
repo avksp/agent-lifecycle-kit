@@ -1,7 +1,7 @@
 # Controlled technical English for ALK
 
 This is a local writing profile inspired by Simplified Technical English (STE).
-It covers new instruction text and one orchestrator routing pilot. It does not
+It covers new instruction text and the maintained skill routes. It does not
 claim ASD-STE100 conformity or certification. It does not reproduce the licensed
 manual or its dictionary. The Russian guide preserves meaning; it is not an
 English-standard compliance claim.
@@ -46,13 +46,26 @@ This retains the refusal boundary; “Use a default value” does not.
 
 ## Read by stage
 
-The pilot changes only `agent-workflow-orchestrator` routing. Read its complete
-hash-bound lifecycle reference before acting. Keep the latest user instruction
-and active packet verbatim. Then read the cookbook common route, recipe table
-and safety rules, the selected recipe and its required links. Select a new
-recipe when the request or stage changes. If the stage is unclear, inspect the
-durable state before choosing. This changes document selection, not lifecycle
-gates or authority. See [Lifecycle task scenarios](lifecycle-cookbook.md).
+Each role keeps its complete hash-bound lifecycle contract mandatory. Keep the
+latest user instruction and active packet verbatim. Use paths from the installed
+skill root, not an unrelated consumer project's `docs/` directory. The portable
+package supplies the required static guides and references.
+
+| Requested case | Role | Applicable cookbook recipe |
+| --- | --- | --- |
+| Plan authoring | `agent-first-planning` | Research and planning only |
+| Worker compilation | `agent-plan-to-workers` | None; use the complete compilation contract |
+| Plan review | `audit-agent-plan` | Review a Markdown plan folder |
+| Implementation audit | `audit-plan-implementation` | Audit implementation evidence |
+| Defect repair | `bug-forensics` | Bug Forensics repair, only after explicit opt-in |
+| Untrusted issue intake | `issue-to-spec` | None; use the draft-only intake contract |
+
+For a role that uses a recipe, read the cookbook common route, recipe table,
+safety rules, selected recipe and its required follow-ups. Load another recipe
+when the stage changes. Compilation and intake must not borrow an unrelated
+execution recipe. The orchestrator selects the recipe for its actual stage.
+These reading routes add no workflow phase, audit pass or execution authority.
+See [Lifecycle task scenarios](lifecycle-cookbook.md).
 
 The existing `tools/release/validate_skill_parity.py` checks reference hashes,
 package bytes and a bounded set of critical clauses. It reports UTF-8 byte counts
@@ -60,7 +73,13 @@ and whitespace-separated word counts (`len(text.split())`). These counts include
 Markdown and code. They are not tokens, model calls, cost or behavior measures.
 For a before/after comparison, retain the exact source bytes and hashes, name
 the same requested stage, and list every selected section. Include the required
-full reference on both sides and disclose any shared contracts not counted.
+full reference on both sides and include every mandatory shared or transitive follow-up for that case.
+If a required source is missing, mark the measurement `INCOMPLETE`. Record exact
+UTF-8 byte intervals, document hashes and source identities. Union overlapping
+intervals within one document and case; count reuse again in another case.
+Report increases honestly. Do not infer reuse after compaction or omit a required
+reference to obtain a smaller number. User/system input, active packets and model
+overhead remain execution obligations outside this source-reading projection.
 
 Clause checks cannot prove semantic equivalence or general STE compliance.
 Independent semantic review must check authorization, refusal, budgets, unknown

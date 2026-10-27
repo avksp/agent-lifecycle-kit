@@ -1,5 +1,11 @@
 # Agent Lifecycle Kit documentation
 
+Release 2.29 keeps full skill contracts, checks all seven roles and bundles
+19 required static documents in the [portable plugin](reference/agent-plugins.md).
+The [local writing profile](guides/controlled-technical-english.md) defines staged
+reading and honest byte/word metrics; token savings and host enforcement are
+not inferred.
+
 This documentation describes the standalone lifecycle kit. ALK controls
 completion of coding-agent work by keeping the requested result, reviewed plan,
 bounded execution, evidence, review and final proof aligned. The external agent
@@ -36,7 +42,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.28.0` from
+  `python -m pip install agent-lifecycle-kit==2.29.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

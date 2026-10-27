@@ -9,8 +9,7 @@ import shutil
 import stat
 import zipfile
 from pathlib import Path, PurePosixPath
-from typing import Any, Iterable
-
+from typing import Any
 
 SPEC_VERSION = "1.0.0"
 SCHEMA_ID = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
@@ -24,6 +23,27 @@ EXPECTED_SKILLS = (
     "audit-plan-implementation",
     "bug-forensics",
     "issue-to-spec",
+)
+REQUIRED_DOCUMENTS = (
+    "docs/guides/lifecycle-cookbook.md",
+    "docs/guides/controlled-technical-english.md",
+    "docs/guides/code-review-workflows.md",
+    "docs/guides/bug-forensics-workflows.md",
+    "docs/guides/review-mesh-workflow.md",
+    "docs/reference/safe-artifact-authoring.md",
+    "docs/reference/workflow-continuation.md",
+    "docs/reference/risk-aware-execution.md",
+    "docs/reference/cli.md",
+    "docs/reference/source-of-truth.md",
+    "docs/ru/guides/lifecycle-cookbook.md",
+    "docs/ru/guides/controlled-technical-english.md",
+    "docs/ru/guides/code-review-workflows.md",
+    "docs/ru/guides/bug-forensics-workflows.md",
+    "docs/ru/reference/safe-artifact-authoring.md",
+    "docs/ru/reference/workflow-continuation.md",
+    "docs/ru/reference/risk-aware-execution.md",
+    "docs/ru/reference/cli.md",
+    "docs/ru/reference/source-of-truth.md",
 )
 MAX_SKILL_COUNT = 32
 MAX_SKILL_BYTES = 512 * 1024
@@ -91,6 +111,9 @@ def build_package(
     _require_version(version)
     source_root = root / "skills"
     source_result = validate_skill_source(source_root)
+    source_result["blockers"].extend(validate_required_documents(root))
+    if source_result["blockers"]:
+        source_result["status"] = "FAIL"
     if source_result["status"] != "PASS":
         raise ValueError(json.dumps(source_result, sort_keys=True))
     if output.exists():
@@ -105,6 +128,11 @@ def build_package(
     target_skills.mkdir()
     for skill_name in EXPECTED_SKILLS:
         _copy_tree_without_links(source_root / skill_name, target_skills / skill_name)
+
+    for relative in REQUIRED_DOCUMENTS:
+        destination = output / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / relative, destination)
 
     package_result = validate_package(output, expected_version=version)
     if package_result["status"] != "PASS":
@@ -133,7 +161,9 @@ def validate_skill_source(source_root: Path) -> dict[str, Any]:
     children = sorted(source_root.iterdir(), key=lambda item: item.name)
     names = [child.name for child in children]
     if names != list(EXPECTED_SKILLS):
-        blockers.append(_issue("skills-source-set-mismatch", source_root.as_posix(), expected=list(EXPECTED_SKILLS), actual=names))
+        blockers.append(
+            _issue("skills-source-set-mismatch", source_root.as_posix(), expected=list(EXPECTED_SKILLS), actual=names)
+        )
     for child in children:
         if child.name not in EXPECTED_SKILLS:
             continue
@@ -145,7 +175,9 @@ def validate_skill_source(source_root: Path) -> dict[str, Any]:
         if not _is_regular_file(skill_file):
             blockers.append(_issue("skill-file-invalid", skill_file.relative_to(source_root).as_posix()))
         elif skill_file.stat().st_size > MAX_SKILL_BYTES:
-            blockers.append(_issue("skill-size-limit", skill_file.relative_to(source_root).as_posix(), limit=MAX_SKILL_BYTES))
+            blockers.append(
+                _issue("skill-size-limit", skill_file.relative_to(source_root).as_posix(), limit=MAX_SKILL_BYTES)
+            )
     return _validation("agent-plugin-skills-validation.v1", blockers, skills=names)
 
 
@@ -153,11 +185,30 @@ def validate_package(package_root: Path, *, expected_version: str | None = None)
     """Validate a generated package using only local deterministic rules."""
     blockers: list[dict[str, Any]] = []
     if not _is_directory(package_root):
-        return _validation("agent-plugin-package-validation.v1", [_issue("package-root-invalid", package_root.as_posix())])
+        return _validation(
+            "agent-plugin-package-validation.v1", [_issue("package-root-invalid", package_root.as_posix())]
+        )
     blockers.extend(_validate_tree(package_root, package_root))
     root_entries = sorted(item.name for item in package_root.iterdir())
-    if root_entries != ["plugin.json", "skills"]:
-        blockers.append(_issue("portable-root-mismatch", package_root.as_posix(), expected=["plugin.json", "skills"], actual=root_entries))
+    if root_entries != ["docs", "plugin.json", "skills"]:
+        blockers.append(
+            _issue(
+                "portable-root-mismatch",
+                package_root.as_posix(),
+                expected=["docs", "plugin.json", "skills"],
+                actual=root_entries,
+            )
+        )
+
+    blockers.extend(validate_required_documents(package_root))
+    docs_root = package_root / "docs"
+    allowed = {
+        parent.as_posix() for name in REQUIRED_DOCUMENTS for parent in Path(name).parents if parent != Path()
+    } | set(REQUIRED_DOCUMENTS)
+    if _is_directory(docs_root):
+        for entry in docs_root.rglob("*"):
+            if entry.relative_to(package_root).as_posix() not in allowed:
+                blockers.append(_issue("portable-resource-unexpected", entry.relative_to(package_root).as_posix()))
 
     manifest_path = package_root / "plugin.json"
     manifest: dict[str, Any] | None = None
@@ -178,7 +229,9 @@ def validate_package(package_root: Path, *, expected_version: str | None = None)
         children = sorted(skills_root.iterdir(), key=lambda item: item.name)
         skill_names = [child.name for child in children]
         if skill_names != list(EXPECTED_SKILLS):
-            blockers.append(_issue("portable-skill-set-mismatch", "skills", expected=list(EXPECTED_SKILLS), actual=skill_names))
+            blockers.append(
+                _issue("portable-skill-set-mismatch", "skills", expected=list(EXPECTED_SKILLS), actual=skill_names)
+            )
         if len(children) > MAX_SKILL_COUNT:
             blockers.append(_issue("skill-count-limit", "skills", limit=MAX_SKILL_COUNT))
         for child in children:
@@ -194,9 +247,13 @@ def validate_package(package_root: Path, *, expected_version: str | None = None)
     files = _regular_files(package_root)
     total_bytes = sum(path.stat().st_size for path in files)
     if total_bytes > MAX_PACKAGE_BYTES:
-        blockers.append(_issue("package-size-limit", package_root.as_posix(), limit=MAX_PACKAGE_BYTES, actual=total_bytes))
+        blockers.append(
+            _issue("package-size-limit", package_root.as_posix(), limit=MAX_PACKAGE_BYTES, actual=total_bytes)
+        )
     if manifest is not None and manifest.get("name") != PLUGIN_NAME:
-        blockers.append(_issue("plugin-name-mismatch", "plugin.json", expected=PLUGIN_NAME, actual=manifest.get("name")))
+        blockers.append(
+            _issue("plugin-name-mismatch", "plugin.json", expected=PLUGIN_NAME, actual=manifest.get("name"))
+        )
     return _validation(
         "agent-plugin-package-validation.v1",
         blockers,
@@ -208,6 +265,19 @@ def validate_package(package_root: Path, *, expected_version: str | None = None)
     )
 
 
+def validate_required_documents(root: Path) -> list[dict[str, Any]]:
+    """Require the bounded static resources without following parent links."""
+    blockers = []
+    for relative in REQUIRED_DOCUMENTS:
+        path = root / relative
+        parents = [root / parent for parent in Path(relative).parents if parent != Path()]
+        if any(not _is_directory(parent) for parent in parents) or not _is_regular_file(path):
+            blockers.append(_issue("required-resource-invalid", relative))
+        elif path.stat().st_size > MAX_PACKAGE_BYTES:
+            blockers.append(_issue("required-resource-size-limit", relative))
+    return blockers
+
+
 def validate_manifest(manifest: dict[str, Any], *, expected_version: str | None = None) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     if not isinstance(manifest, dict):
@@ -216,7 +286,9 @@ def validate_manifest(manifest: dict[str, Any], *, expected_version: str | None 
     if unknown:
         blockers.append(_issue("manifest-unknown-fields", "plugin.json", fields=unknown))
     if manifest.get("$schema") != SCHEMA_ID:
-        blockers.append(_issue("manifest-schema-mismatch", "plugin.json", expected=SCHEMA_ID, actual=manifest.get("$schema")))
+        blockers.append(
+            _issue("manifest-schema-mismatch", "plugin.json", expected=SCHEMA_ID, actual=manifest.get("$schema"))
+        )
     name = manifest.get("name")
     if not isinstance(name, str) or not 1 <= len(name) <= 64 or not PLUGIN_NAME_PATTERN.fullmatch(name):
         blockers.append(_issue("manifest-name-invalid", "plugin.json"))
@@ -229,8 +301,7 @@ def validate_manifest(manifest: dict[str, Any], *, expected_version: str | None 
         if field in manifest and not isinstance(manifest[field], str):
             blockers.append(_issue("manifest-field-invalid", f"plugin.json:{field}"))
     if "keywords" in manifest and (
-        not isinstance(manifest["keywords"], list)
-        or any(not isinstance(value, str) for value in manifest["keywords"])
+        not isinstance(manifest["keywords"], list) or any(not isinstance(value, str) for value in manifest["keywords"])
     ):
         blockers.append(_issue("manifest-keywords-invalid", "plugin.json"))
     author = manifest.get("author")
@@ -242,8 +313,7 @@ def validate_manifest(manifest: dict[str, Any], *, expected_version: str | None 
         blockers.append(_issue("manifest-author-invalid", "plugin.json"))
     extensions = manifest.get("extensions")
     if extensions is not None and (
-        not isinstance(extensions, dict)
-        or any(not isinstance(value, dict) for value in extensions.values())
+        not isinstance(extensions, dict) or any(not isinstance(value, dict) for value in extensions.values())
     ):
         blockers.append(_issue("manifest-extensions-invalid", "plugin.json"))
     return _validation("agent-plugin-manifest-validation.v1", blockers, schemaId=SCHEMA_ID, name=name, version=version)
@@ -279,12 +349,33 @@ def validate_archive(
     content: dict[str, bytes] = {}
     try:
         with zipfile.ZipFile(archive_path) as archive:
-            for info in archive.infolist():
+            entries = archive.infolist()
+            if sum(info.file_size for info in entries) > MAX_PACKAGE_BYTES:
+                return _validation(
+                    "agent-plugin-archive-validation.v1",
+                    [_issue("archive-expanded-size-limit", archive_path.as_posix())],
+                )
+            for info in entries:
                 name = info.filename
                 try:
                     _require_safe_archive_name(name)
                 except ValueError as exc:
                     blockers.append(_issue("archive-path-invalid", name, error=str(exc)))
+                    continue
+                parts = PurePosixPath(name).parts
+                if parts[0] not in {"plugin.json", "skills", "docs"}:
+                    blockers.append(_issue("archive-root-invalid", name))
+                if any(part in FORBIDDEN_PACKAGE_ROOTS for part in parts):
+                    blockers.append(_issue("forbidden-component-rejected", name))
+                if Path(name).name in FORBIDDEN_FILE_NAMES or Path(name).suffix.lower() in {
+                    ".pem",
+                    ".key",
+                    ".p12",
+                    ".pfx",
+                }:
+                    blockers.append(_issue("secret-like-file-rejected", name))
+                if stat.S_IFMT(info.external_attr >> 16) not in {0, stat.S_IFREG, stat.S_IFLNK, stat.S_IFDIR}:
+                    blockers.append(_issue("archive-non-regular-file-rejected", name))
                     continue
                 if name in content:
                     blockers.append(_issue("archive-duplicate-path", name))
@@ -292,7 +383,7 @@ def validate_archive(
                 if stat.S_ISLNK(info.external_attr >> 16):
                     blockers.append(_issue("archive-symlink-rejected", name))
                     continue
-                if info.is_dir():
+                if info.is_dir() or stat.S_ISDIR(info.external_attr >> 16):
                     blockers.append(_issue("archive-directory-entry-rejected", name))
                     continue
                 names.append(name)
@@ -310,11 +401,26 @@ def validate_archive(
             blockers.append(_issue("archive-manifest-invalid", "plugin.json", error=str(exc)))
     else:
         blockers.append(_issue("archive-manifest-missing", "plugin.json"))
+    for relative in REQUIRED_DOCUMENTS:
+        if relative not in content:
+            blockers.append(_issue("required-resource-invalid", relative))
+    for name in content:
+        if name.startswith("docs/") and name not in REQUIRED_DOCUMENTS:
+            blockers.append(_issue("portable-resource-unexpected", name))
     expected_files = None
     if package_root is not None:
-        expected_files = {path.relative_to(package_root).as_posix(): path.read_bytes() for path in _regular_files(package_root)}
+        expected_files = {
+            path.relative_to(package_root).as_posix(): path.read_bytes() for path in _regular_files(package_root)
+        }
         if set(content) != set(expected_files):
-            blockers.append(_issue("archive-content-mismatch", archive_path.as_posix(), expected=sorted(expected_files), actual=sorted(content)))
+            blockers.append(
+                _issue(
+                    "archive-content-mismatch",
+                    archive_path.as_posix(),
+                    expected=sorted(expected_files),
+                    actual=sorted(content),
+                )
+            )
         for name, data in expected_files.items():
             if content.get(name) != data:
                 blockers.append(_issue("archive-file-mismatch", name))
@@ -340,7 +446,12 @@ def provenance_for_schema(root: Path) -> dict[str, Any]:
         blockers.append(_issue("schema-provenance-version-mismatch", PROVENANCE_PATH.as_posix()))
     if provenance.get("sourceDigest") != schema_digest or provenance.get("localSchemaDigest") != schema_digest:
         blockers.append(_issue("schema-provenance-digest-mismatch", PROVENANCE_PATH.as_posix(), expected=schema_digest))
-    return _validation("agent-plugin-schema-provenance-validation.v1", blockers, schemaDigest=schema_digest, provenancePath=PROVENANCE_PATH.as_posix())
+    return _validation(
+        "agent-plugin-schema-provenance-validation.v1",
+        blockers,
+        schemaDigest=schema_digest,
+        provenancePath=PROVENANCE_PATH.as_posix(),
+    )
 
 
 def _validate_tree(path: Path, root: Path) -> list[dict[str, Any]]:
@@ -381,7 +492,9 @@ def _copy_tree_without_links(source: Path, target: Path) -> None:
 
 
 def _regular_files(root: Path) -> list[Path]:
-    return sorted((item for item in root.rglob("*") if _is_regular_file(item)), key=lambda item: item.relative_to(root).as_posix())
+    return sorted(
+        (item for item in root.rglob("*") if _is_regular_file(item)), key=lambda item: item.relative_to(root).as_posix()
+    )
 
 
 def _is_directory(path: Path) -> bool:
@@ -414,7 +527,14 @@ def _require_version(version: str) -> None:
 
 def _require_safe_archive_name(name: str) -> None:
     path = PurePosixPath(name)
-    if not name or "\\" in name or path.is_absolute() or ".." in path.parts or any(part == "" for part in path.parts):
+    if (
+        not name
+        or not path.parts
+        or "\\" in name
+        or path.is_absolute()
+        or ".." in path.parts
+        or any(part == "" for part in path.parts)
+    ):
         raise ValueError("archive path must be a non-empty relative POSIX path without traversal")
 
 
@@ -423,4 +543,9 @@ def _issue(code: str, path: str, **details: Any) -> dict[str, Any]:
 
 
 def _validation(schema_version: str, blockers: list[dict[str, Any]], **details: Any) -> dict[str, Any]:
-    return {"schemaVersion": schema_version, "status": "PASS" if not blockers else "FAIL", "blockers": blockers, **details}
+    return {
+        "schemaVersion": schema_version,
+        "status": "PASS" if not blockers else "FAIL",
+        "blockers": blockers,
+        **details,
+    }

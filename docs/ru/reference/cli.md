@@ -81,7 +81,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.28.0
+python -m pip install agent-lifecycle-kit==2.29.0
 ```
 
 ## Идентичность подтверждений задачи
