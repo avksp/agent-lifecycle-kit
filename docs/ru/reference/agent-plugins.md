@@ -107,3 +107,7 @@ Agent Plugins в клиентах](agent-plugin-qualification.md), чтобы в
   поверхностями публикации.
 
 English version: [Portable Agent Plugins package](https://github.com/avksp/agent-lifecycle-kit/blob/main/docs/reference/agent-plugins.md).
+
+В исторической документации использовалось примерное имя
+`agent-lifecycle-kit-agent-plugin-v1.70.0.zip` для версии 1.70.0.
+Для обязательных ресурсов используйте инструкции текущего релиза выше.

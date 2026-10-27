@@ -103,3 +103,7 @@ versioned release surfaces and update rules.
   and marketplace projections remain separate publication surfaces.
 
 Русская версия: [Переносимый пакет Agent Plugins](../ru/reference/agent-plugins.md).
+
+Historical documentation used the example filename
+`agent-lifecycle-kit-agent-plugin-v1.70.0.zip` for version 1.70.0.
+Use the current release instructions above for the required resource layout.

@@ -58,7 +58,7 @@
 | Компиляция пакетов | `agent-plan-to-workers` | Нет; полный контракт компиляции |
 | Проверка плана | `audit-agent-plan` | Review a Markdown plan folder |
 | Аудит реализации | `audit-plan-implementation` | Audit implementation evidence |
-| Исправление дефекта | `bug-forensics` | Bug Forensics repair, после явного включения |
+| Исправление ошибки | `bug-forensics` | Bug Forensics repair, после явного включения |
 | Недоверенный внешний запрос | `issue-to-spec` | Нет; контракт ввода только в черновик |
 
 Для роли с рецептом прочитайте общий маршрут cookbook, таблицу рецептов,

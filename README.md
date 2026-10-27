@@ -1,10 +1,4 @@
 <p align="center">
-
-Release 2.29 keeps full skill contracts mandatory, adds bounded checks for all
-seven roles, and bundles 19 required static documents in the portable plugin.
-See the [portable format](docs/reference/agent-plugins.md) and the
-[local writing profile](docs/guides/controlled-technical-english.md). These checks
-do not claim host enforcement, general semantic equivalence or token savings.
   <img src="docs/assets/agent-lifecycle-kit-banner.svg?v=2026-08-02-1" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
 </p>
 
