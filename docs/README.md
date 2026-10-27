@@ -6,6 +6,9 @@ bounded execution, evidence, review and final proof aligned. The external agent
 solves the product task; ALK preserves the authority needed to verify or block
 that result. It is host-neutral and does not depend on a source project.
 
+
+Release 2.28 adds [bounded lifecycle and accounting baselines](reference/performance-and-resource-budgets.md#release-228-lifecycle-and-accounting-baselines). Repository tools measure real read-only operations and separate fixture preparation from operation and subprocess time. The Windows fixture comparison observed a 13.08% median reduction in one six-sample experiment; it is not a universal speed promise. All security and platform checks remain required.
+
 ## Release 2.18 security and compatibility
 
 Read [OpenCode 1.x/2.x qualification and signing](adapters/opencode.md), [redaction policy](reference/public-locators-and-redaction.md) and [review examples](guides/code-review-workflows.md). Process stdin/output/Git reads share bounded deadlines and byte limits; identity capture disables external diff and textconv. Historical receipts remain unchanged. No host or model guarantee is inferred from CLI help.
@@ -33,7 +36,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.27.0` from
+  `python -m pip install agent-lifecycle-kit==2.28.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

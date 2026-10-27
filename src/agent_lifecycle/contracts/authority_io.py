@@ -12,6 +12,7 @@ import time
 import uuid
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager, suppress
+from functools import cache
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -165,7 +166,7 @@ class _Directory:
     def stat_child(self, name: str) -> os.stat_result:
         if self.fd is not None:
             return os.stat(name, dir_fd=self.fd, follow_symlinks=False)
-        return (self.path / name).stat(follow_symlinks=False)
+        return os.stat(os.path.join(self.path, name), follow_symlinks=False)  # noqa: PTH116, PTH118
 
     def open_child(self, name: str) -> int:
         if self.fd is not None:
@@ -207,11 +208,7 @@ class _Directory:
         elif self.handle is not None:
             if not self.writable:
                 raise LifecycleError("authority-io-unavailable", "Directory write authority is required")
-            from ctypes import wintypes
-
             api = _windows_api()
-            api.FlushFileBuffers.argtypes = [wintypes.HANDLE]
-            api.FlushFileBuffers.restype = wintypes.BOOL
             if not api.FlushFileBuffers(self.handle):
                 raise LifecycleError("authority-durability-unavailable", "Directory durability barrier failed")
         else:
@@ -486,6 +483,18 @@ def append_authority_bytes(path: Path, data: bytes, *, root: Path | None = None)
 def _windows_api() -> Any:
     if sys.platform != "win32":
         raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
+    return _windows_api_bindings()
+
+
+@cache
+def _windows_api_bindings() -> Any:
+    """Publish only complete bindings; concurrent first calls may build equivalent copies.
+
+    Cache DLL/function configuration only. Handles, I/O, identities and ctypes'
+    thread-local last-error values remain live at each call site.
+    """
+    if sys.platform != "win32":
+        raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
     import ctypes
     from ctypes import wintypes
 
@@ -504,6 +513,8 @@ def _windows_api() -> Any:
     api.CloseHandle.restype = wintypes.BOOL
     api.GetFileInformationByHandleEx.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
     api.GetFileInformationByHandleEx.restype = wintypes.BOOL
+    api.FlushFileBuffers.argtypes = [wintypes.HANDLE]
+    api.FlushFileBuffers.restype = wintypes.BOOL
     return api
 
 

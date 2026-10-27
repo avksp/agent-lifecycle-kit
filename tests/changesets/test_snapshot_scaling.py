@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import stat
 import subprocess
 import sys
@@ -12,12 +13,14 @@ import time
 import tracemalloc
 import types
 import unittest
+from collections import Counter
 from contextlib import ExitStack
 from itertools import product
 from pathlib import Path
 from unittest.mock import patch
 
 from agent_lifecycle.changesets import snapshot
+from agent_lifecycle.changesets.git_io import run_bounded_command
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.workflow.task_transitions import _validate_task_write_scope
 
@@ -90,7 +93,66 @@ def _historical_module(stack: ExitStack):
     return module
 
 
+def _run_isolated_comparison(test_id: str) -> int:
+    """Require the complete original comparison from one bounded fresh process."""
+    child_code = (
+        "import os,unittest;os.environ['ALK_SNAPSHOT_PARITY_CHILD']='1';"
+        "unittest.main(module=None,verbosity=2)"
+    )
+    result = run_bounded_command(
+        [sys.executable, "-B", "-c", child_code, test_id],
+        cwd=REPOSITORY,
+        timeout_seconds=300,
+        max_stdout_bytes=8 * 1024 * 1024,
+        max_stderr_bytes=2 * 1024 * 1024,
+    )
+    stdout = result.stdout.decode("utf-8", errors="replace")
+    sys.stdout.write(stdout)
+    sys.stderr.write(result.stderr.decode("utf-8", errors="replace"))
+    if result.returncode:
+        raise AssertionError(f"Historical comparison child exited {result.returncode}")
+    records = [line.removeprefix("SNAPSHOT_COMPARISON=") for line in stdout.splitlines()
+               if line.startswith("SNAPSHOT_COMPARISON=")]
+    if len(records) != 1:
+        raise AssertionError("Expected exactly one complete historical comparison record")
+    rows = json.loads(records[0])
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise AssertionError("Historical comparison record must contain measurement rows")
+    fields = ("files", "failure", "fixtureFiles", "case", "version")
+    observed = Counter(tuple(row.get(key) for key in fields) for row in rows)
+    expected = Counter((count, None, None, None, None) for count in (2, 20, 60))
+    expected.update((None, failure, count, None, None)
+                    for failure, count in product(("oversized", "missing-object"), (2, 20, 60)))
+    expected[(None, None, None, "rename-and-copy", None)] = 1
+    expected.update((None, failure, count, None, version) for failure, count, version in product(
+        ("malformed-metadata", "blob-drift", "batch-failure"), (2, 20, 60),
+        ("agent_lifecycle._release219_reference.snapshot", snapshot.__name__),
+    ))
+    if observed != expected:
+        raise AssertionError("Historical comparison omitted or duplicated required cases")
+    return len(rows)
+
+
 class SnapshotScalingTests(unittest.TestCase):
+    def test_isolated_comparison_rejects_success_without_complete_evidence(self) -> None:
+        samples = (
+            (0, b""),
+            (0, b"SNAPSHOT_COMPARISON=[]\n"),
+            (0, b"SNAPSHOT_COMPARISON={}\n"),
+            (0, ("SNAPSHOT_COMPARISON=" + json.dumps([{"files": 2}] * 28) + "\n").encode()),
+            (0, b"SNAPSHOT_COMPARISON=[]\nSNAPSHOT_COMPARISON=[]\n"),
+            (1, b"SNAPSHOT_COMPARISON=[]\n"),
+        )
+        for code, stdout in samples:
+            with (
+                self.subTest(code=code, stdout=stdout),
+                patch(__name__ + ".run_bounded_command", return_value=subprocess.CompletedProcess([], code, stdout, b"")),
+                patch("sys.stdout"),
+                patch("sys.stderr"),
+                self.assertRaises(AssertionError),
+            ):
+                _run_isolated_comparison(self.id())
+
     def test_rename_and_copy_keep_protected_source_in_authoritative_ownership_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -133,6 +195,10 @@ class SnapshotScalingTests(unittest.TestCase):
         probe = subprocess.run(["git", "cat-file", "-e", BASELINE], cwd=REPOSITORY, capture_output=True)
         if probe.returncode:
             self.skipTest("shallow checkout lacks accepted 2.19 source; current capture gate still runs")
+        if os.name == "nt" and os.environ.get("ALK_SNAPSHOT_PARITY_CHILD") != "1":
+            rows = _run_isolated_comparison(self.id())
+            print(f"SNAPSHOT_ISOLATION=complete;measurementRows={rows};comparisons=19")
+            return
         measurements = []
         with ExitStack() as stack:
             historical = _historical_module(stack)

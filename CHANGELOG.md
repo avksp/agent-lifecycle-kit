@@ -4,6 +4,34 @@
 
 - No changes yet.
 
+## 2.28.0 - 2026-10-26
+
+- Reduce repeated Windows path-object work while retaining fresh stat, identity,
+  reparse, descriptor, admission and cleanup checks. One complete six-sample
+  comparison measured a 13.08% median reduction for the limited-usage module;
+  this release makes no universal 20% speed promise.
+- Reuse one immutable test seed per fixture worker while preserving isolated
+  per-test state, complete test discovery and exact outcomes.
+- Run complete Windows qualification with the serial test driver. Keep the hour
+  limit, optional bounded parallel runner and all checks.
+- Isolate the complete Windows historical snapshot comparison in a bounded
+  process. Keep the original oracle, assertions and memory measurements.
+- Separate positive queue-test coordination from the production admission
+  deadline. Keep default timeout, refusal and dead-waiter checks.
+- Extend repository performance tooling with real workflow status and persistent
+  journal reads at 1/100 tasks or reservations. Report setup, operation and
+  subprocess costs separately; keep read-only fixture invariants.
+- Bind measurements to current worktree file hashes, policy, environment,
+  workloads and metric definitions. Refuse incomparable reports, retain unknown
+  telemetry, and use nearest-rank descriptive p95 with at most seven samples.
+- Use the existing guarded descriptor reader for source capture, reject
+  nonregular files and file swaps, and check shared read deadlines. Preserve
+  output limits, process cleanup and all required OS/Python quality gates.
+- Check annotations beneath cached decorators on Python 3.14 and later while
+  preserving source identity and rejection of live annotation changes.
+- Preserve the original clock-proof hashes for eager imports on Python 3.15;
+  keep nonzero lazy-import flags and unknown AST fields visible to the guard.
+
 ## 2.27.0 - 2026-10-25
 
 - Preserve accepted AST fingerprints for Python 3.15 eager-import `is_lazy=0`;

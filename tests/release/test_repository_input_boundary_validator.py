@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import shutil
 import tempfile
 import unittest
@@ -138,6 +139,25 @@ class RepositoryInputBoundaryValidatorTests(unittest.TestCase):
             shutil.copy2(Path(authority_io.__file__), source)
             _, _, errors = _inspect_source(source, authority_io)
             self.assertIn("source-runtime-origin-mismatch", errors)
+
+    def test_cached_backend_runtime_matches_unchanged_source(self):
+        function = authority_io._windows_api_bindings
+        self.assertFalse(inspect.isfunction(function))
+        self.assertTrue(inspect.isfunction(inspect.unwrap(function)))
+        _, _, errors = _inspect_source(Path(authority_io.__file__), authority_io)
+        self.assertEqual(errors, [])
+
+    def test_cached_backend_annotation_replacement_is_rejected_when_available(self):
+        function = inspect.unwrap(authority_io._windows_api_bindings)
+        annotation = getattr(function, "__annotate__", None)
+        if annotation is None:
+            return
+        try:
+            function.__annotate__ = lambda *_args: {}
+            _, _, errors = _inspect_source(Path(authority_io.__file__), authority_io)
+        finally:
+            function.__annotate__ = annotation
+        self.assertIn("source-runtime-code-mismatch", errors)
 
     def test_runtime_annotation_binding_is_checked_when_available(self):
         function = paths.normalize_repo_path

@@ -6,20 +6,20 @@
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
-![Python](https://img.shields.io/badge/python-3.11--3.14-blue.svg)
+![Python](https://img.shields.io/badge/python-3.11--3.15-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and
-acceptance decisions connected while the external agent changes the project.
+**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and acceptance decisions connected while the external agent changes the project.
 
-The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling
-stay in adapters or host-local profiles.
+The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling stay in adapters or host-local profiles.
 
 ALK provides a verifiable finish for external-agent work with proportionate control. It adds only the checks and evidence needed for the task; most of the time remains for research, implementation and product verification.
+
+Release 2.28 adds [bounded lifecycle and accounting baselines](docs/reference/performance-and-resource-budgets.md#release-228-lifecycle-and-accounting-baselines). Repository tools measure real read-only operations and separate fixture preparation from operation and subprocess time. The Windows fixture comparison observed a 13.08% median reduction in one six-sample experiment; it is not a universal speed promise. All security and platform checks remain required.
 
 ## Quick start
 Start with [install ALK and make the first run](docs/guides/install-and-first-run.md). Release 2.23 adds [compact S0/S1 authoring](docs/reference/tier-proportional-plan-packages.md) with explicit checklist completion and unchanged approval gates. Release 2.22 adds [conservative plan-review reuse](docs/reference/conservative-delta-review.md) with independent current applicability and no automatic full reruns. Release 2.21 adds [command accounting, bounded preparation and response recovery](docs/reference/source-native-workflow-accounting.md). Release 2.20 adds [target-bound initialization](docs/reference/cli.md#release-220-composed-initialization-and-digest-display), [bounded local continuation](docs/reference/workflow-continuation.md) and batched Git snapshots. Release 2.19 adds [safe artifact authoring and planning preflight](docs/reference/safe-artifact-authoring.md), [bounded review handoff](docs/reference/review-mesh.md#bounded-review-handoff) and thin skills with complete references. Release 2.18 bounds process/Git diagnostics, hardens signing and distinguishes OpenCode 1.x/2.x compatibility ([adapter notes](docs/adapters/opencode.md)); 2.17 strengthens [workflow validation and recovery](docs/reference/workflow-completeness.md). Release 2.16 introduced cumulative accounting within verified host capabilities; see [retention maintenance](docs/operations/retention-maintenance.md).
 
-It includes macOS, Linux and Windows instructions, Python 3.11-3.15, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.27.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
+It includes macOS, Linux and Windows instructions, Python 3.11-3.15, [PyPI](https://pypi.org/project/agent-lifecycle-kit/) installation with `python -m pip install agent-lifecycle-kit==2.28.0`, and common `agent-lifecycle version` errors. See [2.15 migration notes](docs/reference/cli.md#migrating-authority-artifacts-to-215) and [authority boundaries](docs/reference/authority-artifact-boundaries.md).
 
 For a quick start, run:
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "agent-performance-budgets.v1",
-  "revision": 1,
-  "sourceRevision": "dbf0ffbc6a3f8bd53f7408f58cb4475d3aef2350",
+  "revision": 2,
+  "sourceRevision": "4e0ca9d2bf45768959c7cd7799296c8d45a0bcee",
   "limits": {
     "maxGitProcessesPerFullScan": 4,
     "maxGitObjects": 1000000,
@@ -20,7 +20,7 @@
     "maxSimpleLiteralRules": 64,
     "maxLinuxGroupSamplesPerSecond": 4,
     "maxEd25519OptimizedToReferenceMedianRatioBps": 2000,
-    "maxBenchmarkSamplesPerCase": 31,
+    "maxBenchmarkSamplesPerCase": 7,
     "maxBenchmarkOutputBytes": 16777216,
     "maxEvidenceBytesPerRun": 100663296
   },
@@ -34,7 +34,11 @@
   "operations": [
     "cli-version",
     "neutrality-tracked",
-    "canonical-digest"
+    "canonical-digest",
+    "workflow-status-small",
+    "workflow-status-growing",
+    "accounting-read-small",
+    "accounting-read-growing"
   ],
   "productionPromotionClaimed": false
 }

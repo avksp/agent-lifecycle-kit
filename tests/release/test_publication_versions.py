@@ -23,6 +23,33 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_performance_publication_preserves_measured_scope_and_bounds(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "bounded-lifecycle-performance-baseline"
+        ]
+        policy = json.loads((ROOT / "policy/performance-budgets.json").read_bytes())
+        self.assertEqual(feature["operations"], policy["operations"])
+        self.assertEqual(feature["status"], "ADVISORY")
+        self.assertEqual(feature["maxSamplesPerCase"], 7)
+        self.assertEqual(feature["maxWarmupSamples"], 2)
+        self.assertEqual(feature["maxCommandWallSeconds"], 120)
+        self.assertEqual(feature["maxTotalWallSeconds"], 600)
+        for field in (
+            "repositoryCheckoutRequired",
+            "sourceIdentityIncludesWorktreeFiles",
+            "guardedDescriptorReadsRequired",
+            "setupAndOperationTimingsSeparated",
+            "readOnlyFixtures",
+        ):
+            self.assertTrue(feature[field], field)
+        for field in (
+            "universalSpeedupPromised",
+            "wholeHostAuthorityClaimed",
+            "missingTelemetryIsZero",
+        ):
+            self.assertFalse(feature[field], field)
+
     def test_architecture_publication_keeps_capability_and_proof_limits(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}["bounded-architecture-and-python315"]
