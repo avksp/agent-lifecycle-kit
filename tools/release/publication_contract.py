@@ -9,6 +9,26 @@ from release_common import digest_value, load_json
 
 PLUGIN_NAME = "agent-lifecycle-kit"
 
+SKILL_INSTRUCTION_DOCUMENTATION: dict[str, Any] = {
+    "id": "bounded-skill-instructions-and-resources",
+    "englishPath": "docs/reference/agent-plugins.md",
+    "russianPath": "docs/ru/reference/agent-plugins.md",
+    "englishWritingProfile": "docs/guides/controlled-technical-english.md",
+    "russianWritingProfile": "docs/ru/guides/controlled-technical-english.md",
+    "skillCount": 7,
+    "requiredDocumentCount": 19,
+    "readingCaseCount": 6,
+    "wholeLifecycleContractsRequired": True,
+    "boundedCriticalClauseChecks": True,
+    "sourcePackageArchiveParityRequired": True,
+    "skillRootRelativeResources": True,
+    "generalSemanticEquivalenceClaimed": False,
+    "hostEnforcementClaimed": False,
+    "steCertificationClaimed": False,
+    "tokenSavingsClaimed": False,
+    "newAuditStage": False,
+}
+
 PERFORMANCE_BASELINE_DOCUMENTATION: dict[str, Any] = {
     "id": "bounded-lifecycle-performance-baseline",
     "status": "ADVISORY",
@@ -432,6 +452,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "pluginName": PLUGIN_NAME,
         "entries": entries,
         "documentedFeatures": [
+            SKILL_INSTRUCTION_DOCUMENTATION,
             PERFORMANCE_BASELINE_DOCUMENTATION,
             ARCHITECTURE_PY315_DOCUMENTATION,
             LIFECYCLE_CONTROL_DOCUMENTATION,

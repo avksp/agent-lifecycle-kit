@@ -10,8 +10,12 @@ replace the Python package, adapter projections or lifecycle commands.
 The release archive contains one root manifest and the canonical ALK skills:
 
 ```text
-agent-lifecycle-kit-agent-plugin-v1.70.0.zip
+agent-lifecycle-kit-agent-plugin-v2.29.0.zip
 ├── plugin.json
+├── docs/
+│   ├── guides/
+│   ├── reference/
+│   └── ru/
 └── skills/
     ├── agent-first-planning/SKILL.md
     ├── agent-plan-to-workers/SKILL.md
@@ -26,24 +30,38 @@ The root manifest uses the Agent Plugins 1.0.0 contract and declares the
 release version. The `skills/` directory is generated from the repository
 `skills/` tree, which remains its only content source.
 
+
+The bounded `docs/` projection contains 19 required EN/RU guides and references.
+The exact allowlist is `REQUIRED_DOCUMENTS` in `tools/release/agent_plugin_package.py`;
+repository documents remain the only authoring source. Links from skills resolve
+relative to the skill root inside this package, never against consumer-project
+files. Missing or changed required documents fail source/package/ZIP parity.
+The optional Russian Review Mesh translation is not bundled. Package availability
+is not proof of host installation or lifecycle enforcement. The 512 KiB per-skill
+and 4 MiB total package/archive bounds remain unchanged.
+
 ## Install through a compatible client
 
-Download the archive from the [GitHub release](https://github.com/avksp/agent-lifecycle-kit/releases/tag/v1.70.0), unpack it and follow the installation procedure of the selected client. The specification defines the package and component layout; the client defines the installation command, trust prompt, permissions, updates and local cache.
+This resource layout starts with 2.29.0. The examples below name that release.
+Until it is published, build from the candidate source instead of downloading
+an older archive: 2.28.0 contains skills but not this required documentation.
+
+Download the archive from the [GitHub release](https://github.com/avksp/agent-lifecycle-kit/releases/tag/v2.29.0), unpack it and follow the installation procedure of the selected client. The specification defines the package and component layout; the client defines the installation command, trust prompt, permissions, updates and local cache.
 
 For client-specific commands, use the [adapter installation guide](../adapters/install.md) and the page for the selected adapter. The package can also be inspected locally before installation:
 
 ```bash
 python tools/release/build_agent_plugin.py \
   --root . \
-  --version 1.70.0 \
+  --version 2.29.0 \
   --out work/agent-plugin \
-  --archive work/agent-lifecycle-kit-agent-plugin-v1.70.0.zip
+  --archive work/agent-lifecycle-kit-agent-plugin-v2.29.0.zip
 
 python tools/release/validate_agent_plugin.py \
   --package work/agent-plugin \
-  --archive work/agent-lifecycle-kit-agent-plugin-v1.70.0.zip \
+  --archive work/agent-lifecycle-kit-agent-plugin-v2.29.0.zip \
   --root . \
-  --version 1.70.0 \
+  --version 2.29.0 \
   --evidence work/agent-plugin-validation.json
 ```
 
@@ -75,12 +93,12 @@ versioned release surfaces and update rules.
 
 ## Boundaries
 
-- The package contains skills only. It does not contain ALK source code,
+- The package contains skills and required static documentation only. It does not contain ALK source code,
   runtime state, project tasks, secrets, adapter credentials or `mcp.json`.
 - The package does not start a host CLI or a model. Host execution remains an
   explicit adapter and local-profile concern.
 - The generated archive is a release projection. Do not edit it by hand; use
-  the repository `skills/` tree and rebuild it for a new release.
+  the repository `skills/` and `docs/` sources and rebuild it for a new release.
 - The package version is immutable semver. Client-specific plugin manifests
   and marketplace projections remain separate publication surfaces.
 

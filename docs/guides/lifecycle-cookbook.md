@@ -416,6 +416,35 @@ Use `agent-lifecycle start` for the common path. Advanced scripts may use the
 atomic `adapter task start`, `adapter run` and `adapter session resume`
 commands when they need direct control over one lifecycle primitive.
 
+
+### Bounded authoring and evidence examples
+
+- After a reviewed plan amendment, compile the new packet index in its fresh
+  artifact root before adoption. A new result path alone does not replace a
+  stale packet index. Keep old packets, failed receipts and expenses.
+- Link acceptance text to its canonical requirement. When scope changes, update
+  the linked acceptance before freeze. Structural preflight does not prove
+  that copied prose has the same meaning.
+- Check the actual lint selectors before promising unchanged test AST and clean
+  full-file lint. A production baseline does not exempt test files. Do not
+  invent a baseline or ignore after a failed check.
+- For long checks, retain selected test identities, starts and outcomes. Use an
+  existing bounded result tool or verbose output with the same selected tests.
+  A partial log does not prove that missing cases passed.
+- Keep process, validation, measurement and provider counts separate. Charge one
+  actual receipt once even when workers and the controller both reference it.
+  Preserve unknown usage and original clocks after retries or compaction.
+- A partial profile can justify a finite experiment; it cannot establish a
+  whole-workload speed result. Keep the frozen target until an explicit scope
+  decision. New same-job controls need their own bounded cost and deadline.
+- If a helper fails before its workload, preserve that distinction. An upstream
+  bug report is a hypothesis, not a confirmed local cause. Record exact platform
+  source bytes and any explicit CRLF materialization; never normalize a failed
+  proof silently or relabel it `PASS`.
+
+These are existing authoring and evidence rules, illustrated by Release 2.28.
+They require no additional audit round or native gate.
+
 ## Bounded capability feasibility before freeze
 
 For a new route, portability claim or changed supported scenario, bind the claim

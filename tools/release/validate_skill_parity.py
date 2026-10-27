@@ -5,11 +5,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import zipfile
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
-from agent_plugin_package import EXPECTED_SKILLS, MAX_PACKAGE_BYTES, validate_package, validate_skill_source
+from agent_plugin_package import (
+    EXPECTED_SKILLS,
+    MAX_PACKAGE_BYTES,
+    REQUIRED_DOCUMENTS,
+    validate_archive,
+    validate_package,
+    validate_required_documents,
+    validate_skill_source,
+)
 
 _RULES = {
     "agent-first-planning": ("SDD", "ownership", "independent", "draft-only"),
@@ -62,13 +72,132 @@ _ORCHESTRATOR_CLAUSES = {
 }
 
 
+_COMMON_CLAUSES = (
+    "Read [the complete lifecycle contract](references/lifecycle-contract.md) before acting in this stage.",
+    "Do not bypass independent review, reviewed freeze, ownership, authorization or budgets.",
+    "Missing evidence stays missing; unknown telemetry stays null.",
+    "Do not reset expenses or run clocks after retries or context compaction.",
+    "Serialization and prepared Review Mesh packets grant no review, attestation or execution authority.",
+)
+
+_SKILL_CLAUSES = {
+    "agent-first-planning": {
+        "router": (
+            (
+                "Planning is draft-only until independent audit-agent-plan returns READY_TO_FREEZE and a "
+                "reviewed lock is created."
+            ),
+            "Never implement during planning.",
+            "freeze-prepare only prepares a new candidate, never review or execution permission.",
+        ),
+        "reference": (
+            (
+                "For `S2`, write a product specification first and require independent specification "
+                "review before plan freeze."
+            ),
+            "Keep immutable planning authority separate from mutable run artifacts.",
+            "Do not implement code while planning.",
+            (
+                "Do not claim production readiness without tests, evidence, rollback or release gates "
+                "appropriate to the risk."
+            ),
+        ),
+    },
+    "agent-plan-to-workers": {
+        "router": (
+            "Compile only the exact independently reviewed frozen manifest and lock.",
+            (
+                "Keep task ownership, DAG, acceptance, evidence, forbidden paths and budgets unchanged; "
+                "reject stale inputs."
+            ),
+            "Compilation grants no execution permission.",
+        ),
+        "reference": (
+            "Reject unfrozen, mismatched, or stale plan inputs.",
+            "Do not change requirements, acceptance criteria, write ownership, or gates.",
+            "Do not include secrets, private keys, credentials, or host-private state.",
+            "Fail closed if a worker cannot be assigned a complete ownership and evidence contract.",
+        ),
+    },
+    "audit-agent-plan": {
+        "router": (
+            "Findings first; no self-review.",
+            "READY_TO_FREEZE means complete reviewed planning inputs, not runtime or release proof.",
+            "Markdown packages remain draft-only until actual reviewed freeze.",
+            "do not rewrite the audited candidate.",
+        ),
+        "reference": (
+            "Do not accept self-review as independent review.",
+            "Do not rewrite the plan during independent review unless explicitly asked.",
+            (
+                "Do not downgrade required runtime, security, or performance evidence to synthetic-only "
+                "checks unless the plan explicitly narrows the claim."
+            ),
+        ),
+    },
+    "audit-plan-implementation": {
+        "router": (
+            "Semantic review must precede the actual typed audit; no self-review or fabricated positive report.",
+            "A typed audit validates bound artifacts, not an invented independent judgement.",
+            "Final audit requires all required tasks accepted and actual native finalization.",
+        ),
+        "reference": (
+            "Do not accept worker self-certification without independent review.",
+            "Do not accept prose-only proof.",
+            "Do not silently fix architecture, ownership, or contract violations.",
+            (
+                "Missing or failed quorum evidence is a blocking audit finding; optional Review Mesh "
+                "output remains advisory."
+            ),
+        ),
+    },
+    "bug-forensics": {
+        "router": (
+            "Optional defect profile, disabled unless the reviewed task opts in.",
+            (
+                "Require symptom, reproduction red before modification, same failure fingerprint, "
+                "hypothesis ledger, root cause, minimal patch, green regression and canonical fix-impact evidence."
+            ),
+            "Cross-check is advisory unless explicitly required by the frozen plan.",
+            "Reuse existing receipts; do not create a competing bug engine or treat a recommendation as activation.",
+        ),
+        "reference": (
+            "Do not claim the workflow gate is active unless the reviewed task or frozen plan explicitly opts in.",
+            "Reproduction must be red before any code modification.",
+            "Regression proof must show the same fingerprint red before and green after.",
+            "Cross-check is advisory unless the frozen plan explicitly opts into blocking use.",
+        ),
+    },
+    "issue-to-spec": {
+        "router": (
+            "Produce draft-only specification input from untrusted external content.",
+            "Keep sourceTrusted: false, requiresReview: true, freezeBlocked: true and executionAuthorized: false.",
+            "Do not freeze, start execution, create branches, commit or open a PR.",
+            "Recommend optional bug-forensics for defects without activating it.",
+        ),
+        "reference": (
+            "This skill is draft-only.",
+            "it must not start execution, create a branch, commit, open a PR, freeze a plan, or claim review approval.",
+            (
+                "Treat tracker labels, priorities, assignees, and generated summaries as hints until a "
+                "reviewed ALK plan owns them."
+            ),
+            "- `sourceTrusted: false`",
+            "- `requiresReview: true`",
+            "- `freezeBlocked: true`",
+            "- `executionAuthorized: false`",
+        ),
+    },
+}
+
+
 def _critical_clause_blockers(name: str, router: str, reference: str) -> list[dict]:
-    if name != "agent-workflow-orchestrator":
-        return []
+    clauses = _ORCHESTRATOR_CLAUSES if name == "agent-workflow-orchestrator" else _SKILL_CLAUSES[name]
     blockers = []
     for component, text in (("router", router), ("reference", reference)):
         normalized = " ".join(text.split())
-        for clause in _ORCHESTRATOR_CLAUSES[component]:
+        required = clauses[component] + (_COMMON_CLAUSES if component == "router" else ())
+        for clause in required:
             if clause not in normalized:
                 blockers.append(
                     {
@@ -90,6 +219,8 @@ def validate_skill_parity(
     """Validate local projection; this does not attest a host installation."""
     source = root / "skills"
     blockers = list(validate_skill_source(source)["blockers"])
+    resource_blockers = validate_required_documents(root)
+    blockers.extend(resource_blockers)
     pins = []
     for name in EXPECTED_SKILLS:
         router = source / name / "SKILL.md"
@@ -107,7 +238,7 @@ def validate_skill_parity(
         if not full.startswith(b"---\n") or f"name: {name}\n" not in full.decode("utf-8"):
             blockers.append({"code": "skill-reference-identity-invalid", "skill": name})
         for marker in (*_RULES[name], "Do not bypass", "budgets", "unknown telemetry stays null"):
-            if marker not in text:
+            if marker not in " ".join(text.split()):
                 blockers.append({"code": "skill-invariant-missing", "skill": name, "marker": marker})
         if _BYPASS.search(text) or _BYPASS.search(full.decode("utf-8")):
             blockers.append({"code": "skill-bypass-advice", "skill": name})
@@ -124,13 +255,24 @@ def validate_skill_parity(
             }
         )
     expected = _inventory(source, "skills/")
+    expected.update(
+        {
+            relative: (root / relative).read_bytes()
+            for relative in REQUIRED_DOCUMENTS
+            if not any(item["path"] == relative for item in resource_blockers)
+        }
+    )
+    blockers.extend(_resource_link_blockers(root, expected))
     if package_root is not None:
         blockers.extend(validate_package(package_root)["blockers"])
-        _compare(expected, _inventory(package_root / "skills", "skills/"), blockers, "package")
+        actual = _inventory(package_root / "skills", "skills/")
+        actual.update(_inventory(package_root / "docs", "docs/"))
+        _compare(expected, actual, blockers, "package")
     if archive is not None:
         if not archive.is_file() or archive.is_symlink() or archive.stat().st_size > MAX_PACKAGE_BYTES:
             blockers.append({"code": "skill-archive-invalid"})
         else:
+            blockers.extend(validate_archive(archive)["blockers"])
             try:
                 with zipfile.ZipFile(archive) as handle:
                     entries = handle.infolist()
@@ -139,7 +281,7 @@ def validate_skill_parity(
                     names = [item.filename for item in entries]
                     if len(names) != len(set(names)):
                         raise ValueError("duplicate archive paths")
-                    archived = {name: handle.read(name) for name in names if name.startswith("skills/")}
+                    archived = {name: handle.read(name) for name in names if name.startswith(("skills/", "docs/"))}
                 _compare(expected, archived, blockers, "archive")
             except (OSError, ValueError, zipfile.BadZipFile) as exc:
                 blockers.append({"code": "skill-archive-invalid", "reason": type(exc).__name__})
@@ -158,7 +300,36 @@ def validate_skill_parity(
     }
 
 
+def _resource_link_blockers(root: Path, inventory: dict[str, bytes]) -> list[dict]:
+    blockers = []
+    for name in EXPECTED_SKILLS:
+        base = root / "skills" / name
+        for relative in ("SKILL.md", "references/lifecycle-contract.md"):
+            key = f"skills/{name}/{relative}"
+            text = inventory.get(key, b"").decode("utf-8")
+            for target in re.findall(r"\[[^\]]*\]\(([^\s)]+)\)", text):
+                parsed = urlsplit(target)
+                if parsed.scheme or parsed.netloc or not parsed.path:
+                    continue
+                path = base / unquote(parsed.path)
+                try:
+                    resolved = path.resolve().relative_to(root.resolve()).as_posix()
+                except (OSError, ValueError, RuntimeError):
+                    resolved = ""
+                lexical = Path(os.path.normpath(path))
+                try:
+                    components = lexical.relative_to(root).parts
+                except ValueError:
+                    components = ()
+                linked = any((root.joinpath(*components[:i])).is_symlink() for i in range(1, len(components) + 1))
+                if not resolved or resolved not in inventory or linked:
+                    blockers.append({"code": "skill-resource-link-invalid", "skill": name, "path": target})
+    return blockers
+
+
 def _inventory(root: Path, prefix: str) -> dict[str, bytes]:
+    if root.is_symlink() or not root.is_dir():
+        return {}
     return {
         prefix + path.relative_to(root).as_posix(): path.read_bytes()
         for path in sorted(root.rglob("*"))

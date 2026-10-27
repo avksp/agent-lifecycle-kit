@@ -18,6 +18,9 @@ Read the common route, recipe table and safety rules in
 docs/guides/lifecycle-cookbook.md. Select the recipe for the current request
 and stage. Read that recipe and its required links before acting. Load another
 recipe when the stage changes. The complete lifecycle contract remains required.
+In this installed package, `docs/guides/lifecycle-cookbook.md` means the
+[packaged cookbook](../../docs/guides/lifecycle-cookbook.md), relative to this skill root.
+Use its local paths; do not read consumer-project files as ALK contracts.
 Retain valid evidence after overruns; preserve all expenses and UNKNOWN usage
 across retries and compact. Start only the selected frozen task.
 
@@ -28,7 +31,7 @@ reset expenses or run clocks after retries or context compaction.
 Safe artifact commands: `task artifact-create` creates new bounded structured
 JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
 Review Mesh packets grant no review, attestation or execution authority. See
-`docs/reference/safe-artifact-authoring.md`.
+[safe artifact authoring](../../docs/reference/safe-artifact-authoring.md).
 
 Full contract SHA256: `b3ec79e0280c06fa1057845ce7cae24f87682a0662d6f670e79d98ee2406bc35`
 Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.
@@ -45,3 +48,6 @@ host enforcement. Read the complete reference for the required receipts.
 It replaces no validator or transition. Use context checkpoint and the thread
 bridge only through their existing bounded, lineage-checked contracts; restored
 context grants no execution authority.
+
+Resource paths are relative to this installed skill root. The package supplies
+its required documents; a consumer project is not their fallback source.

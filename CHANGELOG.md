@@ -4,6 +4,25 @@
 
 - No changes yet.
 
+## 2.29.0 - 2026-10-27
+
+- Protect all seven skill roles with bounded critical-clause regressions. Check
+  authority, ordering, independent review, budgets, unknown usage and refusals
+  even when broad keywords and reference hashes still match.
+- Include 19 required static EN/RU documents in the portable plugin. Keep exact
+  source/package/archive bytes, deterministic archives, regular-file and path
+  safety, and the existing size limits. Reject missing resources, dot paths
+  and directory entries disguised as documents.
+- Resolve instruction resources from the installed skill root. Keep every full
+  lifecycle contract mandatory, and select recipes only for applicable stages.
+  Packet compilation and untrusted intake do not borrow execution recipes.
+- Extend the local STE-inspired writing profile, paired guidance and current
+  architecture owner map. Add existing bounded authoring/evidence examples;
+  no new audit phase, host guarantee or STE certification is introduced.
+- Measure complete reading for six fixed cases against accepted 2.28 source.
+  Show the plan-review reduction and increases in five other cases honestly;
+  source bytes and words do not establish token, cost or behavior savings.
+
 ## 2.28.0 - 2026-10-26
 
 - Reduce repeated Windows path-object work while retaining fresh stat, identity,

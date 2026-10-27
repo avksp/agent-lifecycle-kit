@@ -23,6 +23,30 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_skill_instruction_publication_preserves_scope_and_honest_claims(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "bounded-skill-instructions-and-resources"
+        ]
+        self.assertEqual(feature["skillCount"], 7)
+        self.assertEqual(feature["requiredDocumentCount"], 19)
+        self.assertEqual(feature["readingCaseCount"], 6)
+        for key in (
+            "wholeLifecycleContractsRequired",
+            "boundedCriticalClauseChecks",
+            "sourcePackageArchiveParityRequired",
+            "skillRootRelativeResources",
+        ):
+            self.assertTrue(feature[key], key)
+        for key in (
+            "generalSemanticEquivalenceClaimed",
+            "hostEnforcementClaimed",
+            "steCertificationClaimed",
+            "tokenSavingsClaimed",
+            "newAuditStage",
+        ):
+            self.assertFalse(feature[key], key)
+
     def test_performance_publication_preserves_measured_scope_and_bounds(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
