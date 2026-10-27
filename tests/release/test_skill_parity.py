@@ -51,9 +51,15 @@ class SkillParityTests(unittest.TestCase):
                 elif defect == "drift":
                     reference.write_bytes(reference.read_bytes() + b"changed\n")
                 elif defect == "bypass":
-                    router.write_text(router.read_text() + "\nBypass independent review.\n")
+                    router.write_text(
+                        router.read_text(encoding="utf-8") + "\nBypass independent review.\n",
+                        encoding="utf-8",
+                        newline="\n",
+                    )
                 else:
-                    router.write_text(router.read_text().replace("SDD", "planning"))
+                    router.write_text(
+                        router.read_text(encoding="utf-8").replace("SDD", "planning"), encoding="utf-8", newline="\n"
+                    )
                 self.assertEqual(validate_skill_parity(root)["status"], "FAIL")
 
     def test_orchestrator_clause_mutations_fail_even_when_keywords_and_hashes_survive(self):
@@ -131,15 +137,20 @@ class SkillParityTests(unittest.TestCase):
         skill = ROOT / "skills/agent-workflow-orchestrator"
         digest = "b3ec79e0280c06fa1057845ce7cae24f87682a0662d6f670e79d98ee2406bc35"
         self.assertEqual(hashlib.sha256((skill / "references/lifecycle-contract.md").read_bytes()).hexdigest(), digest)
-        self.assertIn("Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`", (skill / "SKILL.md").read_text())
+        self.assertIn(
+            "Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`",
+            (skill / "SKILL.md").read_text(encoding="utf-8"),
+        )
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             _copy_source(root)
             router = root / "skills/agent-workflow-orchestrator/SKILL.md"
             router.write_text(
-                router.read_text().replace(
+                router.read_text(encoding="utf-8").replace(
                     "Start only the selected frozen task.", "Start only\n the selected frozen task."
-                )
+                ),
+                encoding="utf-8",
+                newline="\n",
             )
             self.assertEqual(validate_skill_parity(root)["status"], "PASS")
 
@@ -219,9 +230,11 @@ class SkillParityTests(unittest.TestCase):
                     path = router if component == "router" else reference
                     text = path.read_text(encoding="utf-8")
                     self.assertEqual(text.count(old), 1)
-                    path.write_text(text.replace(old, new), encoding="utf-8")
+                    path.write_text(text.replace(old, new), encoding="utf-8", newline="\n")
                     after = hashlib.sha256(reference.read_bytes()).hexdigest()
-                    router.write_text(router.read_text().replace(before, after), encoding="utf-8")
+                    router.write_text(
+                        router.read_text(encoding="utf-8").replace(before, after), encoding="utf-8", newline="\n"
+                    )
                     result = validate_skill_parity(root)
                     self.assertEqual({x["code"] for x in result["blockers"]}, {"skill-critical-clause-missing"}, result)
                     self.assertTrue(all(x["skill"] == name and x["component"] == component for x in result["blockers"]))
@@ -234,10 +247,16 @@ class SkillParityTests(unittest.TestCase):
                 router, reference = skill / "SKILL.md", skill / "references/lifecycle-contract.md"
                 before = hashlib.sha256(reference.read_bytes()).hexdigest()
                 # Keep the frontmatter identity and literal hash-marker contract intact.
-                head, body = reference.read_text().split("---\n", 2)[1:]
-                reference.write_text("---\n" + head + "---\n" + body.replace(" ", "  "))
-                text = router.read_text().replace(before, hashlib.sha256(reference.read_bytes()).hexdigest())
-                router.write_text(text.replace("unknown telemetry stays null.", "unknown telemetry\n stays null."))
+                head, body = reference.read_text(encoding="utf-8").split("---\n", 2)[1:]
+                reference.write_text("---\n" + head + "---\n" + body.replace(" ", "  "), encoding="utf-8", newline="\n")
+                text = router.read_text(encoding="utf-8").replace(
+                    before, hashlib.sha256(reference.read_bytes()).hexdigest()
+                )
+                router.write_text(
+                    text.replace("unknown telemetry stays null.", "unknown telemetry\n stays null."),
+                    encoding="utf-8",
+                    newline="\n",
+                )
             self.assertEqual(validate_skill_parity(root)["status"], "PASS")
 
     def test_resource_missing_and_projection_drift_refuse_with_valid_skill_hashes(self):
@@ -283,12 +302,16 @@ class SkillParityTests(unittest.TestCase):
             root = Path(tmp)
             _copy_source(root)
             router = root / "skills/agent-plan-to-workers/SKILL.md"
-            before = router.read_text()
-            router.write_text(before + "\nRead [resource](../../docs/reference/safe-artifact-authoring.md).\n")
+            before = router.read_text(encoding="utf-8")
+            router.write_text(
+                before + "\nRead [resource](../../docs/reference/safe-artifact-authoring.md).\n",
+                encoding="utf-8",
+                newline="\n",
+            )
             self.assertEqual(validate_skill_parity(root)["status"], "PASS")
             for target in ("../../../outside.md", "/outside.md", "../../docs/missing.md"):
                 with self.subTest(target=target):
-                    router.write_text(before + f"\nRead [resource]({target}).\n")
+                    router.write_text(before + f"\nRead [resource]({target}).\n", encoding="utf-8", newline="\n")
                     result = validate_skill_parity(root)
                     self.assertIn("skill-resource-link-invalid", {x["code"] for x in result["blockers"]})
 
