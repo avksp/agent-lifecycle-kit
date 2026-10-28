@@ -99,6 +99,7 @@ from agent_lifecycle.reporting import (
     render_usage_export_json,
     render_usage_export_table,
 )
+from agent_lifecycle.workflow.state import load_state
 
 
 def dispatch_observability(args: argparse.Namespace) -> dict[str, Any] | str:
@@ -335,7 +336,7 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
     if args.context_command == "checkpoint":
         return _dispatch_context_checkpoint(args)
     if args.context_command == "restore":
-        state = read_json_object(Path(args.state), label="workflow state")
+        state = load_state(Path(args.state))
         payload = restore_context_checkpoint(
             Path(args.checkpoint),
             state=state,
@@ -355,7 +356,7 @@ def _dispatch_context(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_context_checkpoint(args: argparse.Namespace) -> dict[str, Any]:
-    state = read_json_object(Path(args.state), label="workflow state")
+    state = load_state(Path(args.state))
     manifest = read_json_object(Path(args.plan), label="context checkpoint plan")
     input_payload = read_json_object(Path(args.input), label="context checkpoint input")
     reason = str(args.reason)
@@ -407,10 +408,10 @@ def _require_checkpoint_output_root(root: Path) -> None:
 def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any] | str:
     record = read_json_object(Path(args.record), label="goal record")
     if args.goal_command == "check":
-        state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        state = load_state(Path(args.state)) if args.state else None
         return validate_goal_record(record, state=state, require_current=args.current)
     if args.goal_command == "summarize":
-        state = read_json_object(Path(args.state), label="workflow state")
+        state = load_state(Path(args.state))
         profile = read_json_object(Path(args.profile), label="context profile") if args.profile else None
         return build_objective_snapshot(record, state, profile=profile, window=args.target_window)
     if args.goal_command == "view":
@@ -427,7 +428,7 @@ def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any] | str:
             return render_goal_view_terminal(payload)
         return payload
     if args.goal_command == "update":
-        state = read_json_object(Path(args.state), label="workflow state")
+        state = load_state(Path(args.state))
         updated = update_goal_record(
             record,
             state,

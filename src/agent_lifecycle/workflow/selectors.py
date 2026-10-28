@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError
-from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_V4
+from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 
 
 def ready_tasks(state: dict[str, Any]) -> list[str]:
@@ -22,7 +22,7 @@ def ready_tasks(state: dict[str, Any]) -> list[str]:
 
 def active_tasks(state: dict[str, Any]) -> list[str]:
     active_statuses = {"RUNNING", "VERIFYING"}
-    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+    if not has_current_workflow_semantics(state):
         active_statuses.update({"VALIDATING", "ACCEPTANCE_PENDING"})
     return [
         task_id

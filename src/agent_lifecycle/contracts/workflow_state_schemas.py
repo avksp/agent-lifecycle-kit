@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from typing import Any
 
 from agent_lifecycle.contracts.canonical import canonical_digest
@@ -11,6 +12,11 @@ from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.immutable_input_schemas import _validate_a5_state
 from agent_lifecycle.contracts.paths import MAX_REPO_PATH_BYTES, normalize_repo_path
 from agent_lifecycle.contracts.schema_builders import open_object_schema
+from agent_lifecycle.contracts.workflow_storage_schemas import (
+    WORKFLOW_STATE_V5,
+    validate_storage_counts,
+    validate_storage_metadata,
+)
 
 WORKFLOW_STATE_V3 = "agent-workflow-state.v3"
 WORKFLOW_STATE_V4 = "agent-workflow-state.v4"
@@ -815,6 +821,28 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
 }
 
 
+def has_current_workflow_semantics(state: dict[str, Any]) -> bool:
+    """v5 changes storage representation and retains all v4 authority rules."""
+    return state.get("schemaVersion") in {WORKFLOW_STATE_V4, WORKFLOW_STATE_V5}
+
+
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5] = deepcopy(WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V4])
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5].update({"$id": WORKFLOW_STATE_V5})
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5]["properties"]["schemaVersion"] = {
+    "const": WORKFLOW_STATE_V5,
+}
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5]["required"].append("storage")
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5]["properties"]["storage"] = {
+    "type": "object",
+    "required": ["schemaVersion", "root"],
+    "additionalProperties": False,
+    "properties": {
+        "schemaVersion": {"const": "agent-workflow-storage.v1"},
+        "root": {"type": "string", "minLength": 1},
+    },
+}
+
+
 def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True) -> dict[str, Any]:
     """Validate state shape and cross-field invariants before it is trusted."""
 
@@ -827,8 +855,11 @@ def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True)
         if "closingWindow" in state:
             raise LifecycleError("closing-context-invalid", "Legacy state cannot carry an active closing context")
         return state
-    if schema_version != WORKFLOW_STATE_V4:
+    if not has_current_workflow_semantics(state):
         raise LifecycleError("unsupported-workflow-state", "workflow state schemaVersion is unsupported")
+    if schema_version == WORKFLOW_STATE_V5:
+        validate_storage_metadata(state.get("storage"))
+        validate_storage_counts(state)
     _require_string(state, "runId")
     _require_string(state, "packageId")
     _require_positive_int(state, "stateRevision")

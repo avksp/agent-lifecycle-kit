@@ -15,6 +15,7 @@ from typing import ParamSpec, TypeVar
 
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.process_lock import exclusive_process_lock
+from agent_lifecycle.contracts.workflow_state_authority import workflow_authority_operation
 
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
@@ -34,7 +35,7 @@ def workflow_transaction(operation: Callable[_P, _R]) -> Callable[_P, _R]:
 
 
 @contextmanager
-def workflow_transaction_context(state_path: object) -> Iterator[None]:
+def workflow_transaction_context(state_path: object, *, creation_root: Path | None = None) -> Iterator[None]:
     """Share the same lock after pure initialization input validation."""
     if not isinstance(state_path, Path):
         raise LifecycleError("workflow-state-path-invalid", "workflow mutation requires a Path")
@@ -52,6 +53,7 @@ def workflow_transaction_context(state_path: object) -> Iterator[None]:
     with exclusive_process_lock(lock_path):
         token = _ACTIVE.set(active | {key})
         try:
-            yield
+            with workflow_authority_operation(state_path, allow_missing=True, creation_root=creation_root):
+                yield
         finally:
             _ACTIVE.reset(token)

@@ -28,6 +28,7 @@ from agent_lifecycle.contracts.workflow_finalization_types import (
     FinalizationProofBody,
     FinalizationProofInputs,
 )
+from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.followup import validate_followup_register
 from agent_lifecycle.host_protocol.lifecycle_gate import (
     evaluate_stop_gate,
@@ -423,7 +424,7 @@ def finalize_run(
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
     require_native_closing_action(state, "finalize", now_iso())
     outcome = state.get("finalAuditOutcome")
-    if state.get("schemaVersion") == "agent-workflow-state.v4" and not isinstance(outcome, dict):
+    if has_current_workflow_semantics(state) and not isinstance(outcome, dict):
         raise LifecycleError("final-audit-outcome-required", "v4 finalization requires an applied final-audit outcome")
     if isinstance(outcome, dict) and outcome.get("verdict") not in {None, "ACCEPTED"}:
         raise LifecycleError("final-audit-outcome-not-accepted", "final audit outcome does not permit finalization")

@@ -15,6 +15,7 @@ from agent_lifecycle.contracts.immutable_input_schemas import (
     validate_a5_plan_policy,
     validate_a5_policy,
 )
+from agent_lifecycle.contracts.workflow_state_authority import historical_snapshots
 from agent_lifecycle.planning.task_compatibility import validate_task_plan_compatibility_receipt
 
 
@@ -208,8 +209,6 @@ def original_legacy_plan_from_history(
     events: list[dict[str, Any]],
 ) -> str:
     """Follow verified native compatible adoptions back to the execution plan."""
-    from agent_lifecycle.planning.task_compatibility import task_contracts_compatible
-
     current, current_task = state, task
     seen = set()
     while current_task.get("planCompatibilityReceipt") is not None:
@@ -237,31 +236,38 @@ def original_legacy_plan_from_history(
             or operation.get("stateRevision") != event.get("stateRevision")
         ):
             raise LifecycleError("a5-context-invalid", "Legacy compatibility lacks its native operation")
-        snapshots = [
-            snapshot
-            for snapshot in state.get("priorSnapshots", [])
-            if {
-                key: snapshot.get(key) for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")
-            }
-            == receipt.get("previousPlan")
-        ]
-        candidates = [
-            (snapshot, item)
-            for snapshot in snapshots
-            for item in snapshot.get("tasks", [])
-            if item.get("id") == task["id"]
-            and item.get("attempt") == task["attempt"]
-            and item.get("status") == "ACCEPTED"
-            and task_contracts_compatible(item, current_task)
-            and all(
-                item.get(role) == receipt["acceptedArtifacts"].get(role)
-                for role in ("result", "review", "implementationAuditReport")
-            )
-        ]
+        candidates = _legacy_snapshot_candidates(state, task, receipt, current_task)
         if len(candidates) != 1:
             raise LifecycleError("a5-context-invalid", "Legacy accepted task lineage is missing or ambiguous")
         current, current_task = candidates[0]
     return current["planDigest"]
+
+
+def _legacy_snapshot_candidates(
+    state: dict[str, Any], task: dict[str, Any], receipt: dict[str, Any], current_task: dict[str, Any]
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    from agent_lifecycle.planning.task_compatibility import task_contracts_compatible
+
+    snapshots = [
+        snapshot
+        for snapshot in historical_snapshots(state)
+        if {key: snapshot.get(key) for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")}
+        == receipt.get("previousPlan")
+    ]
+    candidates = [
+        (snapshot, item)
+        for snapshot in snapshots
+        for item in snapshot.get("tasks", [])
+        if item.get("id") == task["id"]
+        and item.get("attempt") == task["attempt"]
+        and item.get("status") == "ACCEPTED"
+        and task_contracts_compatible(item, current_task)
+        and all(
+            item.get(role) == receipt["acceptedArtifacts"].get(role)
+            for role in ("result", "review", "implementationAuditReport")
+        )
+    ]
+    return candidates
 
 
 def original_admission_from_events(

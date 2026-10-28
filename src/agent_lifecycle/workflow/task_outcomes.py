@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_V4
+from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.workflow.artifacts import artifact_identity, artifact_path, package_root
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
@@ -86,7 +86,7 @@ def apply_task_review_outcome(
             implementation_audit_path=implementation_audit_path,
             reason=reason,
         )
-    expected_phase = "RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"
+    expected_phase = "RUNNING" if has_current_workflow_semantics(state) else "STEP_REVIEW"
     if state.get("phase") != expected_phase:
         raise LifecycleError("invalid-phase", "task outcome requires a reviewable workflow phase")
     review_identity = artifact_identity(root, expected_review_path, review)

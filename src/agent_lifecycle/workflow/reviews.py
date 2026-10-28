@@ -9,6 +9,8 @@ from agent_lifecycle.changesets import capture_task_change_set, require_current_
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids, validate_review_verdict
+from agent_lifecycle.contracts.workflow_state_authority import historical_snapshots
+from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.review.validation import require_supported_review_provenance
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
 from agent_lifecycle.workflow.state import validate_typed_blocker
@@ -150,7 +152,7 @@ def _unfinished_item_ids(state: dict[str, Any], task: dict[str, Any], root: Path
     snapshots = state.get("priorSnapshots", [])
     if not isinstance(snapshots, list):
         raise LifecycleError("task-result-history-invalid", "prior plan snapshots must be an array")
-    for snapshot in snapshots:
+    for snapshot in historical_snapshots(state, root=root):
         if not isinstance(snapshot, dict) or not isinstance(snapshot.get("tasks"), list):
             raise LifecycleError("task-result-history-invalid", "prior plan snapshot has no task history")
         for previous in snapshot["tasks"]:
@@ -254,7 +256,7 @@ def _validate_non_accepting_outcome(
     blocker, change = result.get("blocker"), result.get("contractChangeRequest")
     if blocker is None and change is None:
         return False
-    if not allowed or state.get("schemaVersion") != "agent-workflow-state.v4":
+    if not allowed or not has_current_workflow_semantics(state):
         raise LifecycleError("task-result-not-acceptable", "blocking task result cannot enter review acceptance path")
     if blocker is not None and change is not None:
         raise LifecycleError("task-result-invalid", "task result must select one non-accepting outcome")

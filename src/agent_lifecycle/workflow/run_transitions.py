@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.operation_kernel import commit_state, load_for_update
 from agent_lifecycle.workflow.query import status
@@ -36,7 +37,7 @@ def block_run(
         raise LifecycleError("nested-blocker-forbidden", "a blocked workflow cannot be blocked again")
     subject = None
     if blocker_code in REVIEW_INTERRUPTION_CODES:
-        if state.get("schemaVersion") != "agent-workflow-state.v4" or not review_task_id:
+        if not has_current_workflow_semantics(state) or not review_task_id:
             raise LifecycleError(
                 "review-interruption-task-required", "technical review interruption requires v4 and a task"
             )
@@ -46,7 +47,7 @@ def block_run(
     previous = state["phase"]
     state["phase"] = "BLOCKED"
     blocker: dict[str, Any] = {"code": blocker_code, "reason": reason, "resumePhase": previous}
-    if state.get("schemaVersion") == "agent-workflow-state.v4":
+    if has_current_workflow_semantics(state):
         blocker.update({"scope": "run", "recoveryRoute": "resolve-run"})
         if subject is not None:
             blocker["reviewSubject"] = subject

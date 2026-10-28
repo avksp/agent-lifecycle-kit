@@ -15,6 +15,7 @@ from agent_lifecycle.followup import (
     validate_followup_register,
     write_followup_register,
 )
+from agent_lifecycle.workflow.state import load_state
 
 
 def add_followup_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -49,7 +50,7 @@ def dispatch_followup(args: argparse.Namespace) -> dict[str, Any]:
     register_path = Path(args.register)
     register = load_followup_register(register_path)
     if args.followup_command == "check":
-        state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        state = load_state(Path(args.state)) if args.state else None
         validation = validate_followup_register(register, state=state, root=Path(args.root))
         if args.fail_on_finalization_blockers and validation["finalizationBlockers"]:
             raise LifecycleError(
@@ -83,7 +84,7 @@ def dispatch_followup(args: argparse.Namespace) -> dict[str, Any]:
             "registerDigest": validation["registerDigest"],
         }
     if args.followup_command == "sweep":
-        state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        state = load_state(Path(args.state)) if args.state else None
         profile = read_json_object(Path(args.profile), label="context profile") if args.profile else None
         return build_followup_summary(register, state=state, profile=profile, window=args.target_window)
     raise LifecycleError("command-not-implemented", "followup command is not implemented")

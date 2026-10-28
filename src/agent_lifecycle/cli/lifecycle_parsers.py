@@ -261,6 +261,11 @@ def _add_workflow_state_parsers(
     workflow_migrate.add_argument("--operation-id", required=True)
     workflow_migrate.add_argument("--expected-revision", required=True, type=int)
     workflow_migrate.add_argument("--source-revision", required=True)
+    workflow_migrate.add_argument(
+        "--target-schema",
+        choices=["agent-workflow-state.v4", "agent-workflow-state.v5"],
+        default="agent-workflow-state.v4",
+    )
     workflow_legacy = workflow_sub.add_parser(
         "migrate-runner-artifact",
         help="convert one legacy runner artifact into a non-authoritative archival record",
@@ -319,6 +324,13 @@ def _add_workflow_control_parsers(
     workflow_authorize.add_argument("--source-revision", required=True)
     workflow_authorize.add_argument("--receipt", required=True)
     workflow_authorize.add_argument("--reason", required=True)
+    workflow_renew = workflow_sub.add_parser("authorization-renew")
+    workflow_renew.add_argument("--state", required=True)
+    workflow_renew.add_argument("--operation-id", required=True)
+    workflow_renew.add_argument("--expected-revision", required=True, type=int)
+    workflow_renew.add_argument("--source-revision", required=True)
+    workflow_renew.add_argument("--receipt", required=True)
+    workflow_renew.add_argument("--reason", required=True)
     workflow_external_pause = workflow_sub.add_parser("external-pause", aliases=["pause-external"])
     workflow_external_pause.add_argument("--state", required=True)
     workflow_external_pause.add_argument("--operation-id", required=True)

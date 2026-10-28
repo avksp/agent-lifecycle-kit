@@ -19,6 +19,26 @@ C1 показывает участников и внешние границы; C
 
 ## Текущие владельцы проверок и ограничения
 
+Workflow v5 использует один нижний storage service в
+`contracts/workflow_storage.py`; рядом находятся schema, operation context
+и contained I/O. Общий reader `contracts/workflow_state_authority.py` проверяет
+фактический компактный v4/v5 authority и весь достижимый граф. Workflow storage
+модули остаются compatibility facades. Transaction/kernel workflow объединяет
+preflight, observer/policy writes и публикацию в одном operation context.
+Accounting использует этот нижний reader после собственных journal/source/
+event-prefix guards и не импортирует workflow ради разбора storage. Metrics
+связываются с реальными compact authority bytes. Зависимость accounting→workflow
+и второй parser не вводятся; текущие dependency/acyclic и complexity policies
+сохраняются.
+
+Явная миграция сохраняет grants, clocks и расходы; initialization остаётся v4.
+Явное same-run authorization renewal — отдельный защищённый переход, меняющий
+только authorization expiry. Эти операции не создают host enforcement и не
+ослабляют journal/DECLARED-ledger ограничения. В документе
+[хранение состояния workflow и восстановление](../reference/workflow-state-storage.md)
+описаны graph/capacity limits, Git exclusions, partial-write recovery и отдельный
+охват fixture, изолированной application rehearsal и live evidence.
+
 [Карта безопасности](../security/release-security.md) разделяет проверки
 выполнения, CI, необязательный анализ и квалификацию хостов. Разделы с номерами
 релизов ниже — исторический контекст решений, а не доказательство текущего релиза.

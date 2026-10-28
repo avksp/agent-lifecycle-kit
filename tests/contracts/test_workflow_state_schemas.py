@@ -139,13 +139,23 @@ class WorkflowStateSchemaTests(unittest.TestCase):
     def test_committed_result_and_projection_status_keep_permission_separate(self) -> None:
         ref = {"path": "result.json", "sha256": "a" * 64, "bytes": 10}
         committed = {
-            "schemaVersion": COMMITTED_RESULT_V1, "runId": "run", "operationId": "op",
-            "requestDigest": "b" * 64, "beforeRevision": 1, "afterRevision": 2,
-            "stateDigest": "c" * 64, "eventBundleDigest": "d" * 64,
-            "semanticResultRef": ref, "closingWindowId": None, "policyEventId": None,
-            "projectionGeneration": 2, "authorityDecisionRef": None,
-            "resourcePolicyEffectRef": None, "deadlineDecisionRef": None,
-            "clockObservationRef": None, "committedProofEnvelopeRef": None,
+            "schemaVersion": COMMITTED_RESULT_V1,
+            "runId": "run",
+            "operationId": "op",
+            "requestDigest": "b" * 64,
+            "beforeRevision": 1,
+            "afterRevision": 2,
+            "stateDigest": "c" * 64,
+            "eventBundleDigest": "d" * 64,
+            "semanticResultRef": ref,
+            "closingWindowId": None,
+            "policyEventId": None,
+            "projectionGeneration": 2,
+            "authorityDecisionRef": None,
+            "resourcePolicyEffectRef": None,
+            "deadlineDecisionRef": None,
+            "clockObservationRef": None,
+            "committedProofEnvelopeRef": None,
         }
         committed["resultDigest"] = canonical_digest(committed)
         self.assertEqual(get_schema(COMMITTED_RESULT_V1)["$id"], COMMITTED_RESULT_V1)
@@ -159,9 +169,15 @@ class WorkflowStateSchemaTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(LifecycleError):
                 validate_committed_result(invalid)
         projection = {
-            "schemaVersion": PROJECTION_STATUS_V1, "runId": "run", "workflowRevision": 2,
-            "generation": 2, "stateDigest": "c" * 64, "eventBundleDigest": "d" * 64,
-            "status": "PENDING", "ackRef": None, "committedProofEnvelopeRef": None,
+            "schemaVersion": PROJECTION_STATUS_V1,
+            "runId": "run",
+            "workflowRevision": 2,
+            "generation": 2,
+            "stateDigest": "c" * 64,
+            "eventBundleDigest": "d" * 64,
+            "status": "PENDING",
+            "ackRef": None,
+            "committedProofEnvelopeRef": None,
         }
         self.assertEqual(get_schema(PROJECTION_STATUS_V1)["$id"], PROJECTION_STATUS_V1)
         self.assertIs(validate_projection_status(projection), projection)
@@ -180,12 +196,18 @@ class WorkflowStateSchemaTests(unittest.TestCase):
         request = {
             "schemaVersion": TRANSITION_REQUEST_V1,
             "binding": {"bindingId": "binding", "expectedBindingDigest": "b" * 64},
-            "operationId": "transition-1", "requestDigest": "c" * 64,
+            "operationId": "transition-1",
+            "requestDigest": "c" * 64,
             "expectedWorkflowRevision": 3,
             "expectedAccountingRevisions": [{"budgetScopeId": "budget:run", "revision": 5}],
-            "action": "activateClosingWindow", "eventType": "closing-window-activated",
-            "nextStateRef": ref, "eventBundleRef": ref, "semanticResultRef": ref,
-            "authorityContextRef": ref, "activationEffect": None, "preparedProofInputRef": None,
+            "action": "activateClosingWindow",
+            "eventType": "closing-window-activated",
+            "nextStateRef": ref,
+            "eventBundleRef": ref,
+            "semanticResultRef": ref,
+            "authorityContextRef": ref,
+            "activationEffect": None,
+            "preparedProofInputRef": None,
         }
         self.assertEqual(get_schema(TRANSITION_REQUEST_V1)["$id"], TRANSITION_REQUEST_V1)
         self.assertIs(validate_transition_request(request), request)
@@ -193,10 +215,13 @@ class WorkflowStateSchemaTests(unittest.TestCase):
             {**request, "nativePermissionGranted": True},
             {**request, "expectedWorkflowRevision": True},
             {**request, "requestDigest": "C" * 64},
-            {**request, "expectedAccountingRevisions": [
-                {"budgetScopeId": "budget:run", "revision": 5},
-                {"budgetScopeId": "budget:run", "revision": 6},
-            ]},
+            {
+                **request,
+                "expectedAccountingRevisions": [
+                    {"budgetScopeId": "budget:run", "revision": 5},
+                    {"budgetScopeId": "budget:run", "revision": 6},
+                ],
+            },
             {**request, "nextStateRef": {**ref, "bytes": 8_388_609}},
             {**request, "activationEffect": {"closingWindowId": "window"}},
         ]
@@ -208,18 +233,28 @@ class WorkflowStateSchemaTests(unittest.TestCase):
     def test_adoption_wire_shapes_are_closed_and_do_not_qualify_operator(self) -> None:
         ref = {"path": "proof.json", "sha256": "a" * 64, "bytes": 10}
         adoption = {
-            "schemaVersion": ADOPTION_INPUT_V1, "operationId": "adopt-1", "bindingRef": ref,
-            "legacyStateRef": ref, "legacyEventLogRef": None, "initialSnapshotRef": ref,
+            "schemaVersion": ADOPTION_INPUT_V1,
+            "operationId": "adopt-1",
+            "bindingRef": ref,
+            "legacyStateRef": ref,
+            "legacyEventLogRef": None,
+            "initialSnapshotRef": ref,
             "accountingMode": "EXISTING_QUALIFIED_SCOPE",
         }
         selection = {
             "schemaVersion": ADOPTION_SELECTION_V1,
-            "expectedBindingDigest": "b" * 64, "expectedPinDigest": "c" * 64,
-            "expectedInitialSnapshotDigest": "d" * 64, "expectedAccountingStateDigest": "e" * 64,
-            "expectedAccountingRevision": 4, "expectedJournalIdentity": "journal",
-            "expectedBudgetScopeId": "budget:run", "expectedStorageProtocolVersion": "5",
-            "expectedWorkflowProtocolVersion": "1", "operatorQualificationRef": ref,
-            "quiescenceEvidenceRef": ref, "writerInventoryRef": ref,
+            "expectedBindingDigest": "b" * 64,
+            "expectedPinDigest": "c" * 64,
+            "expectedInitialSnapshotDigest": "d" * 64,
+            "expectedAccountingStateDigest": "e" * 64,
+            "expectedAccountingRevision": 4,
+            "expectedJournalIdentity": "journal",
+            "expectedBudgetScopeId": "budget:run",
+            "expectedStorageProtocolVersion": "5",
+            "expectedWorkflowProtocolVersion": "1",
+            "operatorQualificationRef": ref,
+            "quiescenceEvidenceRef": ref,
+            "writerInventoryRef": ref,
         }
         for name, value, validator in (
             (ADOPTION_INPUT_V1, adoption, validate_adoption_input),

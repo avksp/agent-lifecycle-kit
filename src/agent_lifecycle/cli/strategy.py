@@ -12,6 +12,7 @@ from agent_lifecycle.contracts import LifecycleError, read_json_object, write_js
 from agent_lifecycle.policy.execution_strategy import resolve_execution_strategy
 from agent_lifecycle.workflow.artifacts import package_root
 from agent_lifecycle.workflow.selectors import find_task
+from agent_lifecycle.workflow.state import load_state
 
 
 def dispatch_strategy(args: argparse.Namespace) -> dict[str, Any]:
@@ -21,7 +22,7 @@ def dispatch_strategy(args: argparse.Namespace) -> dict[str, Any]:
         args.adapter,
         Path(args.descriptor) if args.descriptor else None,
     )
-    state = read_json_object(Path(args.state), label="workflow state")
+    state = load_state(Path(args.state))
     manifest = read_json_object(Path(args.manifest), label="frozen plan manifest")
     root = package_root(Path(args.state), state)
     payload = resolve_execution_strategy(

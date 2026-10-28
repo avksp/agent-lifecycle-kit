@@ -18,7 +18,7 @@ from agent_lifecycle.contracts.authority_io import (
     resolve_authority_anchor,
 )
 from agent_lifecycle.contracts.authority_text import require_manifest_text
-from agent_lifecycle.contracts.canonical import prepare_json_object
+from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, load_json_object, prepare_json_object
 from agent_lifecycle.contracts.execution_target import (
     discard_created_output,
     inspect_execution_target,
@@ -32,12 +32,15 @@ from agent_lifecycle.contracts.ownership_paths import (
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import create_private_json
+from agent_lifecycle.contracts.workflow_state_authority import workflow_package_root
 from agent_lifecycle.contracts.workflow_state_schemas import (
     WORKFLOW_STATE_MIGRATION_RECEIPT,
     WORKFLOW_STATE_V3,
     WORKFLOW_STATE_V4,
+    WORKFLOW_STATE_V5,
     validate_workflow_state,
 )
+from agent_lifecycle.contracts.workflow_storage_context import StorageOperation
 from agent_lifecycle.freeze.package_integrity import build_reviewed_plan_lock_v2
 from agent_lifecycle.planning.prerequisites import validate_prerequisite_acceptance
 from agent_lifecycle.planning.validation import validate_plan_manifest
@@ -50,7 +53,7 @@ from agent_lifecycle.workflow.operation_kernel import (
 )
 from agent_lifecycle.workflow.plan_adoption import adopt_plan
 from agent_lifecycle.workflow.query import status
-from agent_lifecycle.workflow.state import now_iso
+from agent_lifecycle.workflow.state import now_iso, storage_root_for_state
 from agent_lifecycle.workflow.transactions import workflow_transaction, workflow_transaction_context
 
 
@@ -87,7 +90,7 @@ def initialize_workflow_state(
     }
     validate_workflow_state(state, allow_legacy=False)
     prepared = prepare_json_object(state, label="initial workflow state")
-    with workflow_transaction_context(state_path):
+    with workflow_transaction_context(state_path, creation_root=workflow_package_root(state_path, state)):
         record_prepared_workflow_writes(state_path, prepared)
         create_private_json(state_path, state)
         return status(state_path)
@@ -100,16 +103,21 @@ def migrate_workflow_state(
     operation_id: str,
     expected_revision: int,
     source_revision: str,
+    target_schema: str = WORKFLOW_STATE_V4,
 ) -> dict[str, Any]:
-    """Migrate a v3 state once, preserving lineage and immutable artifact identities."""
+    """Explicitly migrate storage without renewing execution authority or clocks."""
 
     state = load_for_update(
         state_path, operation_id=operation_id, expected_revision=expected_revision, authorization_required=False
     )
-    if state.get("schemaVersion") != WORKFLOW_STATE_V3:
-        raise LifecycleError("workflow-state-migration-not-required", "state migration requires v3 input")
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    if target_schema == WORKFLOW_STATE_V5:
+        return _migrate_storage_v5(state_path, state, operation_id)
+    if target_schema != WORKFLOW_STATE_V4:
+        raise LifecycleError("unsupported-workflow-state", "Unsupported migration target")
+    if state.get("schemaVersion") != WORKFLOW_STATE_V3:
+        raise LifecycleError("workflow-state-migration-not-required", "state migration requires v3 input")
     migrated = _migrate_copy(state)
     source_state_revision = int(state["stateRevision"])
     receipt_body = {
@@ -136,6 +144,61 @@ def migrate_workflow_state(
         payload={"migrationReceipt": migration_receipt},
     )
     return {**status(state_path), "migrationReceipt": migration_receipt}
+
+
+def _migrate_storage_v5(state_path: Path, state: dict[str, Any], operation_id: str) -> dict[str, Any]:
+    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+        raise LifecycleError("workflow-state-migration-not-required", "V5 migration requires v4 input")
+    operation = StorageOperation.current()
+    assert operation is not None
+    operation.check()
+    root = workflow_package_root(state_path, state)
+    raw = read_authority_bytes(state_path, root=root, max_bytes=MAX_JSON_INPUT_BYTES)
+    operation.check()
+    if load_json_object(raw) != state:
+        raise LifecycleError("authority-input-changed", "Migration source changed after loading")
+    raw_sha = hashlib.sha256(raw).hexdigest()
+    backup_path = state_path.with_name(f"{state_path.name}.v4-backup-{raw_sha}.json")
+    root_name = storage_root_for_state(state_path, state)
+    migrated = deepcopy(state)
+    migrated["schemaVersion"] = WORKFLOW_STATE_V5
+    migrated["storage"] = {"schemaVersion": "agent-workflow-storage.v1", "root": root_name}
+    body = {
+        "schemaVersion": "agent-workflow-storage-migration-receipt.v1",
+        "status": "PASS",
+        "runId": state["runId"],
+        "packageId": state["packageId"],
+        "fromSchemaVersion": WORKFLOW_STATE_V4,
+        "toSchemaVersion": WORKFLOW_STATE_V5,
+        "sourceStateSha256": raw_sha,
+        "sourceStateBytes": len(raw),
+        "sourceStateRevision": state["stateRevision"],
+        "targetStateRevision": state["stateRevision"] + 1,
+        "operationId": operation_id,
+        "storageRoot": root_name,
+        "backupPath": backup_path.absolute().relative_to(root).as_posix(),
+    }
+    receipt = {**body, "receiptDigest": canonical_digest(body)}
+    migrated["storageMigration"] = receipt
+
+    def persist_backup() -> None:
+        try:
+            create_authority_bytes(backup_path, raw, root=root, private=True)
+        except FileExistsError:
+            if read_authority_bytes(backup_path, root=root, max_bytes=MAX_JSON_INPUT_BYTES) != raw:
+                raise LifecycleError("workflow-storage-invalid", "Migration backup collision") from None
+        operation._published(backup_path, raw, "IMMUTABLE_BACKUP")
+
+    commit_state(
+        state_path,
+        migrated,
+        operation_id=operation_id,
+        event_type="workflow-state-migrated",
+        payload={"migrationReceipt": receipt},
+        persist_artifacts=(persist_backup,),
+        prepared_writes={backup_path: raw},
+    )
+    return {**status(state_path), "migrationReceipt": receipt}
 
 
 def _migrate_copy(state: dict[str, Any]) -> dict[str, Any]:
@@ -235,7 +298,7 @@ def initialize_compiled_workflow(
     if prepared.manifest["status"] != "FROZEN":
         raise LifecycleError("plan-not-frozen", "Composition requires an actually reviewed frozen plan")
     with (
-        workflow_transaction_context(prepared.state_path),
+        workflow_transaction_context(prepared.state_path, creation_root=prepared.root),
         packet_publication_lock(prepared.root / prepared.output_dir),
     ):
         current = _prepare_initialization_inputs(*args)

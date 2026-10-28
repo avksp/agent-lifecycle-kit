@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import read_json_object, write_json_create
+from agent_lifecycle.workflow.state import load_state
 from agent_lifecycle.worktree import (
     build_attempt_isolation_receipt,
     validate_attempt_isolation_receipt,
@@ -43,7 +44,7 @@ def dispatch_worktree(args: argparse.Namespace) -> dict[str, Any]:
     if args.worktree_command == "policy-check":
         return validate_worktree_policy(read_json_object(Path(args.policy), label="worktree policy"))
     if args.worktree_command == "receipt":
-        state = read_json_object(Path(args.state), label="workflow state")
+        state = load_state(Path(args.state))
         policy = read_json_object(Path(args.policy), label="worktree policy")
         authorization = (
             read_json_object(Path(args.operator_authorization), label="operator authorization")
@@ -68,7 +69,7 @@ def dispatch_worktree(args: argparse.Namespace) -> dict[str, Any]:
         return receipt
     if args.worktree_command == "check":
         receipt = read_json_object(Path(args.receipt), label="worktree receipt")
-        checked_state = read_json_object(Path(args.state), label="workflow state") if args.state else None
+        checked_state = load_state(Path(args.state)) if args.state else None
         checked_policy = read_json_object(Path(args.policy), label="worktree policy") if args.policy else None
         return validate_attempt_isolation_receipt(receipt, workflow_state=checked_state, policy=checked_policy)
     raise AssertionError("unreachable worktree command")

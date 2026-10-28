@@ -56,6 +56,7 @@ from agent_lifecycle.workflow.artifact_builders import (
     inspect_artifact,
 )
 from agent_lifecycle.workflow.artifacts import build_finding_check_evidence_artifact
+from agent_lifecycle.workflow.state import load_state
 
 
 def dispatch_planning(args: argparse.Namespace) -> dict[str, Any]:
@@ -83,7 +84,7 @@ def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
     if args.specification_command == "completion-gate":
         gate_input = read_json_object(Path(args.input), label="completion gate input") if args.input else {}
         payload = build_completion_gate_receipt(
-            state=read_json_object(Path(args.state), label="workflow state"),
+            state=load_state(Path(args.state)),
             final_audit=read_json_object(Path(args.final_audit), label="final audit") if args.final_audit else None,
             follow_up_register=(
                 read_json_object(Path(args.follow_up_register), label="follow-up register")

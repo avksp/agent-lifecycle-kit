@@ -6,19 +6,16 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
-from agent_lifecycle.contracts.authority_io import read_authority_bytes, resolve_authority_anchor
+from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, canonical_bytes, load_json_object
 from agent_lifecycle.contracts.finding_check_schemas import (
     build_finding_check_evidence,
     validate_finding_check_evidence,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.workflow_state_authority import workflow_package_root as package_root
 
 STRUCTURED_RESULT_ARTIFACT_SCHEMA = "agent-workflow-structured-result-artifact.v1"
-
-
-def package_root(state_path: Path, state: dict[str, Any]) -> Path:
-    return resolve_authority_anchor(state_path, state.get("packageRoot", "."))
 
 
 def artifact_path(task: dict[str, Any], role: str, attempt: int) -> str:
