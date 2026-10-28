@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import tempfile
 import time
 import unittest
@@ -709,14 +711,20 @@ class StateStorageTests(unittest.TestCase):
                     successes += 1
                 except LifecycleError as error:
                     # Concurrent uncommitted file bytes are never trusted.
-                    self.assertIn(
-                        error.code,
-                        {
-                            "authority-input-changed",
-                            "workflow-storage-changed",
-                            "workflow-storage-object-conflict",
-                        },
-                    )
+                    if os.name == "nt" and error.code == "authority-input-unavailable":
+                        self.assertIs(type(error.details.get("winerror")), int, error.details)
+                        self.assertEqual(error.details.get("winerror"), 32, error.details)
+                        self.assertIn(error.details.get("operation"), {"read", "sync"}, error.details)
+                    else:
+                        self.assertIn(
+                            error.code,
+                            {
+                                "authority-input-changed",
+                                "workflow-storage-changed",
+                                "workflow-storage-object-conflict",
+                            },
+                            error.details,
+                        )
             self.assertGreaterEqual(successes, 1)
             persist_storage(self.root, prepared)
             readers = [
@@ -728,6 +736,44 @@ class StateStorageTests(unittest.TestCase):
                 for _ in range(2)
             ]
             self.assertEqual([r.result().object_count for r in readers], [3, 3])
+
+    @unittest.skipUnless(os.name == "nt", "Native Windows sharing proof requires Windows")
+    def test_windows_held_directory_sharing_refusal_preserves_components_and_retry(self):
+        from agent_lifecycle.contracts import authority_io
+
+        prepared = self.prepared()
+        persist_storage(self.root, prepared)
+        directory = self.root / prepared.state["storage"]["root"] / "objects"
+        before = {path.name: path.read_bytes() for path in directory.iterdir()}
+        handle = authority_io._windows_directory(directory, writable=True)
+        try:
+            with self.assertRaises(LifecycleError) as caught:
+                persist_storage(self.root, prepared)
+        finally:
+            authority_io._windows_close(handle)
+        error = caught.exception
+        self.assertEqual(error.code, "authority-input-unavailable", error.details)
+        self.assertIs(type(error.details.get("winerror")), int, error.details)
+        self.assertEqual(error.details.get("winerror"), 32, error.details)
+        self.assertIn(error.details.get("operation"), {"read", "sync"}, error.details)
+        self.assertEqual({path.name: path.read_bytes() for path in directory.iterdir()}, before)
+        persist_storage(self.root, prepared)
+        validation = validate_storage(self.root, prepared.state)
+        self.assertEqual(validation.object_count, 3)
+        self.assertEqual({path.name: path.read_bytes() for path in directory.iterdir()}, before)
+        print(
+            "WINDOWS_STORAGE_SHARING_PROOF="
+            + json.dumps(
+                {
+                    "nativeWindows": True,
+                    "winerror": error.details["winerror"],
+                    "operation": error.details["operation"],
+                    "unchangedComponents": len(before),
+                    "retryObjectCount": validation.object_count,
+                },
+                sort_keys=True,
+            )
+        )
 
     def test_interrupted_write_keeps_orphans_and_retry_completes(self):
         from agent_lifecycle.contracts import workflow_storage_io as storage_io
