@@ -1,5 +1,9 @@
 # Agent Lifecycle Kit documentation
 
+Release 2.30 adds [bounded workflow history and recovery](reference/workflow-state-storage.md)
+and [explicit authorization renewal](reference/cli.md#workflow-history-and-authorization-renewal-in-230).
+The plugin supplies skills and documents; the Python package supplies the CLI.
+
 Release 2.29 keeps full skill contracts, checks all seven roles and bundles
 19 required static documents in the [portable plugin](reference/agent-plugins.md).
 The [local writing profile](guides/controlled-technical-english.md) defines staged
@@ -42,7 +46,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.29.0` from
+  `python -m pip install agent-lifecycle-kit==2.30.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

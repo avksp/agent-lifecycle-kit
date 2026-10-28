@@ -15,7 +15,7 @@ from agent_lifecycle.contracts.ownership_paths import (
     require_manifest_authority_paths,
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
-from agent_lifecycle.contracts.workflow_state_schemas import WORKFLOW_STATE_V4
+from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.freeze import verify_plan_lock_envelope
 from agent_lifecycle.host_protocol.lifecycle_gate import (
     evaluate_post_action_gate,
@@ -114,7 +114,7 @@ def commit_task_result(
         identity,
         repository_root=root,
         require_freshness=task_result_freshness_required(state),
-        allow_non_accepting_outcome=state.get("schemaVersion") == WORKFLOW_STATE_V4,
+        allow_non_accepting_outcome=has_current_workflow_semantics(state),
     )
     policy = state.get("writePolicy")
     if isinstance(policy, dict):
@@ -175,7 +175,7 @@ def commit_task_result(
     task["status"] = "VERIFYING"
     task["lastReason"] = reason
     record_gate_receipts(task, gate_receipts)
-    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+    if not has_current_workflow_semantics(state):
         state["phase"] = "STEP_REVIEW"
     from agent_lifecycle.workflow.limited_usage import require_task_source_frontier_current
 
@@ -208,7 +208,7 @@ def accept_task(
     reason: str,
 ) -> dict[str, Any]:
     state = _mutable_state(state_path, operation_id, expected_revision)
-    expected_phase = "RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"
+    expected_phase = "RUNNING" if has_current_workflow_semantics(state) else "STEP_REVIEW"
     if state["phase"] != expected_phase:
         raise LifecycleError("invalid-phase", "task acceptance requires STEP_REVIEW phase")
     authorization = state.get("authorization")
@@ -302,7 +302,7 @@ def rework_task(
     """Archive a verified attempt and authorize its next remediation attempt."""
 
     state = _mutable_state(state_path, operation_id, expected_revision)
-    expected_phase = "RUNNING" if state.get("schemaVersion") == WORKFLOW_STATE_V4 else "STEP_REVIEW"
+    expected_phase = "RUNNING" if has_current_workflow_semantics(state) else "STEP_REVIEW"
     if state.get("phase") != expected_phase:
         raise LifecycleError("invalid-phase", "task rework requires STEP_REVIEW phase")
     require_source_and_authorization(state, source_revision)
@@ -310,7 +310,7 @@ def rework_task(
     if task.get("status") != "VERIFYING":
         raise LifecycleError("invalid-task-status", f"task {task_id} is not VERIFYING")
     _require_rework_budget(state, task)
-    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+    if not has_current_workflow_semantics(state):
         _require_no_active_sibling(state, task_id)
     validate_attempt_history(state_path, state, task)
     root = package_root(state_path, state)
@@ -322,7 +322,7 @@ def rework_task(
         task["result"],
         repository_root=root,
         require_freshness=task_result_freshness_required(state),
-        allow_non_accepting_outcome=state.get("schemaVersion") == WORKFLOW_STATE_V4,
+        allow_non_accepting_outcome=has_current_workflow_semantics(state),
     )
     expected_review_path = artifact_path(task, "review", int(task["attempt"]))
     if normalize_repo_path(review_path) != expected_review_path:
@@ -391,7 +391,7 @@ def rework_task(
     clear_active_attempt_references(task)
     task["status"] = "REWORK"
     task["lastReason"] = reason
-    if state.get("schemaVersion") != WORKFLOW_STATE_V4:
+    if not has_current_workflow_semantics(state):
         state["phase"] = "REMEDIATING"
     commit_state(
         state_path,
@@ -508,7 +508,7 @@ def _mark_task_accepted(
     task.pop("attemptDeadlineAt", None)
     task["remediationFindingIds"] = []
     unlock_ready_tasks(state)
-    if state.get("schemaVersion") == WORKFLOW_STATE_V4:
+    if has_current_workflow_semantics(state):
         required = [item for item in state.get("tasks", []) if item.get("required", True)]
         active = any(item.get("status") in {"RUNNING", "VERIFYING"} for item in state.get("tasks", []))
         complete = bool(required) and all(item.get("status") == "ACCEPTED" for item in required)

@@ -16,6 +16,19 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class StrategyCliTests(unittest.TestCase):
+    def test_resolve_refuses_malformed_state_without_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, lock, state = _write_inputs(root)
+            payload = json.loads(state.read_text(encoding="utf-8"))
+            del payload["eventLog"]
+            state.write_text(json.dumps(payload), encoding="utf-8")
+            out = root / "strategy.json"
+            code, result = _run_cli(_args(manifest, lock, state, out))
+            self.assertEqual(code, 2)
+            self.assertEqual(result["code"], "invalid-workflow-state")
+            self.assertFalse(out.exists())
+
     def test_resolve_writes_bound_provider_neutral_strategy(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -117,13 +130,18 @@ def _write_inputs(root: Path) -> tuple[Path, Path, Path]:
             "manifestHash": digest,
         },
         "state.json": {
+            "schemaVersion": "agent-workflow-state.v4",
+            "phase": "RUNNING",
+            "eventLog": "events.jsonl",
+            "packageRoot": ".",
+            "operationLedger": {},
             "runId": "run-cli",
             "packageId": "strategy-cli",
             "planRevision": 1,
             "planDigest": digest,
             "stateRevision": 3,
             "sourceRevision": "source-sha",
-            "tasks": [{"id": "WS-01", "attemptCount": 0}],
+            "tasks": [{"id": "WS-01", "status": "READY", "attempt": 0}],
         },
     }
     paths: list[Path] = []

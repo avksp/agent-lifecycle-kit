@@ -4,6 +4,19 @@
 
 - No changes yet.
 
+## 2.30.0 - 2026-10-28
+
+- Add explicit v4-to-v5 workflow state migration. Keep full history in bounded,
+  content-addressed objects and retain an exact original state backup.
+- Share guarded storage reads across workflow, accounting and CLI consumers.
+  Preserve original clocks, budgets, costs, unknown usage and authorization.
+- Add exact same-run authorization renewal for a committed task awaiting review
+  or a run awaiting final audit. Keep the existing attempt and prior grant history.
+- Preserve native initial pre-plan snapshots during migration. Compare complete
+  logical history in the isolated migration rehearsal.
+- Add native scale, failure, concurrency and isolation coverage, paired storage
+  documentation, and package checks. Existing platform and security gates remain.
+
 ## 2.29.0 - 2026-10-27
 
 - Protect all seven skill roles with bounded critical-clause regressions. Check

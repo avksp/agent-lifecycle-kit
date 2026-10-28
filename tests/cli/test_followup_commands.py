@@ -9,29 +9,45 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 try:
-    from .helpers import _run_cli  # noqa: E402
+    from .helpers import _run_cli
 except ImportError:
-    from helpers import _run_cli  # noqa: E402
+    from helpers import _run_cli
 
 
 class FollowUpCommandTests(unittest.TestCase):
+    def test_followup_refuses_malformed_state_before_business_check(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state_path = _write_state(root)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            del state["tasks"]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            register = _write_register(root, current_scope_impact="completion-proof")
+            code, payload = _run_cli(
+                ["followup", "check", "--register", str(register), "--state", str(state_path), "--root", str(root)]
+            )
+            self.assertEqual(code, 2)
+            self.assertEqual(payload["code"], "invalid-workflow-state")
+
     def test_followup_check_close_and_sweep_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             state_path = _write_state(root)
             register_path = _write_register(root, current_scope_impact="completion-proof")
 
-            code, payload = _run_cli([
-                "followup",
-                "check",
-                "--register",
-                str(register_path),
-                "--state",
-                str(state_path),
-                "--root",
-                str(root),
-                "--fail-on-finalization-blockers",
-            ])
+            code, payload = _run_cli(
+                [
+                    "followup",
+                    "check",
+                    "--register",
+                    str(register_path),
+                    "--state",
+                    str(state_path),
+                    "--root",
+                    str(root),
+                    "--fail-on-finalization-blockers",
+                ]
+            )
             self.assertEqual(code, 2)
             self.assertEqual(payload["code"], "follow-up-finalization-blocked")
 
@@ -39,39 +55,43 @@ class FollowUpCommandTests(unittest.TestCase):
             artifact.parent.mkdir(parents=True)
             artifact.write_text('{"status":"PASS"}\n', encoding="utf-8")
 
-            code, payload = _run_cli([
-                "followup",
-                "close",
-                "--register",
-                str(register_path),
-                "--item-id",
-                "FU-01",
-                "--evidence-id",
-                "EV-FOLLOWUP",
-                "--artifact",
-                "evidence/follow-up.json",
-                "--verifier",
-                "reviewer",
-                "--reason",
-                "current evidence passed",
-                "--root",
-                str(root),
-            ])
+            code, payload = _run_cli(
+                [
+                    "followup",
+                    "close",
+                    "--register",
+                    str(register_path),
+                    "--item-id",
+                    "FU-01",
+                    "--evidence-id",
+                    "EV-FOLLOWUP",
+                    "--artifact",
+                    "evidence/follow-up.json",
+                    "--verifier",
+                    "reviewer",
+                    "--reason",
+                    "current evidence passed",
+                    "--root",
+                    str(root),
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(payload["schemaVersion"], "agent-follow-up-close-result.v1")
 
-            code, payload = _run_cli([
-                "followup",
-                "sweep",
-                "--register",
-                str(register_path),
-                "--state",
-                str(state_path),
-                "--profile",
-                str(ROOT / "profiles/small-context-profile.v1.json"),
-                "--target-window",
-                "4k-strict",
-            ])
+            code, payload = _run_cli(
+                [
+                    "followup",
+                    "sweep",
+                    "--register",
+                    str(register_path),
+                    "--state",
+                    str(state_path),
+                    "--profile",
+                    str(ROOT / "profiles/small-context-profile.v1.json"),
+                    "--target-window",
+                    "4k-strict",
+                ]
+            )
             self.assertEqual(code, 0)
             self.assertEqual(payload["schemaVersion"], "agent-follow-up-summary.v1")
             self.assertEqual(payload["counts"]["open"], 0)
@@ -103,6 +123,7 @@ def _write_state(root: Path) -> Path:
                 "sourceRevision": "source",
                 "stateRevision": 1,
                 "phase": "FINAL_AUDIT",
+                "tasks": [],
             }
         ),
         encoding="utf-8",

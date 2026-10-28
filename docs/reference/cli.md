@@ -1,5 +1,33 @@
 # CLI reference
 
+## Workflow history and authorization renewal in 2.30
+
+Install Python package 2.30 to use these commands. The portable plugin contains
+skills and static documents; it uses the separately installed CLI.
+
+`workflow init` creates v4 state. Use `workflow state-migrate` with
+`--target-schema agent-workflow-state.v5` for an explicit v4-to-v5 conversion.
+Supply the current `--expected-revision`, `--source-revision` and a unique
+`--operation-id`. Conversion keeps an exact backup of the original state and
+moves complete history into bounded immutable objects. Original costs, unknown
+usage, budgets, clocks and authorization remain part of the run.
+
+`workflow authorization-renew` consumes a distinct, fresh user receipt through
+`--receipt`. It supports a consumed grant when a committed task is `VERIFYING`,
+or the run is in `FINAL_AUDIT` with all required tasks accepted. The receipt
+binds the current run, plan, source, state revision, previous grant, budgets,
+clocks and task subjects. Renewal keeps the existing attempt and prior grant
+history. Migration alone does not renew an expired grant. A blocked run needs
+its existing blocker recovery route.
+
+```bash
+agent-lifecycle workflow state-migrate --help
+agent-lifecycle workflow authorization-renew --help
+```
+
+See the [2.30 storage and recovery guide](https://github.com/avksp/agent-lifecycle-kit/blob/v2.30.0/docs/reference/workflow-state-storage.md)
+for limits, backups, Git exclusions and the separate renewal contract.
+
 ## Migrating authority artifacts to 2.15
 
 Version 2.15 tightens validation before artifacts can grant authority. Existing
@@ -76,7 +104,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.29.0
+python -m pip install agent-lifecycle-kit==2.30.0
 ```
 
 ## Task evidence identity

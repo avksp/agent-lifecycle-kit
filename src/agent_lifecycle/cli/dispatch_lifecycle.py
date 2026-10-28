@@ -38,6 +38,7 @@ from agent_lifecycle.workflow import (
     next_action,
     pause_for_budget_decision,
     pause_for_external_action,
+    renew_execution_authorization,
     resolve_blocker,
     resume_external_action,
     rework_task,
@@ -47,9 +48,11 @@ from agent_lifecycle.workflow import (
     status,
     validate_budget_exceeded_policy,
 )
-from agent_lifecycle.workflow.artifacts import build_current_task_change_set
+from agent_lifecycle.workflow.artifacts import build_current_task_change_set, package_root
 from agent_lifecycle.workflow.closing_window import operator_claim_refusal
 from agent_lifecycle.workflow.initialization import initialize_compiled_workflow, project_workflow_initialization
+from agent_lifecycle.workflow.state import load_state
+from agent_lifecycle.workflow.storage import task_evidence
 
 
 def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
@@ -59,6 +62,34 @@ def dispatch_lifecycle(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == "audit":
         return dispatch_audit(args)
     raise LifecycleError("command-not-implemented", "lifecycle command is not implemented")
+
+
+def _dispatch_workflow_query(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    if args.workflow_command == "next":
+        return next_action(status(state_path, full=True)["state"])
+    payload = status(state_path, full=args.full)
+    prefix = getattr(args, "digest_prefix_length", None)
+    return build_digest_display_view(payload, minimum_length=prefix) if prefix is not None else payload
+
+
+def _dispatch_execution_grant(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
+    if args.workflow_command == "run-start":
+        return start_execution(
+            state_path,
+            operation_id=args.operation_id,
+            expected_revision=args.expected_revision,
+            source_revision=args.source_revision,
+            reason=args.reason,
+        )
+    authorize = {"authorize": authorize_execution, "authorization-renew": renew_execution_authorization}
+    return authorize[args.workflow_command](
+        state_path,
+        operation_id=args.operation_id,
+        expected_revision=args.expected_revision,
+        source_revision=args.source_revision,
+        receipt_path=args.receipt,
+        reason=args.reason,
+    )
 
 
 def _dispatch_workflow_initialization(args: argparse.Namespace) -> dict[str, Any]:
@@ -83,6 +114,7 @@ def _dispatch_workflow_initialization(args: argparse.Namespace) -> dict[str, Any
             operation_id=args.operation_id,
             expected_revision=args.expected_revision,
             source_revision=args.source_revision,
+            target_schema=args.target_schema,
         )
     if args.workflow_command == "migrate-runner-artifact":
         from agent_lifecycle.migration.legacy_runner import convert_legacy_runner_artifact
@@ -121,12 +153,8 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
     if args.workflow_command in {"init", "state-migrate", "migrate-runner-artifact"}:
         return _dispatch_workflow_initialization(args)
     state_path = Path(args.state)
-    if args.workflow_command == "status":
-        payload = status(state_path, full=args.full)
-        prefix = getattr(args, "digest_prefix_length", None)
-        return build_digest_display_view(payload, minimum_length=prefix) if prefix is not None else payload
-    if args.workflow_command == "next":
-        return next_action(status(state_path, full=True)["state"])
+    if args.workflow_command in {"status", "next"}:
+        return _dispatch_workflow_query(args, state_path)
     if args.workflow_command == "validation-select":
         return _dispatch_validation_select(args, state_path)
     if args.workflow_command == "run":
@@ -158,23 +186,8 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
             start_mode=args.start_mode,
             authorized_by=args.authorized_by,
         )
-    if args.workflow_command == "run-start":
-        return start_execution(
-            state_path,
-            operation_id=args.operation_id,
-            expected_revision=args.expected_revision,
-            source_revision=args.source_revision,
-            reason=args.reason,
-        )
-    if args.workflow_command == "authorize":
-        return authorize_execution(
-            state_path,
-            operation_id=args.operation_id,
-            expected_revision=args.expected_revision,
-            source_revision=args.source_revision,
-            receipt_path=args.receipt,
-            reason=args.reason,
-        )
+    if args.workflow_command in {"run-start", "authorize", "authorization-renew"}:
+        return _dispatch_execution_grant(args, state_path)
     if args.workflow_command in {"external-pause", "pause-external"}:
         return pause_for_external_action(
             state_path,
@@ -369,11 +382,11 @@ def _dispatch_task_snapshot(args: argparse.Namespace, state_path: Path) -> dict[
             "phase-packet-required-fact-missing",
             "task snapshot phase packet requires --manifest, --lock, --phase-packet-purpose and --phase-packet-out",
         )
-    state = read_json_object(state_path, label="workflow state") if packet_requested else None
+    state = load_state(state_path) if packet_requested else None
     task = _state_task(state, args.task) if isinstance(state, dict) else None
     if args.phase_packet_purpose == "TASK_AUDIT" and isinstance(task, dict) and task.get("status") == "VERIFYING":
         assert state is not None
-        payload = _result_bound_task_change_set(state, task)
+        payload = _result_bound_task_change_set(state, task, package_root(state_path, state))
     else:
         payload = build_current_task_change_set(state_path, task_id=args.task)
     if args.out:
@@ -395,8 +408,8 @@ def _dispatch_task_snapshot(args: argparse.Namespace, state_path: Path) -> dict[
     return payload
 
 
-def _result_bound_task_change_set(state: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
-    evidence = task.get("resultChangeSetEvidence")
+def _result_bound_task_change_set(state: dict[str, Any], task: dict[str, Any], root: Path) -> dict[str, Any]:
+    evidence = task_evidence(root, state, task, "resultChangeSetEvidence")
     if not isinstance(evidence, dict):
         raise LifecycleError("phase-packet-required-fact-missing", "task audit result change-set evidence is missing")
     required = ("provider", "baselineSha", "fileSetHash", "diffHash", "snapshotHash")
@@ -424,7 +437,7 @@ def _result_bound_task_change_set(state: dict[str, Any], task: dict[str, Any]) -
 
 
 def _dispatch_validation_select(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:
-    state = read_json_object(state_path, label="workflow state")
+    state = load_state(state_path)
     task = _state_task(state, args.task)
     snapshot = read_json_object(Path(args.snapshot), label="task snapshot")
     if snapshot.get("taskId") != task.get("id"):

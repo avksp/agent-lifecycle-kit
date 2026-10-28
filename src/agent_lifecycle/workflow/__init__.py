@@ -1,6 +1,6 @@
 """Durable workflow controller primitives."""
 
-from agent_lifecycle.workflow.authorization import authorize_execution
+from agent_lifecycle.workflow.authorization import authorize_execution, renew_execution_authorization
 from agent_lifecycle.workflow.bug_forensics_gates import (
     bug_forensics_activated,
     build_bug_forensics_gate_receipt,
@@ -90,6 +90,7 @@ __all__ = [
     "pause_for_budget_decision",
     "pause_for_external_action",
     "proof_integrity_required",
+    "renew_execution_authorization",
     "require_bug_forensics_gate_pass",
     "require_task_sandbox_evidence_pass",
     "require_worker_lease_receipt_pass",

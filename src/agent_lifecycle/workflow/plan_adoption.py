@@ -551,6 +551,7 @@ def _copy_accepted_runtime(
         "controllerGateReceipts",
         "remediationFindingIds",
         "ownershipReceipt",
+        "resultChangeSetEvidence",
         "implementationAuditReport",
         "lastReason",
         "immutableInputAdmission",

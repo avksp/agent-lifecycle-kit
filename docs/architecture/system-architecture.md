@@ -16,6 +16,25 @@ on how the pieces work together for common operator flows.
 
 ## Current control owners and limits
 
+Workflow v5 storage uses one lower service in `contracts/workflow_storage.py`,
+with schema, operation-context and contained I/O modules beside it. The shared
+`contracts/workflow_state_authority.py` reader validates actual compact v4/v5
+authority and its complete reachable graph. Workflow storage modules remain
+compatibility facades. The workflow transaction/kernel composes preflight,
+observer/policy writes and publication with that same operation context.
+Accounting consumes this lower reader after its own journal/source/event-prefix
+checks; it does not import workflow to parse storage. Metrics bind the actual
+compact authority bytes. No accounting-to-workflow dependency or second parser
+is introduced. The current dependency/acyclic and complexity policies remain.
+
+Explicit migration preserves execution grants, clocks and costs; initialization
+remains v4. Explicit same-run authorization renewal is a separate guarded
+transition and changes only authorization expiry. Neither operation provides
+host enforcement or relaxes existing journal/DECLARED-ledger restrictions.
+See [workflow state storage and recovery](../reference/workflow-state-storage.md)
+for graph/capacity limits, Git exclusions, partial-write recovery and the separate
+scope of fixture, isolated application and live evidence.
+
 The [security control map](../security/release-security.md) separates runtime
 controls, CI guards, optional analysis and host qualification. Release-numbered
 sections below are historical design context, not current release proof.

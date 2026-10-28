@@ -20,13 +20,17 @@ from agent_lifecycle.contracts.workflow_authority import (
     verify_signed_authority_snapshot,
 )
 from agent_lifecycle.contracts.workflow_authority_schemas import validate_bootstrap_pin, validate_run_output_anchor
+from agent_lifecycle.contracts.workflow_state_authority import (
+    decode_workflow_authority,
+    validate_workflow_authority,
+)
 from agent_lifecycle.contracts.workflow_state_schemas import (
-    WORKFLOW_STATE_V4,
+    has_current_workflow_semantics,
     validate_adoption_input,
     validate_adoption_selection,
     validate_runtime_binding,
-    validate_workflow_state,
 )
+from agent_lifecycle.contracts.workflow_storage_context import StorageOperation
 
 from .contracts import JournalUnavailable, canonical, digest
 
@@ -357,10 +361,17 @@ def _validate_v6_storage_receipt(db: sqlite3.Connection) -> None:
         raise JournalUnavailable("V6 schema differs from migration receipt")
 
 
-def validate_legacy_adoption_history(state: dict, events: list[dict]) -> dict:
+def validate_legacy_adoption_history(
+    state: dict,
+    events: list[dict],
+    *,
+    root: Path | None = None,
+    state_path: Path | None = None,
+    operation: StorageOperation | None = None,
+) -> dict:
     """Refuse split or incomplete legacy history before any Journal adoption write."""
-    validate_workflow_state(state)
-    if state["schemaVersion"] != WORKFLOW_STATE_V4:
+    validate_workflow_authority(state, root=root, state_path=state_path, operation=operation)
+    if not has_current_workflow_semantics(state):
         raise LifecycleError("workflow-adoption-invalid", "Legacy state must complete explicit v4 migration")
     if type(events) is not list:
         raise LifecycleError("workflow-adoption-invalid", "Complete ordered event history is required")
@@ -369,48 +380,9 @@ def validate_legacy_adoption_history(state: dict, events: list[dict]) -> dict:
     if len(events) != revision - 1 or len(ledger) != len(events):
         raise LifecycleError("workflow-adoption-invalid", "Event and operation history are incomplete")
     seen: set[str] = set()
-    fields = {
-        "schemaVersion",
-        "runId",
-        "packageId",
-        "stateRevision",
-        "operationId",
-        "eventType",
-        "payload",
-        "recordedAt",
-    }
     for expected_revision, event in enumerate(events, start=2):
-        if type(event) is not dict or set(event) != fields:
-            raise LifecycleError("workflow-adoption-invalid", "Legacy event has missing or unknown fields")
-        operation_id = event["operationId"]
-        if (
-            event["schemaVersion"] != "agent-workflow-event.v1"
-            or event["runId"] != state["runId"]
-            or event["packageId"] != state["packageId"]
-            or type(event["stateRevision"]) is not int
-            or event["stateRevision"] != expected_revision
-            or type(operation_id) is not str
-            or not 1 <= len(operation_id) <= 256
-            or operation_id in seen
-            or type(event["eventType"]) is not str
-            or not event["eventType"]
-            or type(event["payload"]) is not dict
-            or type(event["recordedAt"]) is not str
-            or not event["recordedAt"]
-        ):
-            raise LifecycleError("workflow-adoption-invalid", "Legacy event identity or order differs")
-        entry = ledger.get(operation_id)
-        if (
-            type(entry) is not dict
-            or set(entry) != {"stateRevision", "eventType", "recordedAt"}
-            or type(entry["stateRevision"]) is not int
-            or entry["stateRevision"] != expected_revision
-            or entry["eventType"] != event["eventType"]
-            or type(entry["recordedAt"]) is not str
-            or not entry["recordedAt"]
-            or entry["recordedAt"] != event["recordedAt"]
-        ):
-            raise LifecycleError("workflow-adoption-invalid", "Operation ledger differs from event history")
+        operation_id = _require_legacy_event_identity(event, state, expected_revision, seen)
+        _require_legacy_ledger_entry(ledger.get(operation_id), event, expected_revision)
         seen.add(operation_id)
     return {
         "schemaVersion": "agent-workflow-legacy-history-check.v1",
@@ -423,6 +395,53 @@ def validate_legacy_adoption_history(state: dict, events: list[dict]) -> dict:
         "accountingHistoryQualified": False,
         "nativePermissionGranted": False,
     }
+
+
+def _require_legacy_event_identity(event: dict, state: dict, expected_revision: int, seen: set[str]) -> str:
+    fields = {
+        "schemaVersion",
+        "runId",
+        "packageId",
+        "stateRevision",
+        "operationId",
+        "eventType",
+        "payload",
+        "recordedAt",
+    }
+    if type(event) is not dict or set(event) != fields:
+        raise LifecycleError("workflow-adoption-invalid", "Legacy event has missing or unknown fields")
+    operation_id = event["operationId"]
+    if (
+        event["schemaVersion"] != "agent-workflow-event.v1"
+        or event["runId"] != state["runId"]
+        or event["packageId"] != state["packageId"]
+        or type(event["stateRevision"]) is not int
+        or event["stateRevision"] != expected_revision
+        or type(operation_id) is not str
+        or not 1 <= len(operation_id) <= 256
+        or operation_id in seen
+        or type(event["eventType"]) is not str
+        or not event["eventType"]
+        or type(event["payload"]) is not dict
+        or type(event["recordedAt"]) is not str
+        or not event["recordedAt"]
+    ):
+        raise LifecycleError("workflow-adoption-invalid", "Legacy event identity or order differs")
+    return operation_id
+
+
+def _require_legacy_ledger_entry(entry: object, event: dict, expected_revision: int) -> None:
+    if (
+        type(entry) is not dict
+        or set(entry) != {"stateRevision", "eventType", "recordedAt"}
+        or type(entry["stateRevision"]) is not int
+        or entry["stateRevision"] != expected_revision
+        or entry["eventType"] != event["eventType"]
+        or type(entry["recordedAt"]) is not str
+        or not entry["recordedAt"]
+        or entry["recordedAt"] != event["recordedAt"]
+    ):
+        raise LifecycleError("workflow-adoption-invalid", "Operation ledger differs from event history")
 
 
 def _adoption_artifact(root: Path, ref: dict) -> bytes:
@@ -459,10 +478,10 @@ def prepare_legacy_adoption_candidate(
         binding["canonicalStatePath"], label="bound state"
     ):
         raise LifecycleError("workflow-adoption-invalid", "Legacy state path differs from binding")
-    state = load_json_object(_adoption_artifact(root, state_ref), label="legacy workflow state")
-    validate_workflow_state(state)
+    state_raw = _adoption_artifact(root, state_ref)
+    state = load_json_object(state_raw, label="legacy workflow state")
     if (
-        state["schemaVersion"] != WORKFLOW_STATE_V4
+        not has_current_workflow_semantics(state)
         or state["runId"] != binding["runId"]
         or state["packageId"] != binding["packageId"]
         or state.get("planDigest") != binding["planDigest"]
@@ -471,31 +490,12 @@ def prepare_legacy_adoption_candidate(
         raise LifecycleError("workflow-adoption-invalid", "Legacy state identity differs from binding")
     state_path = root / state_ref["path"]
     anchor = resolve_authority_anchor(state_path, state.get("packageRoot", "."), root=root)
-    event_path = anchor / normalize_repo_path(state["eventLog"], label="legacy event log")
-    try:
-        event_relative = event_path.relative_to(root).as_posix()
-    except ValueError:
-        raise LifecycleError("workflow-adoption-invalid", "Legacy event log escapes selected root") from None
-    event_ref = adoption_input["legacyEventLogRef"]
-    if event_ref is None:
-        if state["stateRevision"] != 1 or state["operationLedger"]:
-            raise LifecycleError("workflow-adoption-invalid", "Missing legacy event prefix")
-        try:
-            read_authority_bytes(root / event_relative, max_bytes=8_388_608, root=root)
-        except FileNotFoundError:
-            event_raw = b""
-        else:
-            raise LifecycleError("workflow-adoption-invalid", "Existing event log requires an exact ref")
-    else:
-        if normalize_repo_path(event_ref["path"], label="event ref") != event_relative:
-            raise LifecycleError("workflow-adoption-invalid", "Legacy event path differs from state")
-        event_raw = _adoption_artifact(root, event_ref)
-    events = []
-    for line in event_raw.splitlines():
-        if not line.strip():
-            raise LifecycleError("workflow-adoption-invalid", "Blank legacy event line")
-        events.append(load_json_object(line, label="legacy event"))
-    history = validate_legacy_adoption_history(state, events)
+    events = _read_adoption_events(root, anchor, state, adoption_input)
+    with StorageOperation(anchor, state_path=state_path, run_id=state["runId"]) as operation:
+        state = decode_workflow_authority(state_raw, root=anchor, state_path=state_path, operation=operation)
+        history = validate_legacy_adoption_history(
+            state, events, root=anchor, state_path=state_path, operation=operation
+        )
     snapshot_raw = _adoption_artifact(root, adoption_input["initialSnapshotRef"])
     if len(snapshot_raw) > 1_048_576:
         raise LifecycleError("workflow-adoption-invalid", "Initial snapshot exceeds authority byte limit")
@@ -539,6 +539,34 @@ def prepare_legacy_adoption_candidate(
         "financialAdmission": False,
         "nativePermissionGranted": False,
     }
+
+
+def _read_adoption_events(root: Path, anchor: Path, state: dict, adoption_input: dict) -> list[dict]:
+    event_path = anchor / normalize_repo_path(state["eventLog"], label="legacy event log")
+    try:
+        event_relative = event_path.relative_to(root).as_posix()
+    except ValueError:
+        raise LifecycleError("workflow-adoption-invalid", "Legacy event log escapes selected root") from None
+    event_ref = adoption_input["legacyEventLogRef"]
+    if event_ref is None:
+        if state["stateRevision"] != 1 or state["operationLedger"]:
+            raise LifecycleError("workflow-adoption-invalid", "Missing legacy event prefix")
+        try:
+            read_authority_bytes(root / event_relative, max_bytes=8_388_608, root=root)
+        except FileNotFoundError:
+            event_raw = b""
+        else:
+            raise LifecycleError("workflow-adoption-invalid", "Existing event log requires an exact ref")
+    else:
+        if normalize_repo_path(event_ref["path"], label="event ref") != event_relative:
+            raise LifecycleError("workflow-adoption-invalid", "Legacy event path differs from state")
+        event_raw = _adoption_artifact(root, event_ref)
+    events = []
+    for line in event_raw.splitlines():
+        if not line.strip():
+            raise LifecycleError("workflow-adoption-invalid", "Blank legacy event line")
+        events.append(load_json_object(line, label="legacy event"))
+    return events
 
 
 def _loaded_root(db: sqlite3.Connection, binding: dict, binding_digest: str) -> dict:
