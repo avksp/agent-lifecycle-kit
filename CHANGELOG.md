@@ -4,6 +4,20 @@
 
 - No changes yet.
 
+## 2.31.0 - 2026-10-29
+
+- Extend bounded tracked-text secret checks to supported UTF-8/BOM and UTF-16 BOM
+  text, shared static credential categories, and exact harmless fixture exceptions.
+  Refuse malformed or oversize supported text without echoing credential values.
+- Add a global branch coverage floor and four critical-file line/branch floors.
+  Validate report versions, complete file inventories, and consistent counters;
+  preserve existing statement/combined floors and historical policy semantics.
+- Validate legacy state structure before mandatory identity fields are read.
+  Keep later authority/history checks and read-only preparation; preserve costs,
+  unknown usage, clocks and expired authorization without granting permission.
+- Update paired documentation and release evidence. Existing platform, security,
+  independent review, native completion and publication gates remain required.
+
 ## 2.30.0 - 2026-10-28
 
 - Add explicit v4-to-v5 workflow state migration. Keep full history in bounded,

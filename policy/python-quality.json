@@ -1,6 +1,6 @@
 {
   "schemaVersion": "agent-python-quality-policy.v1",
-  "revision": 5,
+  "revision": 6,
   "toolchain": {
     "ruff": "0.17.1",
     "mypy": "2.4.0",
@@ -3321,6 +3321,25 @@
       "branchCovered": 7254,
       "branchTotal": 11144,
       "combinedPercent": 76.6715
+    },
+    "minimumBranchPercent": 71,
+    "criticalFileFloors": {
+      "src/agent_lifecycle/contracts/authority_io.py": {
+        "minimumBranchPercent": 56,
+        "minimumStatementLinePercent": 72
+      },
+      "src/agent_lifecycle/contracts/workflow_state_authority.py": {
+        "minimumBranchPercent": 71,
+        "minimumStatementLinePercent": 85
+      },
+      "src/agent_lifecycle/workflow/implementation_audit_gate.py": {
+        "minimumBranchPercent": 65,
+        "minimumStatementLinePercent": 80
+      },
+      "src/agent_lifecycle/workflow/state.py": {
+        "minimumBranchPercent": 81,
+        "minimumStatementLinePercent": 88
+      }
     }
   },
   "limits": {

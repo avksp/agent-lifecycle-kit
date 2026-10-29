@@ -29,6 +29,7 @@ from agent_lifecycle.contracts.workflow_state_schemas import (
     validate_adoption_input,
     validate_adoption_selection,
     validate_runtime_binding,
+    validate_workflow_state,
 )
 from agent_lifecycle.contracts.workflow_storage_context import StorageOperation
 
@@ -480,6 +481,7 @@ def prepare_legacy_adoption_candidate(
         raise LifecycleError("workflow-adoption-invalid", "Legacy state path differs from binding")
     state_raw = _adoption_artifact(root, state_ref)
     state = load_json_object(state_raw, label="legacy workflow state")
+    validate_workflow_state(state)
     if (
         not has_current_workflow_semantics(state)
         or state["runId"] != binding["runId"]

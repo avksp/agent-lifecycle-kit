@@ -1,5 +1,8 @@
 # Agent Lifecycle Kit documentation
 
+Release 2.31 strengthens supported-text secret checks, enforces global branch and critical-file coverage floors, and gives a bounded structural refusal for malformed legacy state. See [the 2.31 check boundaries](reference/cli.md#release-231-bounded-quality-checks).
+
+
 Release 2.30 adds [bounded workflow history and recovery](reference/workflow-state-storage.md)
 and [explicit authorization renewal](reference/cli.md#workflow-history-and-authorization-renewal-in-230).
 The plugin supplies skills and documents; the Python package supplies the CLI.
@@ -46,7 +49,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.30.0` from
+  `python -m pip install agent-lifecycle-kit==2.31.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

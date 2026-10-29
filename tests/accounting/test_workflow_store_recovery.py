@@ -23,6 +23,8 @@ from agent_lifecycle.accounting.workflow_state_store import (
 from agent_lifecycle.contracts import LifecycleError
 from agent_lifecycle.contracts.canonical import canonical_digest
 from agent_lifecycle.contracts.workflow_authority_schemas import AUTHORITY_SNAPSHOT_V1
+from agent_lifecycle.contracts.workflow_storage import persist_storage, prepare_storage
+from agent_lifecycle.workflow.state import require_current_authorization
 from tests.contracts.test_workflow_authority import _issuer, _pin, _signed
 
 from .test_journal import operation as make_operation
@@ -31,11 +33,19 @@ from .test_opening_balances import import_data
 
 def _state() -> dict:
     return {
-        "schemaVersion": "agent-workflow-state.v4", "runId": "run", "packageId": "package",
-        "planRevision": 1, "planDigest": "a" * 64, "sourceRevision": "source", "stateRevision": 1,
-        "phase": "RUNNING", "eventLog": "events.jsonl", "operationLedger": {},
-        "tasks": [{"id": "WS-01", "status": "READY", "attempt": 0, "dependsOn": [],
-                   "attemptHistory": [], "required": True}],
+        "schemaVersion": "agent-workflow-state.v4",
+        "runId": "run",
+        "packageId": "package",
+        "planRevision": 1,
+        "planDigest": "a" * 64,
+        "sourceRevision": "source",
+        "stateRevision": 1,
+        "phase": "RUNNING",
+        "eventLog": "events.jsonl",
+        "operationLedger": {},
+        "tasks": [
+            {"id": "WS-01", "status": "READY", "attempt": 0, "dependsOn": [], "attemptHistory": [], "required": True}
+        ],
     }
 
 
@@ -50,27 +60,49 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
     @classmethod
     def _candidate_fixture(cls, root: Path) -> tuple[dict, dict]:
         qualification = cls._artifact(root, "proof/qualification.json", b"operator evidence")
-        snapshot = _signed({
-            "schemaVersion": AUTHORITY_SNAPSHOT_V1, "authorityDomain": "authority:run",
-            "rootId": "root", "rootGeneration": "generation:1", "bindingId": "binding",
-            "journalIdentity": "journal", "epoch": 0, "previousSnapshotDigest": None,
-            "validFrom": "2020-01-01T00:00:00.000000Z", "expiresAt": "2100-01-01T00:00:00.000000Z",
-            "activeIssuers": [_issuer()], "revokedIssuers": [], "revokedGrants": [],
-        }, bytes(range(32)), b"agent-lifecycle-workflow-authority-snapshot-v1\x00")
-        pin = {**_pin(), "qualificationRef": qualification,
-               "expectedInitialSnapshotDigest": canonical_digest(snapshot)}
+        snapshot = _signed(
+            {
+                "schemaVersion": AUTHORITY_SNAPSHOT_V1,
+                "authorityDomain": "authority:run",
+                "rootId": "root",
+                "rootGeneration": "generation:1",
+                "bindingId": "binding",
+                "journalIdentity": "journal",
+                "epoch": 0,
+                "previousSnapshotDigest": None,
+                "validFrom": "2020-01-01T00:00:00.000000Z",
+                "expiresAt": "2100-01-01T00:00:00.000000Z",
+                "activeIssuers": [_issuer()],
+                "revokedIssuers": [],
+                "revokedGrants": [],
+            },
+            bytes(range(32)),
+            b"agent-lifecycle-workflow-authority-snapshot-v1\x00",
+        )
+        pin = {**_pin(), "qualificationRef": qualification, "expectedInitialSnapshotDigest": canonical_digest(snapshot)}
         pin_ref = cls._artifact(root, "pin.json", canonical(pin).encode("utf-8"))
         binding = {
-            "schemaVersion": "agent-workflow-journal-binding.v1", "bindingId": "binding", "runId": "run",
-            "packageId": "package", "budgetScopeId": "budget:run", "canonicalStatePath": "state.json",
-            "journalPath": str(root / "journal.db"), "journalIdentity": "journal",
-            "storageProtocolVersion": "5", "workflowProtocolVersion": "1", "planDigest": "a" * 64,
-            "sourceRevision": "source", "adoptionEpoch": "epoch-1", "authorityMode": "JOURNAL_REQUIRED",
-            "workflowAuthorityPinRef": pin_ref, "resourceInventoryRef": qualification,
+            "schemaVersion": "agent-workflow-journal-binding.v1",
+            "bindingId": "binding",
+            "runId": "run",
+            "packageId": "package",
+            "budgetScopeId": "budget:run",
+            "canonicalStatePath": "state.json",
+            "journalPath": str(root / "journal.db"),
+            "journalIdentity": "journal",
+            "storageProtocolVersion": "5",
+            "workflowProtocolVersion": "1",
+            "planDigest": "a" * 64,
+            "sourceRevision": "source",
+            "adoptionEpoch": "epoch-1",
+            "authorityMode": "JOURNAL_REQUIRED",
+            "workflowAuthorityPinRef": pin_ref,
+            "resourceInventoryRef": qualification,
             "deadlineInventoryRef": qualification,
         }
         adoption = {
-            "schemaVersion": "agent-workflow-adoption-input.v1", "operationId": "adopt-1",
+            "schemaVersion": "agent-workflow-adoption-input.v1",
+            "operationId": "adopt-1",
             "bindingRef": cls._artifact(root, "binding.json", canonical(binding).encode("utf-8")),
             "legacyStateRef": cls._artifact(root, "state.json", canonical(_state()).encode("utf-8")),
             "legacyEventLogRef": None,
@@ -79,12 +111,17 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
         }
         selection = {
             "schemaVersion": "agent-workflow-adoption-selection.v1",
-            "expectedBindingDigest": canonical_digest(binding), "expectedPinDigest": canonical_digest(pin),
+            "expectedBindingDigest": canonical_digest(binding),
+            "expectedPinDigest": canonical_digest(pin),
             "expectedInitialSnapshotDigest": canonical_digest(snapshot),
-            "expectedAccountingStateDigest": "f" * 64, "expectedAccountingRevision": 1,
-            "expectedJournalIdentity": "journal", "expectedBudgetScopeId": "budget:run",
-            "expectedStorageProtocolVersion": "5", "expectedWorkflowProtocolVersion": "1",
-            "operatorQualificationRef": qualification, "quiescenceEvidenceRef": qualification,
+            "expectedAccountingStateDigest": "f" * 64,
+            "expectedAccountingRevision": 1,
+            "expectedJournalIdentity": "journal",
+            "expectedBudgetScopeId": "budget:run",
+            "expectedStorageProtocolVersion": "5",
+            "expectedWorkflowProtocolVersion": "1",
+            "operatorQualificationRef": qualification,
+            "quiescenceEvidenceRef": qualification,
             "writerInventoryRef": qualification,
         }
         return adoption, selection
@@ -98,8 +135,13 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
             )
             self.assertEqual(result["status"], "DATA_CANDIDATE")
             self.assertEqual(result["eventCount"], 0)
-            for name in ("operatorQualified", "quiescenceQualified", "accountingHistoryQualified",
-                         "financialAdmission", "nativePermissionGranted"):
+            for name in (
+                "operatorQualified",
+                "quiescenceQualified",
+                "accountingHistoryQualified",
+                "financialAdmission",
+                "nativePermissionGranted",
+            ):
                 self.assertFalse(result[name])
             (root / "events.jsonl").write_bytes(b"")
             with self.assertRaises(LifecycleError):
@@ -107,9 +149,72 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
                     adoption, selection, artifact_root=root, observed_at="2026-09-23T01:00:00.000000Z"
                 )
             adoption["legacyEventLogRef"] = self._artifact(root, "events.jsonl", b"")
-            self.assertEqual(prepare_legacy_adoption_candidate(
-                adoption, selection, artifact_root=root, observed_at="2026-09-23T01:00:00.000000Z"
-            )["eventCount"], 0)
+            self.assertEqual(
+                prepare_legacy_adoption_candidate(
+                    adoption, selection, artifact_root=root, observed_at="2026-09-23T01:00:00.000000Z"
+                )["eventCount"],
+                0,
+            )
+
+    def test_malformed_current_state_refuses_stably_before_identity_dereference(self) -> None:
+        for version in ("v4", "v5"):
+            for field in ("runId", "packageId", "stateRevision", "eventLog"):
+                with self.subTest(version=version, field=field), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    adoption, selection = self._candidate_fixture(root)
+                    state = _state()
+                    if version == "v5":
+                        prepared = prepare_storage(state, storage_root="state.json.storage")
+                        persist_storage(root, prepared)
+                        state = prepared.state
+                    state.pop(field)
+                    adoption["legacyStateRef"] = self._artifact(root, "state.json", canonical(state).encode() + b"\n")
+                    before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                    diagnostics = []
+                    for _ in range(2):
+                        with self.assertRaises(LifecycleError) as caught:
+                            prepare_legacy_adoption_candidate(
+                                adoption, selection, artifact_root=root, observed_at="2026-09-23T01:00:00.000000Z"
+                            )
+                        diagnostics.append((caught.exception.code, str(caught.exception)))
+                        self.assertLess(len(str(caught.exception)), 1000)
+                        self.assertNotIn("Traceback", str(caught.exception))
+                    self.assertEqual(diagnostics[0], diagnostics[1])
+                    after = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                    self.assertEqual(before, after)
+
+    def test_valid_candidate_preserves_expired_authorization_costs_and_clocks(self) -> None:
+        for version in ("v4", "v5"):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                adoption, selection = self._candidate_fixture(root)
+                state = _state()
+                state.update(
+                    runStartedAt="2000-01-01T00:00:00Z",
+                    runDeadlineAt="2001-01-01T00:00:00Z",
+                    authorization={"required": False, "granted": True, "expiresAt": "2001-01-01T00:00:00Z"},
+                    expenses={"inputTokens": None, "outputTokens": None, "usd": None, "unknownHolds": ["fixture-hold"]},
+                )
+                if version == "v5":
+                    prepared = prepare_storage(state, storage_root="state.json.storage")
+                    persist_storage(root, prepared)
+                    state = prepared.state
+                raw = canonical(state).encode() + b"\n"
+                adoption["legacyStateRef"] = self._artifact(root, "state.json", raw)
+                before = {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                candidate = prepare_legacy_adoption_candidate(
+                    adoption, selection, artifact_root=root, observed_at="2026-09-23T01:00:00.000000Z"
+                )
+                self.assertEqual("DATA_CANDIDATE", candidate["status"])
+                self.assertFalse(candidate["nativePermissionGranted"])
+                self.assertFalse(candidate["financialAdmission"])
+                self.assertEqual(raw, (root / "state.json").read_bytes())
+                self.assertEqual(
+                    before, {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+                )
+                with self.assertRaises(LifecycleError) as caught:
+                    require_current_authorization(state)
+                self.assertEqual("authorization-expired", caught.exception.code)
 
     def test_changed_artifact_or_self_selected_pin_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -123,7 +228,9 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
             adoption["legacyStateRef"] = self._artifact(root, "state.json", canonical(_state()).encode("utf-8"))
             with self.assertRaises(LifecycleError):
                 prepare_legacy_adoption_candidate(
-                    adoption, {**selection, "expectedPinDigest": "0" * 64}, artifact_root=root,
+                    adoption,
+                    {**selection, "expectedPinDigest": "0" * 64},
+                    artifact_root=root,
                     observed_at="2026-09-23T01:00:00.000000Z",
                 )
             snapshot_raw = (root / "snapshot.json").read_bytes() + b" " * 1_048_576
@@ -165,10 +272,13 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
                 self.assertEqual(journal.import_opening(scope, policy, opening).status, "IMPORTED")
                 store = WorkflowStore(journal, binding, canonical_digest(binding))
                 state, revision = journal._load("budget:run")
-                selected = {**selection, "expectedBindingDigest": canonical_digest(binding),
-                            "expectedJournalIdentity": journal.journal_identity,
-                            "expectedAccountingStateDigest": digest(state),
-                            "expectedAccountingRevision": revision}
+                selected = {
+                    **selection,
+                    "expectedBindingDigest": canonical_digest(binding),
+                    "expectedJournalIdentity": journal.journal_identity,
+                    "expectedAccountingStateDigest": digest(state),
+                    "expectedAccountingRevision": revision,
+                }
                 result = store.read_adoption_accounting_candidate(selected)
                 self.assertEqual(result["stateDigest"], digest(state))
                 self.assertEqual(result["knownSpent"], 0)
@@ -180,8 +290,11 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
                 with self.assertRaises(JournalUnavailable):
                     store.read_adoption_accounting_candidate(selected)
                 current, current_revision = journal._load("budget:run")
-                selected = {**selected, "expectedAccountingStateDigest": digest(current),
-                            "expectedAccountingRevision": current_revision}
+                selected = {
+                    **selected,
+                    "expectedAccountingStateDigest": digest(current),
+                    "expectedAccountingRevision": current_revision,
+                }
                 self.assertEqual(store.read_adoption_accounting_candidate(selected)["activeReservations"], 100)
                 with self.assertRaises(JournalUnavailable):
                     store.read_adoption_accounting_candidate({**selected, "expectedAccountingStateDigest": "0" * 64})
@@ -192,13 +305,19 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
         state["stateRevision"] = 3
         events = []
         for revision, operation in ((2, "first"), (3, "second")):
-            event = {"schemaVersion": "agent-workflow-event.v1", "runId": "run",
-                     "packageId": "package", "stateRevision": revision,
-                     "operationId": operation, "eventType": "task-updated",
-                     "payload": {"taskId": "WS-01"},
-                     "recordedAt": "2026-09-23T01:00:00.000000Z"}
+            event = {
+                "schemaVersion": "agent-workflow-event.v1",
+                "runId": "run",
+                "packageId": "package",
+                "stateRevision": revision,
+                "operationId": operation,
+                "eventType": "task-updated",
+                "payload": {"taskId": "WS-01"},
+                "recordedAt": "2026-09-23T01:00:00.000000Z",
+            }
             state["operationLedger"][operation] = {
-                "stateRevision": revision, "eventType": event["eventType"],
+                "stateRevision": revision,
+                "eventType": event["eventType"],
                 "recordedAt": "2026-09-23T01:00:00.000000Z",
             }
             events.append(event)
@@ -224,12 +343,26 @@ class LegacyAdoptionHistoryTests(unittest.TestCase):
             (state, [events[0], {**events[1], "runId": "other"}]),
             (state, [events[0], {**events[1], "unexpected": True}]),
             ({**state, "operationLedger": {"first": state["operationLedger"]["first"]}}, events),
-            ({**state, "operationLedger": {**state["operationLedger"],
-                                            "second": {**state["operationLedger"]["second"],
-                                                       "eventType": "different"}}}, events),
-            ({**state, "operationLedger": {**state["operationLedger"],
-                                            "second": {**state["operationLedger"]["second"],
-                                                       "recordedAt": "2026-09-23T02:00:00.000000Z"}}}, events),
+            (
+                {
+                    **state,
+                    "operationLedger": {
+                        **state["operationLedger"],
+                        "second": {**state["operationLedger"]["second"], "eventType": "different"},
+                    },
+                },
+                events,
+            ),
+            (
+                {
+                    **state,
+                    "operationLedger": {
+                        **state["operationLedger"],
+                        "second": {**state["operationLedger"]["second"], "recordedAt": "2026-09-23T02:00:00.000000Z"},
+                    },
+                },
+                events,
+            ),
         ]
         for selected_state, selected_events in variants:
             with self.subTest(state=selected_state, events=selected_events), self.assertRaises(LifecycleError):
