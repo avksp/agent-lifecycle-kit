@@ -8,7 +8,7 @@
       "id": "expired-authorization",
       "kind": "negative",
       "input": {
-        "authorization": "EXPIRED"
+        "grantState": "EXPIRED"
       },
       "expectedDecision": "STOP",
       "invariants": [
