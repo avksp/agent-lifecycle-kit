@@ -46,7 +46,7 @@ def generate_lifecycle_cost_report(
         entries.append(_entry_from_artifact(len(entries), source, payload))
         payloads.append(payload)
 
-    report = {
+    report: dict[str, Any] = {
         "schemaVersion": COST_REPORT_SCHEMA,
         "mode": mode,
         "generatedBy": "agent-lifecycle metrics cost-report",

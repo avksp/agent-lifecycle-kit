@@ -218,7 +218,14 @@ def observe_process_costs(entries: list[Any]) -> dict[str, Any]:
         if not isinstance(entry, dict) or entry.get("category") not in COST_CATEGORIES:
             continue
         tokens, steps = entry.get("tokens"), entry.get("steps")
-        if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in (tokens, steps)):
+        if (
+            not isinstance(tokens, int)
+            or isinstance(tokens, bool)
+            or tokens < 0
+            or not isinstance(steps, int)
+            or isinstance(steps, bool)
+            or steps < 0
+        ):
             continue
         if tokens == 0 and steps == 0:
             continue
