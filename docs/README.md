@@ -1,5 +1,21 @@
 # Agent Lifecycle Kit documentation
 
+Release 2.32 adds a shared advisory observation of process costs, paired EN/RU
+manual checks, and shorter reading routes for eight selected stage cases. Process
+means pipeline compliance plus coordination; useful work means implementation
+plus product validation. Reported and confirmed subtotals retain their scope
+and confidence. An attested subset does not establish whole-run completeness.
+Missing whole-run shares and provider usage stay null/UNAVAILABLE. Existing
+pipeline verdicts, limits and lifecycle authority retain their meaning.
+
+The fixed source-reading comparison reduces plan authoring from 25,643 to
+23,570 UTF-8 bytes (8.084%) and defect repair from 26,247 to 24,174 (7.898%).
+Both miss the 10% engineering target. All seven complete role contracts and
+skill routers are unchanged. These are selected-stage source bytes, not whole
+host input or measured token/model savings. A fixed local comparison reduces
+CLI/facade calls from two to one with identical state/event bytes; its wall time
+can be higher. See [the CLI release notes](reference/cli.md#release-232-process-observations-and-reading-scope) for scope and refusal boundaries.
+
 Release 2.31 strengthens supported-text secret checks, enforces global branch and critical-file coverage floors, and gives a bounded structural refusal for malformed legacy state. See [the 2.31 check boundaries](reference/cli.md#release-231-bounded-quality-checks).
 
 
@@ -49,7 +65,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.31.0` from
+  `python -m pip install agent-lifecycle-kit==2.32.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

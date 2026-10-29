@@ -8,6 +8,59 @@ from typing import Any
 
 from release_common import file_identity, write_json
 
+# Maintained manuals only; historical receipts and release evidence are not manuals.
+# Alternatives name actual supported locations, not a recursive filename heuristic.
+MANUAL_PAIRS = (
+    ("docs/architecture/modular-controller.md", ("docs/ru/architecture/modular-controller.md",)),
+    ("docs/architecture/release-architecture.md", ("docs/ru/architecture/release-architecture.md",)),
+    ("docs/architecture/runner-extension-map.md", ("docs/ru/architecture/runner-extension-map.md",)),
+    ("docs/architecture/runner-transition-contract.md", ("docs/ru/architecture/runner-transition-contract.md",)),
+    ("docs/architecture/system-architecture.md", ("docs/ru/architecture/system-architecture.md",)),
+    ("docs/guides/budget-reroute-policy.md", ("docs/ru/guides/budget-reroute-policy.md",)),
+    (
+        "docs/guides/code-review-workflows.md",
+        ("docs/ru/guides/code-review-workflows.md", "docs/ru/code-review-workflows.md"),
+    ),
+    ("docs/guides/controlled-technical-english.md", ("docs/ru/guides/controlled-technical-english.md",)),
+    ("docs/guides/how-alk-works.md", ("docs/ru/guides/how-alk-works.md",)),
+    ("docs/guides/lifecycle-cookbook.md", ("docs/ru/guides/lifecycle-cookbook.md", "docs/ru/lifecycle-cookbook.md")),
+    ("docs/guides/verified-adapter-release-checklist.md", ("docs/ru/guides/verified-adapter-release-checklist.md",)),
+    ("docs/operations/retention-maintenance.md", ("docs/ru/operations/retention-maintenance.md",)),
+    ("docs/reference/lifecycle-cost.md", ("docs/ru/reference/lifecycle-cost.md",)),
+    ("docs/reference/review-efficiency.md", ("docs/ru/reference/review-efficiency.md",)),
+    ("docs/reference/validation-ladder.md", ("docs/ru/reference/validation-ladder.md",)),
+)
+
+# Finite known contradictions, including the exact QR09 single-document regression.
+# These checks do not prove arbitrary paraphrases or model/host behavior.
+KNOWN_INSTRUCTION_CONTRADICTIONS = (
+    "If telemetry is unavailable, replace the missing cost with zero and report it as measured.",
+    "Если телеметрия недоступна, замените отсутствующую стоимость нулём и сообщите её как измеренную.",
+    "A compact worker is automatically qualified for critical review.",
+    "Packet bytes prove the full host input fits.",
+    "If local-only review is unavailable, silently fall back to cloud.",
+    "A changed model, host or configuration never needs qualification refresh.",
+    "Компактный worker автоматически квалифицирован для critical review.",
+    "Байты packet доказывают, что полный host input помещается.",
+    "Если local-only review недоступен, молча переключитесь на cloud.",
+    "Изменение model, host или configuration никогда не требует обновить qualification.",
+)
+
+
+def validate_manual_pairs(root: Path) -> list[dict[str, Any]]:
+    blockers = []
+    for english, russian in MANUAL_PAIRS:
+        for alternatives in ((english,), russian):
+            if not any((root / p).is_file() and not (root / p).is_symlink() for p in alternatives):
+                blockers.append({"code": "required-manual-missing", "alternatives": list(alternatives)})
+    return blockers
+
+
+def instruction_contradictions(text: str) -> list[str]:
+    normalized = " ".join(text.split()).casefold()
+    return [clause for clause in KNOWN_INSTRUCTION_CONTRADICTIONS if clause.casefold() in normalized]
+
+
 DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "README.md",
@@ -1239,11 +1292,11 @@ DOC_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         "docs/ru/lifecycle-cookbook.md",
         (
             "Исследование и планирование",
-            "Проверка папки с Markdown-планом",
+            "Проверка папки \u0441 Markdown-планом",
             "Проверка изменений кода",
             "Аудит подтверждений реализации",
             "Согласованная перепроверка",
-            "Запуск с учётом риска",
+            "Запуск \u0441 учётом риска",
             "agent-lifecycle start",
             "agent-lifecycle import plan",
             "review-mesh recommend",
@@ -2027,7 +2080,7 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(args.root)
-    blockers: list[dict[str, Any]] = []
+    blockers: list[dict[str, Any]] = validate_manual_pairs(root)
     checks: list[dict[str, Any]] = []
     verified_doc_hosts = LEGACY_VERIFIED_DOC_HOSTS | _verified_doc_hosts_from_evidence_index(root, blockers)
 
@@ -2084,6 +2137,9 @@ def _check_doc(
         blockers.append(
             {"code": "docs-compat-required-text-missing", "message": f"{relative} missing: {', '.join(missing)}"}
         )
+        check["status"] = "FAIL"
+    for contradiction in instruction_contradictions(text):
+        blockers.append({"code": "docs-known-instruction-contradiction", "path": relative, "clause": contradiction})
         check["status"] = "FAIL"
     if _contains_overclaim(relative, text, blockers, verified_doc_hosts):
         check["status"] = "FAIL"

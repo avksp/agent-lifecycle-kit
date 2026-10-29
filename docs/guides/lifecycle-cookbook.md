@@ -1,52 +1,49 @@
 # Lifecycle task scenarios
 
+Raw input stays draft-only until reviewed authority permits execution.
+
 ## Canonical execution route
 
-For implementation work, use `workflow continue` when the exact next transition
-is not already known: project first, then explicitly apply the same action with
-its revision and digest guards. Direct `workflow task-*` commands remain the
-state transition surface for callers that already know the route. See
-[Workflow continuation](../reference/workflow-continuation.md).
-For a predeclared deterministic sequence, use its `--until-blocked --apply`
-mode with an explicit bundle and positive transition/I/O caps; ALK still stops
-before any model, host, reviewer, operator or plan-authority action. The legacy
-`runner` commands are compatibility journals only; they are deprecated and
-cannot authorize, accept or finalize work. A runner receipt must be treated as
-evidence to attach to workflow state, never as a replacement for a workflow
-transition.
+If the route is known, call it directly with bound arguments, for example:
+`agent-lifecycle start --adapter codex --mode research --file work/tasks/research.md --out work/tasks/research-start.json`.
+For an unknown implementation transition, project `workflow continue` first;
+apply only its exact revision/action digest. Read [Workflow continuation](../reference/workflow-continuation.md)
+when using that route. Existing `--until-blocked --apply` needs a ready explicit
+bundle and positive transition/I/O caps; it stops before model, host, reviewer,
+operator or plan-authority work. Direct `workflow task-*` remains valid.
+Legacy `runner` receipts are read-only compatibility journals, never authority
+to authorize, accept or finalize; attach evidence to workflow instead.
 
-Use these lifecycle task scenarios when you know the kind of work you want, but do not want to
-assemble the lower-level ALK commands from scratch. Every recipe keeps raw
-input draft-only until a reviewed plan or run request explicitly authorizes
-execution.
+Run fast feedback before mandatory acceptance checks and the full quality floor.
+`FULL_REQUIRED` requests repair/plan review, not a whole-repository audit.
+For an unchanged external `WAITING` blocker, save handoff and wait for its event;
+do not relaunch a model, repeat discovery or rerun an unchanged successful check.
 
 ## Choose a recipe
 
-Read the common route above, this table and [Safety rules](#safety-rules).
-Select the recipe for the current request and stage. Read its required links
-before acting. If the stage is unclear, inspect the durable state first.
-Select another recipe when the stage changes. For the orchestrator pilot, the
+Read this common route, this table, [Safety rules](#safety-rules), the selected
+recipe and its required links. Inspect durable state if the stage is unclear;
+change recipe when the stage changes. Keep the complete hash-bound role contract,
+frozen plan, active packet and shared contracts. The orchestrator's
 [complete lifecycle contract](../../skills/agent-workflow-orchestrator/references/lifecycle-contract.md)
-remains required; its hash and origin are in the skill entrypoint. Recipe
-selection does not replace the frozen plan, active packet or shared contracts.
-See the [local writing profile](controlled-technical-english.md) for terminology
-and measurement limits.
+remains required. The [local writing profile](controlled-technical-english.md)
+contains terminology, assigning-controller role suitability and measurement limits.
 
-| Need | Start here | Stops before implementation |
-| --- | --- | --- |
-| Research an area and write a plan | [Research and planning only](#research-and-planning-only) | Yes |
-| Review one task file | [Review one Markdown task](#review-one-markdown-task) | Yes |
-| Review several Markdown plan files | [Review a Markdown plan folder](#review-a-markdown-plan-folder) | Yes |
-| Review code or a PR/MR | [Review code changes](#review-code-changes) | Yes |
-| Audit completed ALK work | [Audit implementation evidence](#audit-implementation-evidence) | No, it audits completed work |
-| Continue after a review requests changes | [Open a remediation attempt](#open-a-remediation-attempt) | No, it continues a frozen task |
-| Find or fix a bug | [Bug Forensics repair](#bug-forensics-repair) | No, after a frozen plan authorizes repair |
-| Ask several reviewers | [Coordinate cross-review](#coordinate-cross-review) | Yes, unless a frozen plan requires quorum |
-| Inspect an active run | [View goal and progress](#view-goal-and-progress) | Yes |
-| Start a frozen task with bounded resources | [Run a risk-aware task](#run-a-risk-aware-task) | No, it authorizes one task attempt |
-| Initialize state or apply a task review | [Use the v4 task-local workflow](#use-the-v4-task-local-workflow) | Initialization still requires separate execution authorization |
-| Recover an authorization or final-audit route | [Recover a run without editing state](#recover-a-run-without-editing-state) | The selected typed gate controls execution |
-| Assess a new capability before freeze | [Bounded capability feasibility before freeze](#bounded-capability-feasibility-before-freeze) | Yes |
+| Need | Recipe |
+| --- | --- |
+| Research or plan, including S0/S2 authoring intents | [Research and planning only](#research-and-planning-only) |
+| One task file | [Review one Markdown task](#review-one-markdown-task) |
+| Plan folder | [Review a Markdown plan folder](#review-a-markdown-plan-folder) |
+| Code or PR/MR | [Review code changes](#review-code-changes) |
+| Completed work | [Audit implementation evidence](#audit-implementation-evidence) |
+| Requested fixes | [Open a remediation attempt](#open-a-remediation-attempt) |
+| Defect | [Bug Forensics repair](#bug-forensics-repair) |
+| Several reviewers | [Coordinate cross-review](#coordinate-cross-review) |
+| Active run | [View goal and progress](#view-goal-and-progress) |
+| Opted-in risk-aware frozen task | [Run a risk-aware task](#run-a-risk-aware-task) |
+| v4 task transition | [Use the v4 task-local workflow](#use-the-v4-task-local-workflow) |
+| Recovery | [Recover a run without editing state](#recover-a-run-without-editing-state) |
+| New capability before freeze | [Bounded capability feasibility before freeze](#bounded-capability-feasibility-before-freeze) |
 
 ## Research and planning only
 

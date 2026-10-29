@@ -1,5 +1,55 @@
 # CLI reference
 
+## Release 2.32: process observations and reading scope
+
+Existing cost reports add `processObservation` from one shared calculation:
+pipeline compliance plus coordination is process; implementation plus product
+validation is useful work. Reported and confirmed subtotals are separate and
+retain confidence and supplied-entry scope. `ATTESTED` entries alone do not
+prove a complete host/run inventory. Without that inventory, whole-run shares
+remain null/UNAVAILABLE. A process-dominance warning can accompany legacy PASS;
+it does not change the pipeline verdict, limits, task acceptance or authority.
+Source collection counts a canonical resolved file path once, including relative
+and absolute aliases. Distinct paths remain distinct even for identical payloads.
+
+The existing release-accounting command keeps four views and unavailable usage:
+
+```bash
+agent-lifecycle metrics release-accounting --release-id 2.32.0 \
+  --artifact work/release-source.json --project-root . \
+  --out work/release-accounting.json
+```
+
+Supply actual current-release evidence; the example path is an input placeholder.
+A bounded source cutoff is partial accounting, not whole-run billing. Retain
+failed/interrupted attempts, research, plugin maintenance and unknown model work.
+Do not substitute UI goal counters or zeros for missing tokens, input/output,
+cached input or USD. The command starts no live calls and grants no promotion.
+
+Fifteen explicit EN/RU manual pairs have a finite contradiction guard and
+independent semantic review. Thirteen fixed scenarios include twelve negative
+cases and a positive control. The malicious-import case observes DRAFT,
+`freezeBlocked` and refusal of authority mutation. These checks establish the
+selected cases; they do not prove arbitrary model behavior or host enforcement.
+
+Eight selected stage-reading cases include separate S0/S2 plan-authoring intents.
+The complete seven role contracts and routers are unchanged. Against exact 2.31
+source, plan authoring changes 25,643 → 23,570 UTF-8 bytes, defect repair
+26,247 → 24,174, plan review 30,550 → 28,477 and implementation audit
+29,220 → 27,147. Compilation stays 9,665 and intake 9,280; S0 and S2 authoring
+each change 25,643 → 23,570. The plan/defect reductions are 8.084%/7.898%, below
+the 10% engineering target; the strict-decrease criterion is met. Counts include
+mandatory shared/transitive reading and are source projections, not full host
+input, tokens or model savings. Provider usage and such savings are UNAVAILABLE.
+The existing fixed local batch comparison uses two explicit CLI/facade calls
+versus one batch call with byte-identical state/events and no host launch. It can
+be slower and establishes no provider-call reduction or general speedup.
+
+Role/risk/context/qualification guidance uses existing provider-neutral profiles.
+It adds no runtime selector, gate, host enforcement or automatic cloud fallback.
+Mandatory acceptance criteria, independent review and quality floors remain in
+force; frozen plans still require separate execution authorization.
+
 ## Release 2.31: bounded quality checks
 
 The repository secret guard checks UTF-8 (including BOM) and UTF-16LE/BE with BOM.
@@ -124,7 +174,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.31.0
+python -m pip install agent-lifecycle-kit==2.32.0
 ```
 
 ## Task evidence identity

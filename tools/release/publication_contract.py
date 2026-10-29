@@ -17,7 +17,7 @@ SKILL_INSTRUCTION_DOCUMENTATION: dict[str, Any] = {
     "russianWritingProfile": "docs/ru/guides/controlled-technical-english.md",
     "skillCount": 7,
     "requiredDocumentCount": 19,
-    "readingCaseCount": 6,
+    "readingCaseCount": 8,
     "wholeLifecycleContractsRequired": True,
     "boundedCriticalClauseChecks": True,
     "sourcePackageArchiveParityRequired": True,
