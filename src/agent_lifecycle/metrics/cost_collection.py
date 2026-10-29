@@ -11,6 +11,7 @@ from agent_lifecycle.metrics.costs import (
     COST_SUMMARY_SCHEMA,
     cost_entry_totals,
     cost_ratios,
+    observe_process_costs,
     summarize_usage_confidence,
 )
 from agent_lifecycle.metrics.phase_resources import (
@@ -34,13 +35,18 @@ def generate_lifecycle_cost_report(
     source_artifacts: list[dict[str, Any]] = []
     entries: list[dict[str, Any]] = []
     payloads: list[dict[str, Any]] = []
-    for index, raw_path in enumerate(artifact_paths):
-        payload, source = _load_source_artifact(raw_path, project_root)
+    seen_paths: set[Path] = set()
+    for raw_path in artifact_paths:
+        source_path = (raw_path if raw_path.is_absolute() else project_root / raw_path).resolve()
+        if source_path in seen_paths:
+            continue
+        seen_paths.add(source_path)
+        payload, source = _load_source_artifact(source_path, project_root)
         source_artifacts.append(source)
-        entries.append(_entry_from_artifact(index, source, payload))
+        entries.append(_entry_from_artifact(len(entries), source, payload))
         payloads.append(payload)
 
-    report = {
+    report: dict[str, Any] = {
         "schemaVersion": COST_REPORT_SCHEMA,
         "mode": mode,
         "generatedBy": "agent-lifecycle metrics cost-report",
@@ -54,6 +60,7 @@ def generate_lifecycle_cost_report(
         "productionPromotionClaimed": False,
     }
     report["compactSummary"] = build_lifecycle_cost_summary(report)
+    report["processObservation"] = report["compactSummary"]["processObservation"]
     return report
 
 
@@ -65,6 +72,7 @@ def build_lifecycle_cost_summary(report: dict[str, Any]) -> dict[str, Any]:
     totals = cost_entry_totals(entries)
     ratios = cost_ratios(totals)
     usage_confidence = summarize_usage_confidence(entries)
+    process_observation = observe_process_costs(entries)
     source_paths = _source_paths(report)
     missing_usage = usage_confidence["missingEntries"]
     next_action = "review missing usage entries" if missing_usage else "continue with the selected lifecycle policy"
@@ -76,6 +84,8 @@ def build_lifecycle_cost_summary(report: dict[str, Any]) -> dict[str, Any]:
             f"pipelineTokenShare={ratios['pipelineTokenShare']}",
             f"pipelineStepShare={ratios['pipelineStepShare']}",
             f"missingUsageEntries={missing_usage}",
+            f"suppliedRecordsProcessTokenShare={process_observation['reportedSubtotal']['processTokenShare']}",
+            "wholeRunCoverage=UNAVAILABLE",
         ],
         "openBlockers": [],
         "acceptedEvidence": [
@@ -94,6 +104,7 @@ def build_lifecycle_cost_summary(report: dict[str, Any]) -> dict[str, Any]:
         "categoryTotals": totals,
         "ratios": ratios,
         "usageConfidence": usage_confidence,
+        "processObservation": process_observation,
         "workflowEconomics": report.get("workflowEconomics", []),
         "usefulWorkTokens": totals["implementation"]["tokens"] + totals["productValidation"]["tokens"],
         "processOverheadTokens": totals["pipelineCompliance"]["tokens"] + totals["coordination"]["tokens"],

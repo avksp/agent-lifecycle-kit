@@ -30,7 +30,7 @@ class PublicationVersionTests(unittest.TestCase):
         ]
         self.assertEqual(feature["skillCount"], 7)
         self.assertEqual(feature["requiredDocumentCount"], 19)
-        self.assertEqual(feature["readingCaseCount"], 6)
+        self.assertEqual(feature["readingCaseCount"], 8)
         for key in (
             "wholeLifecycleContractsRequired",
             "boundedCriticalClauseChecks",
@@ -152,8 +152,13 @@ class PublicationVersionTests(unittest.TestCase):
         # The current release has real command receipts but incomplete run coverage.
         self.assertEqual("PARTIAL", accounting["totals"]["metrics"]["steps"]["status"])
         self.assertGreater(accounting["totals"]["metrics"]["steps"]["value"], 0)
-        self.assertEqual("UNAVAILABLE", accounting["totals"]["metrics"]["elapsedWallMs"]["status"])
-        self.assertIsNone(accounting["totals"]["metrics"]["elapsedWallMs"]["value"])
+        # Recorded operation durations are partial; their sum is not run elapsed time.
+        self.assertEqual("PARTIAL", accounting["totals"]["metrics"]["elapsedWallMs"]["status"])
+        self.assertGreater(accounting["totals"]["metrics"]["elapsedWallMs"]["value"], 0)
+        self.assertEqual(
+            {"status": "UNAVAILABLE", "value": None},
+            accounting["workflowEconomics"]["enclosingElapsedWall"],
+        )
 
     def test_fixture_selection_is_target_specific_and_does_not_mutate_previous_manifests(self):
         paths = []

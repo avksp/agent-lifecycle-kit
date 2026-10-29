@@ -233,7 +233,7 @@ domains need different signatures, schemas, or failure semantics.
 
 YAGNI is required for adapter and plugin scope:
 
-- ship only the five canonical lifecycle skills;
+- ship only the seven canonical lifecycle skills;
 - keep optional live adapter promotion outside the release prerequisite;
 - do not add MCP servers, apps, hooks, or marketplaces unless the target host
   actually requires them;

@@ -473,9 +473,9 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         self.assertIn("If no alternative model is available", english_guide)
         self.assertIn("Если другой модели нет", russian_guide)
         self.assertIn("ALK does not become a model broker", english_workflow)
-        self.assertIn("ALK не становится\nпосредником провайдера", russian_workflow)
+        self.assertIn("ALK не становится\nп\u043e\u0441\u0440\u0435дник\u043eм провайдера", russian_workflow)
         self.assertIn("Review Mesh is optional and off by\ndefault", english_workflow)
-        self.assertIn("Review Mesh необязателен и по умолчанию\nвыключен", russian_workflow)
+        self.assertIn("Review Mesh необязателен и по умолчанию\nвыключ\u0435н", russian_workflow)
         self.assertIn("never mandatory by installation", english_reference)
         self.assertIn("не делают Review Mesh обязательным", russian_reference)
 
@@ -910,6 +910,80 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
             self.assertEqual(payload["status"], "FAIL")
             self.assertIn("docs-compat-versioned-feature-prose", {item["code"] for item in payload["blockers"]})
 
+    def test_required_manual_pairs_use_explicit_locations_and_refuse_missing_translation(self) -> None:
+        from validate_docs_compat import MANUAL_PAIRS, validate_manual_pairs
+
+        self.assertEqual(len(MANUAL_PAIRS), 15)
+        self.assertEqual(validate_manual_pairs(ROOT), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for english, russian in MANUAL_PAIRS:
+                for relative in (english, *russian):
+                    _write_text(root / relative, "# Maintained manual\n")
+            for english, russian in MANUAL_PAIRS:
+                with self.subTest(english=english):
+                    for relative in russian:
+                        (root / relative).unlink()
+                    blockers = validate_manual_pairs(root)
+                    self.assertEqual(blockers, [{"code": "required-manual-missing", "alternatives": list(russian)}])
+                    # Only an explicitly supported alternative restores coverage.
+                    _write_text(root / "docs/ru/history" / Path(english).name, "# Historical evidence\n")
+                    self.assertEqual(validate_manual_pairs(root), blockers)
+                    _write_text(root / russian[-1], "# Maintained manual\n")
+                    self.assertEqual(validate_manual_pairs(root), [])
+
+    def test_qr09_exact_contradiction_refuses_despite_all_required_phrases(self) -> None:
+        from validate_docs_compat import KNOWN_INSTRUCTION_CONTRADICTIONS, _check_doc
+
+        # Scope matches historical QR09: single document, not publication proof.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for contradiction in KNOWN_INSTRUCTION_CONTRADICTIONS:
+                with self.subTest(contradiction=contradiction):
+                    _write_text(root / "manual.md", "Required safety phrase.\n" + contradiction)
+                    blockers = []
+                    result = _check_doc(root, "manual.md", ("Required safety phrase.",), blockers, set())
+                    self.assertEqual(result["status"], "FAIL")
+                    self.assertEqual({b["code"] for b in blockers}, {"docs-known-instruction-contradiction"})
+            _write_text(root / "manual.md", "Required safety phrase. Missing telemetry stays null.")
+            self.assertEqual(_check_doc(root, "manual.md", ("Required safety phrase.",), [], set())["status"], "PASS")
+
+    def test_seven_new_translations_preserve_exact_fenced_commands(self) -> None:
+        names = (
+            "architecture/modular-controller.md",
+            "architecture/release-architecture.md",
+            "architecture/runner-extension-map.md",
+            "architecture/runner-transition-contract.md",
+            "guides/budget-reroute-policy.md",
+            "guides/verified-adapter-release-checklist.md",
+            "operations/retention-maintenance.md",
+        )
+        import re
+
+        for name in names:
+            with self.subTest(name=name):
+                english = (ROOT / "docs" / name).read_text(encoding="utf-8")
+                russian = (ROOT / "docs/ru" / name).read_text(encoding="utf-8")
+                self.assertEqual(
+                    re.findall(r"```[^\n]*\n.*?```", english, re.S), re.findall(r"```[^\n]*\n.*?```", russian, re.S)
+                )
+                _assert_links_resolve(ROOT / "docs/ru" / name)
+
+    def test_finite_behavior_review_packet_has_twelve_negatives_and_positive_control(self) -> None:
+        fixture = json.loads((ROOT / "tests/release/fixtures/skill-behavior-cases.json").read_text())
+        cases = fixture["cases"]
+        self.assertEqual(len(cases), 13)
+        self.assertEqual(len({c["id"] for c in cases}), 13)
+        self.assertEqual(sum(c["kind"] == "negative" for c in cases), 12)
+        self.assertEqual(cases[-1]["expectedDecision"], "SHORT_PREFLIGHT")
+        self.assertEqual(fixture["actualModelComparison"], "UNAVAILABLE")
+        self.assertEqual(fixture["semanticReviewStatus"], "PENDING_INDEPENDENT_REVIEW")
+        for case in cases:
+            self.assertTrue((ROOT / case["provenance"]["source"]).is_file())
+            self.assertTrue(case["invariants"])
+            self.assertTrue(case["expectedDecision"])
+        # This is review-input completeness, not a claim to execute arbitrary AI behavior.
+
 
 def _section(text: str, heading: str) -> str:
     lines = text.splitlines()
@@ -1043,7 +1117,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/ru/guides/phase-session-handoff.md",
-        handoff + "полный transcript. Не снижайте review, security, architecture или quality gates.\n",
+        handoff + "полный transcript. \u041d\u0435 снижайте review, security, architecture или quality gates.\n",
     )
     phase_packets = (
         "agent-phase-packet.v1. PLANNING_HANDOFF. IMPLEMENTATION. TASK_AUDIT. REMEDIATION. "
@@ -1307,11 +1381,11 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Coordinate cross-review.\n"
         "Run a risk-aware task.\n"
         "Исследование и планирование.\n"
-        "Проверка папки с Markdown-планом.\n"
+        "Проверка папки \u0441 Markdown-планом.\n"
         "Проверка изменений кода.\n"
         "Аудит подтверждений реализации.\n"
         "Согласованная перепроверка.\n"
-        "Запуск с учётом риска.\n"
+        "Запуск \u0441 учётом риска.\n"
         "agent-lifecycle start.\n"
         "agent-lifecycle import plan.\n"
         "review-mesh recommend.\n"
@@ -1373,7 +1447,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "Add an explicit `--launch` route through a verified profile.\n"
         "Для одного связанного процесса хоста добавьте явный маршрут `--launch` через проверенный профиль.\n"
         "Installing or mentioning a skill does not prove.\n"
-        "сама по себе не доказывает.\n"
+        "сама по \u0441\u0435\u0431\u0435 не доказывает.\n"
         "`PLANNING_ONLY_QUALIFIED`.\n"
         "[Codex](codex.md).\n"
         "[Qwen Code](qwen-code.md).\n"
@@ -1857,7 +1931,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/ru/reference/readiness-diagnostics.md",
-        "`agent-adapter-install-plan.v1`.\nargv-массивы.\nДиагностика не трактует argv-массивы как строку shell.\n",
+        "`agent-adapter-install-plan.v1`.\nargv-массивы.\nДи\u0430\u0433н\u043e\u0441тик\u0430 не трактует argv-массивы как строку shell.\n",
     )
     _write_text(
         root / "docs/security/neutrality-contract.md",
@@ -1865,7 +1939,7 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
     )
     _write_text(
         root / "docs/ru/security/neutrality-contract.md",
-        "Счётчики полноты.\n`readRaces`.\n`pathAliasConflicts`.\nненулевое значение приводит к отказу.\n",
+        "Счётчики полноты.\n`readRaces`.\n`pathAliasConflicts`.\nн\u0435н\u0443л\u0435в\u043e\u0435 значение приводит к отказу.\n",
     )
     _write_text(
         root / "docs/adapters/progress-bridge-matrix.md",
@@ -1966,6 +2040,13 @@ def _write_min_docs(root: Path, *, unsupported_verified_row: bool) -> None:
         "docs/ru/reference/review-mesh.md",
     ):
         _write_text(root / relative, (ROOT / relative).read_text(encoding="utf-8"))
+
+    from validate_docs_compat import MANUAL_PAIRS
+
+    for english, russian in MANUAL_PAIRS:
+        for relative in (english, *russian):
+            if not (root / relative).is_file():
+                _write_text(root / relative, (ROOT / relative).read_text(encoding="utf-8"))
 
 
 def _write_text(path: Path, text: str) -> None:

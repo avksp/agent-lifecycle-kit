@@ -36,8 +36,7 @@ for graph/capacity limits, Git exclusions, partial-write recovery and the separa
 scope of fixture, isolated application and live evidence.
 
 The [security control map](../security/release-security.md) separates runtime
-controls, CI guards, optional analysis and host qualification. Release-numbered
-sections below are historical design context, not current release proof.
+controls, CI guards, optional analysis and host qualification. Historical release context is recorded in [CHANGELOG](../../CHANGELOG.md); these architecture boundaries are not current release proof.
 
 | Responsibility | Current owner | Check | Limit |
 | --- | --- | --- | --- |
@@ -156,7 +155,9 @@ The workflow and implementation audit recompute that evidence. Git proves
 which bytes were checked; tests and independent review still establish whether
 those bytes implement the intended behavior.
 
-## Release 1.77 quality and packaging boundaries
+The following sections describe current compatibility boundaries. Release chronology is in [CHANGELOG](../../CHANGELOG.md).
+
+## Quality and packaging boundaries
 
 Release 1.77 adds maintenance controls around the existing lifecycle
 architecture. Ruff, mypy and coverage are development-only tools executed by a
@@ -180,7 +181,7 @@ selected opt-in facades. The validator checks imports, exports, annotations and
 English/Russian documentation. Internal modules remain implementation details
 unless they are listed in that contract.
 
-## Release 1.78 performance boundaries
+## Performance boundaries
 
 Release 1.78 optimizes repeated local work without changing lifecycle
 authority. The performance policy and typed ceilings are separate from the
@@ -203,7 +204,7 @@ interleaved Ed25519 median comparison against the frozen affine reference;
 there is no constant-time claim and no runtime dependency or cache-based
 shortcut. See [performance and resource budgets](../reference/performance-and-resource-budgets.md).
 
-## Release 1.79 plan integrity boundary
+## Plan integrity boundary
 
 Release 1.79 adds a canonical, read-only verification facade for plan
 handoffs. The `contracts` layer defines the manifest shape and shared literal
@@ -225,7 +226,7 @@ for research and implementation, while ALK remains responsible for structured
 authority, state transitions, evidence and fail-closed handoff decisions. See
 [Plan verification and integrity](../reference/plan-verification.md).
 
-## Release 1.80: optional adapter lifecycle control
+## Optional adapter lifecycle control
 
 Release 1.80 adds a bounded control plane at the adapter boundary. It is
 optional and provider-neutral. The model still proposes content and uses host
@@ -265,7 +266,7 @@ malformed output, disabled control and producer failure remain non-qualification
 evidence. See [optional adapter lifecycle control](../adapters/lifecycle-control.md)
 and [adapter event capture](../reference/adapter-event-capture.md).
 
-## Release 1.83: explicit recovery and final-audit routing
+## Explicit recovery and final-audit routing
 
 Release 1.83 keeps the operation kernel as the only state writer while making
 recovery routes explicit. `workflow authorize` consumes a bounded,
@@ -282,7 +283,7 @@ attempts within the frozen retry budget, `CONTRACT_CHANGE` waits for a new
 frozen plan, and `BLOCKED` waits for the declared external action. None of
 these transitions changes plan authority or invokes a model.
 
-## Release 2.0: one lifecycle authority
+## One lifecycle authority
 
 Durable workflow state is the sole authority for phase, task status,
 authorization, acceptance, blockers and final proof. `workflow run` projects

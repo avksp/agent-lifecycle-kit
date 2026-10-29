@@ -20,6 +20,7 @@ from agent_plugin_package import (
     validate_required_documents,
     validate_skill_source,
 )
+from validate_docs_compat import instruction_contradictions
 
 _RULES = {
     "agent-first-planning": ("SDD", "ownership", "independent", "draft-only"),
@@ -243,6 +244,16 @@ def validate_skill_parity(
         if _BYPASS.search(text) or _BYPASS.search(full.decode("utf-8")):
             blockers.append({"code": "skill-bypass-advice", "skill": name})
         blockers.extend(_critical_clause_blockers(name, text, reference_text))
+        for component, content in (("router", text), ("reference", reference_text)):
+            for clause in instruction_contradictions(content):
+                blockers.append(
+                    {
+                        "code": "skill-known-instruction-contradiction",
+                        "skill": name,
+                        "component": component,
+                        "clause": clause,
+                    }
+                )
         pins.append(
             {
                 "skill": name,

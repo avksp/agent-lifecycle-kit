@@ -1,6 +1,6 @@
 # Установка ALK и первый запуск
 
-Для текущих проверок ядра установите версию 2.31. Проверки секретов и покрытия в репозитории используют форматы и пороги из [справочника CLI](../reference/cli.md).
+Установите версию 2.32 для рекомендательных наблюдений процесса и поддерживаемых маршрутов чтения EN/RU. Плагин поставляет инструкции и документы; для поведения CLI нужен указанный ниже Python-пакет. Границы 2.32 и прежних проверок секретов и покрытия описаны в [справочнике CLI](../reference/cli.md).
 
 
 Переносимый плагин поставляет skills и документы. Для миграции state
@@ -9,7 +9,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.31.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.32.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -103,7 +103,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.31.0
+python -m pip install agent-lifecycle-kit==2.32.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -114,7 +114,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.31.0
+python -m pip install agent-lifecycle-kit==2.32.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```

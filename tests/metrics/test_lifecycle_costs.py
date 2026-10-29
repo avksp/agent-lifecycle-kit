@@ -14,6 +14,7 @@ from agent_lifecycle.metrics import (  # noqa: E402
     generate_lifecycle_cost_report,
     validate_lifecycle_cost_report,
 )
+from agent_lifecycle.metrics.cost_collection import build_lifecycle_cost_summary  # noqa: E402
 
 
 class LifecycleCostTests(unittest.TestCase):
@@ -159,6 +160,122 @@ class LifecycleCostTests(unittest.TestCase):
         self.assertEqual(report["entries"][0]["tokens"], 1000)
         self.assertEqual(report["entries"][0]["steps"], 7)
         self.assertEqual(report["entries"][0]["usageConfidence"], "ESTIMATED")
+
+    def test_coordination_dominance_is_advisory_with_supplied_scope(self) -> None:
+        report = {
+            "schemaVersion": "agent-lifecycle-cost-report.v1",
+            "mode": "standard",
+            "notes": "private-input-note-do-not-echo",
+            "entries": [
+                {"category": category, "tokens": tokens, "steps": 1, "usageConfidence": "ATTESTED"}
+                for category, tokens in (("implementation", 1000), ("pipelineCompliance", 100), ("coordination", 99000))
+            ],
+        }
+        validation = validate_lifecycle_cost_report(report)
+        summary = build_lifecycle_cost_summary(report)
+        observation = validation["processObservation"]
+
+        self.assertEqual(validation["status"], "PASS")
+        self.assertEqual(validation["blockers"], [])
+        self.assertEqual(observation, summary["processObservation"])
+        self.assertEqual(observation["confidence"], "ATTESTED")
+        self.assertEqual(observation["scope"], "supplied_report_entries")
+        self.assertAlmostEqual(observation["reportedSubtotal"]["processTokenShare"], 0.99001)
+        self.assertEqual(observation["confirmedSubtotal"]["processOverheadTokens"], 99100)
+        self.assertEqual(observation["wholeRunCoverage"]["status"], "UNAVAILABLE")
+        self.assertIsNone(observation["wholeRunCoverage"]["processTokenShare"])
+        self.assertTrue(observation["warnings"][0]["advisoryOnly"])
+        self.assertNotIn(report["notes"], str(observation))
+        self.assertIn("suppliedRecordsProcessTokenShare=0.99001", summary["activeDecisions"])
+
+    def test_partial_confidence_never_establishes_whole_run_coverage(self) -> None:
+        for confidences in (
+            ("MISSING",),
+            ("ESTIMATED",),
+            (None,),
+            ("MISSING", "ESTIMATED", None),
+            ("ATTESTED", "MISSING", "ESTIMATED", None),
+        ):
+            with self.subTest(confidences=confidences):
+                entries = [
+                    {
+                        "category": "coordination",
+                        "tokens": 0 if confidence == "MISSING" else 100,
+                        "steps": 1,
+                        **({"usageConfidence": confidence} if confidence else {}),
+                    }
+                    for confidence in confidences
+                ]
+                report = {"schemaVersion": "agent-lifecycle-cost-report.v1", "mode": "release", "entries": entries}
+                validation = validate_lifecycle_cost_report(report)
+                observation = validation["processObservation"]
+                self.assertEqual(validation["status"], "PASS")
+                self.assertEqual(observation, build_lifecycle_cost_summary(report)["processObservation"])
+                self.assertEqual(observation["reportedSubtotal"]["entryCount"], len(entries))
+                self.assertEqual(observation["wholeRunCoverage"]["status"], "UNAVAILABLE")
+                self.assertIsNone(observation["wholeRunCoverage"]["processTokenShare"])
+                self.assertIsNone(observation["wholeRunCoverage"]["processStepShare"])
+                if "ATTESTED" in confidences:
+                    self.assertEqual(observation["confirmedSubtotal"]["entryCount"], 1)
+                    self.assertEqual(observation["confirmedSubtotal"]["tokens"], 100)
+                else:
+                    self.assertIsNone(observation["confirmedSubtotal"])
+
+    def test_zero_denominators_remain_unavailable_in_new_observation(self) -> None:
+        for tokens, steps in ((0, 1), (1, 0)):
+            with self.subTest(tokens=tokens, steps=steps):
+                validation = validate_lifecycle_cost_report(
+                    {
+                        "schemaVersion": "agent-lifecycle-cost-report.v1",
+                        "mode": "standard",
+                        "entries": [
+                            {
+                                "category": "implementation",
+                                "tokens": tokens,
+                                "steps": steps,
+                                "usageConfidence": "ATTESTED",
+                            }
+                        ],
+                    }
+                )
+                subtotal = validation["processObservation"]["confirmedSubtotal"]
+                self.assertIsNone(subtotal["processTokenShare"] if tokens == 0 else subtotal["processStepShare"])
+                self.assertEqual(validation["ratios"]["pipelineTokenShare"], 0.0)
+
+    def test_empty_observation_does_not_invent_confirmed_zero(self) -> None:
+        report = {"schemaVersion": "agent-lifecycle-cost-report.v1", "mode": "standard", "entries": []}
+        validation = validate_lifecycle_cost_report(report)
+        observation = validation["processObservation"]
+        self.assertEqual(validation["status"], "FAIL")
+        self.assertEqual(observation["confidence"], "UNAVAILABLE")
+        self.assertIsNone(observation["confirmedSubtotal"])
+        self.assertIsNone(observation["reportedSubtotal"]["processTokenShare"])
+        self.assertIsNone(observation["reportedSubtotal"]["processStepShare"])
+        self.assertEqual(observation["warnings"], [])
+
+    def test_generator_deduplicates_resolved_paths_but_keeps_distinct_files(self) -> None:
+        import hashlib
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = _write_json(root / "first.json", _usage_receipt())
+            second = _write_json(root / "second.json", _usage_receipt())
+            link = root / "alias.json"
+            link.symlink_to(first)
+            expected_sha = hashlib.sha256(first.read_bytes()).hexdigest()
+            report = generate_lifecycle_cost_report(
+                artifact_paths=[Path("first.json"), first, root / "./first.json", link, second],
+                root=root,
+            )
+
+        self.assertEqual(len(report["entries"]), 2)
+        self.assertEqual([entry["id"] for entry in report["entries"]], ["artifact-1", "artifact-2"])
+        self.assertEqual([source["path"] for source in report["sourceArtifacts"]], ["first.json", "second.json"])
+        self.assertEqual([source["sha256"] for source in report["sourceArtifacts"]], [expected_sha, expected_sha])
+        self.assertEqual(report["lineage"]["sourceRevisions"], ["source"])
+        self.assertEqual(report["processObservation"]["reportedSubtotal"]["tokens"], 250)
+        self.assertEqual(report["processObservation"], report["compactSummary"]["processObservation"])
+        self.assertEqual(report["processObservation"], validate_lifecycle_cost_report(report)["processObservation"])
 
 
 def _write_json(path: Path, payload: dict) -> Path:

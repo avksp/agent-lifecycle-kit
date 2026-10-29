@@ -79,6 +79,7 @@ def validate_lifecycle_cost_report(report: dict[str, Any]) -> dict[str, Any]:
         "totals": totals,
         "ratios": ratios,
         "usageConfidence": usage_confidence,
+        "processObservation": observe_process_costs(entries),
         "limits": limits,
         "blockers": blockers,
         "reportDigest": canonical_digest(report),
@@ -203,6 +204,92 @@ def cost_ratios(totals: dict[str, dict[str, int]]) -> dict[str, float]:
     return {
         "pipelineTokenShare": round(pipeline_tokens / overall_tokens, 6) if overall_tokens else 0.0,
         "pipelineStepShare": round(pipeline_steps / overall_steps, 6) if overall_steps else 0.0,
+    }
+
+
+def observe_process_costs(entries: list[Any]) -> dict[str, Any]:
+    """Describe supplied records without claiming a complete run inventory."""
+
+    reported = _empty_totals()
+    confirmed = _empty_totals()
+    confidence_states: set[str] = set()
+    reported_count = confirmed_count = 0
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("category") not in COST_CATEGORIES:
+            continue
+        tokens, steps = entry.get("tokens"), entry.get("steps")
+        if (
+            not isinstance(tokens, int)
+            or isinstance(tokens, bool)
+            or tokens < 0
+            or not isinstance(steps, int)
+            or isinstance(steps, bool)
+            or steps < 0
+        ):
+            continue
+        if tokens == 0 and steps == 0:
+            continue
+        category = entry["category"]
+        confidence = entry.get("usageConfidence")
+        confidence_states.add(confidence if confidence in USAGE_CONFIDENCE_STATES else "UNSPECIFIED")
+        reported_count += 1
+        reported[category]["tokens"] += tokens
+        reported[category]["steps"] += steps
+        if confidence == "ATTESTED":
+            confirmed_count += 1
+            confirmed[category]["tokens"] += tokens
+            confirmed[category]["steps"] += steps
+    confidence = next(iter(confidence_states)) if len(confidence_states) == 1 else "MIXED"
+    if not confidence_states:
+        confidence = "UNAVAILABLE"
+    reported_subtotal = _process_subtotal(reported, reported_count, confidence)
+    warnings = []
+    if (
+        reported_subtotal["processOverheadTokens"] > reported_subtotal["usefulWorkTokens"]
+        or reported_subtotal["processOverheadSteps"] > reported_subtotal["usefulWorkSteps"]
+    ):
+        warnings.append(
+            {
+                "code": "process-overhead-dominates-supplied-records",
+                "advisoryOnly": True,
+                "scope": "supplied_report_entries",
+                "message": "Pipeline compliance plus coordination exceeds useful work in supplied records; "
+                "pipeline PASS does not establish economy or whole-run coverage.",
+            }
+        )
+    return {
+        "scope": "supplied_report_entries",
+        "confidence": confidence,
+        "reportedSubtotal": reported_subtotal,
+        "confirmedSubtotal": _process_subtotal(confirmed, confirmed_count, "ATTESTED") if confirmed_count else None,
+        "wholeRunCoverage": {
+            "status": "UNAVAILABLE",
+            "reason": "complete-run-inventory-unavailable",
+            "processTokenShare": None,
+            "processStepShare": None,
+        },
+        "warnings": warnings,
+    }
+
+
+def _process_subtotal(totals: dict[str, dict[str, int]], count: int, confidence: str) -> dict[str, Any]:
+    useful_tokens = totals["implementation"]["tokens"] + totals["productValidation"]["tokens"]
+    useful_steps = totals["implementation"]["steps"] + totals["productValidation"]["steps"]
+    process_tokens = totals["pipelineCompliance"]["tokens"] + totals["coordination"]["tokens"]
+    process_steps = totals["pipelineCompliance"]["steps"] + totals["coordination"]["steps"]
+    total_tokens, total_steps = useful_tokens + process_tokens, useful_steps + process_steps
+    return {
+        "scope": "supplied_report_entries",
+        "confidence": confidence,
+        "entryCount": count,
+        "tokens": total_tokens,
+        "steps": total_steps,
+        "usefulWorkTokens": useful_tokens,
+        "usefulWorkSteps": useful_steps,
+        "processOverheadTokens": process_tokens,
+        "processOverheadSteps": process_steps,
+        "processTokenShare": round(process_tokens / total_tokens, 6) if total_tokens else None,
+        "processStepShare": round(process_steps / total_steps, 6) if total_steps else None,
     }
 
 

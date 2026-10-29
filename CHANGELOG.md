@@ -4,6 +4,28 @@
 
 - No changes yet.
 
+## 2.32.0 - 2026-10-29
+
+- Add a shared advisory process observation: pipeline compliance plus coordination
+  versus implementation plus product validation. Separate reported/confirmed
+  subtotals, confidence and supplied-entry scope; keep whole-run shares
+  null/UNAVAILABLE without complete inventory. Warnings preserve legacy verdicts
+  and authority. Canonical path aliases deduplicate; distinct equal-payload paths remain.
+- Maintain 15 explicit EN/RU manual pairs with a finite contradiction guard,
+  independent semantic review and 13 fixed scenarios (12 negative, one positive).
+  Malicious imports remain DRAFT/freezeBlocked and reject authority mutation.
+- Shorten eight selected stage-reading routes while preserving all seven complete
+  role contracts and routers. Plan reading falls 8.084%, defect reading 7.898%:
+  the 10% engineering target is missed, while strict decrease is met. Source bytes
+  are not full host input; provider/model/token savings remain UNAVAILABLE.
+- Document existing role/risk/context qualification without a runtime selector,
+  new gate or host enforcement. The fixed batch fixture uses one CLI/facade call
+  instead of two with identical state/events; it can be slower and proves no
+  provider-call savings.
+- Update install/version metadata and a current-release accounting fixture with
+  an explicit partial cutoff, all four views, retained failed/interrupted work
+  and unavailable provider telemetry. This fixture grants no release authority.
+
 ## 2.31.0 - 2026-10-29
 
 - Extend bounded tracked-text secret checks to supported UTF-8/BOM and UTF-16 BOM
