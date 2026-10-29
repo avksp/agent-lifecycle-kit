@@ -63,7 +63,16 @@ def _run_receipt() -> dict:
 
 
 class PythonQualityValidatorTests(unittest.TestCase):
-    def _coverage_result(self, totals: dict, *, modern: bool = True, cli: bool = False) -> dict:
+    def _coverage_result(
+        self,
+        totals: dict,
+        *,
+        modern: bool = True,
+        cli: bool = False,
+        coverage_overrides: dict | None = None,
+        files: dict | None = None,
+        meta: dict | None = None,
+    ) -> dict:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "src/example.py"
@@ -75,11 +84,17 @@ class PythonQualityValidatorTests(unittest.TestCase):
                 (raw / name).write_text("[]\n", encoding="utf-8")
             (raw / "ruff-format.stdout.txt").write_text("1 file already formatted\n", encoding="utf-8")
             (raw / "mypy.stdout.txt").write_text("Success: no issues found\n", encoding="utf-8")
-            (raw / "coverage.json").write_text(json.dumps({"totals": totals}), encoding="utf-8")
+            report = {"totals": totals}
+            if files is not None:
+                report["files"] = files
+            report["meta"] = meta if meta is not None else {"format": 3, "version": "7.10.6", "branch_coverage": True}
+            (raw / "coverage.json").write_text(json.dumps(report), encoding="utf-8")
             policy = _policy(_digest(source))
             if modern:
                 policy["revision"] = 5
                 policy["coverage"]["minimumCombinedPercent"] = 76.0
+            if coverage_overrides is not None:
+                policy["coverage"].update(coverage_overrides)
             policy_path, run_path = root / "policy.json", root / "run.json"
             policy_path.write_text(json.dumps(policy), encoding="utf-8")
             run_path.write_text(json.dumps(_run_receipt()), encoding="utf-8")
@@ -112,6 +127,132 @@ class PythonQualityValidatorTests(unittest.TestCase):
             self.assertEqual(json.loads(completed.stdout), value)
             self.assertEqual(completed.returncode, 0 if value["status"] == "PASS" else 1)
             return value
+
+    @staticmethod
+    def _summary(lines: int, covered: int, branches: int, covered_branches: int) -> dict:
+        return {
+            "num_statements": lines,
+            "covered_lines": covered,
+            "missing_lines": lines - covered,
+            "num_branches": branches,
+            "covered_branches": covered_branches,
+            "missing_branches": branches - covered_branches,
+            "percent_covered": 100 * (covered + covered_branches) / (lines + branches),
+        }
+
+    @staticmethod
+    def _extended_floors() -> dict:
+        return {
+            "minimumBranchPercent": 71,
+            "criticalFileFloors": {"src/example.py": {"minimumStatementLinePercent": 85, "minimumBranchPercent": 71}},
+        }
+
+    def test_branch_floor_rejects_full_lines_zero_branches_via_cli(self) -> None:
+        totals = self._summary(1000, 1000, 100, 0)
+        files = {
+            "src/example.py": {"summary": self._summary(100, 100, 100, 0)},
+            "src/other.py": {"summary": self._summary(900, 900, 0, 0)},
+        }
+        value = self._coverage_result(totals, cli=True, coverage_overrides=self._extended_floors(), files=files)
+        self.assertEqual("FAIL", value["status"])
+        self.assertTrue(
+            any(
+                x.get("code") == "coverage-floor-failed" and x.get("metric") == "branchPercent"
+                for x in value["blockers"]
+            ),
+            value,
+        )
+
+    def test_critical_floor_fails_with_passing_global_counts_and_accepts_exact_boundary(self) -> None:
+        totals = self._summary(1000, 950, 200, 150)
+        files = {
+            "src/example.py": {"summary": self._summary(100, 90, 100, 70)},
+            "src/other.py": {"summary": self._summary(900, 860, 100, 80)},
+        }
+        value = self._coverage_result(totals, cli=True, coverage_overrides=self._extended_floors(), files=files)
+        self.assertEqual("FAIL", value["status"])
+        self.assertEqual(["coverage-critical-floor-failed"], [x["code"] for x in value["blockers"]])
+        self.assertEqual("src/example.py", value["blockers"][0]["path"])
+        files["src/example.py"]["summary"] = self._summary(100, 84, 100, 90)
+        files["src/other.py"]["summary"] = self._summary(900, 866, 100, 60)
+        value = self._coverage_result(totals, cli=True, coverage_overrides=self._extended_floors(), files=files)
+        self.assertEqual("FAIL", value["status"])
+        self.assertEqual(["statementLinePercent"], [x["metric"] for x in value["blockers"]])
+        files["src/example.py"]["summary"] = self._summary(100, 85, 100, 71)
+        files["src/other.py"]["summary"] = self._summary(900, 865, 100, 79)
+        value = self._coverage_result(totals, cli=True, coverage_overrides=self._extended_floors(), files=files)
+        self.assertEqual("PASS", value["status"], value)
+        self.assertEqual(71.0, value["summary"]["coverage"]["criticalFiles"]["src/example.py"]["branchPercent"])
+
+    def test_extended_artifact_missing_files_versions_and_inconsistent_counts_refuse(self) -> None:
+        totals = self._summary(100, 90, 100, 90)
+        valid = {"src/example.py": {"summary": totals}}
+        cases = [
+            None,
+            {},
+            {"src/example.py": None},
+            {"src/example.py": {}},
+            {"src/example.py": {"summary": self._summary(100, 89, 100, 90)}},
+            {"src/example.py": {"summary": self._summary(100, 90, 0, 0)}},
+        ]
+        bad = copy.deepcopy(valid)
+        bad["src/example.py"]["summary"]["covered_branches"] = float("nan")
+        cases.append(bad)
+        bad = copy.deepcopy(valid)
+        bad["src/example.py"]["summary"].pop("missing_branches")
+        cases.append(bad)
+        for files in cases:
+            with self.subTest(files=str(files)[:60]):
+                value = self._coverage_result(totals, coverage_overrides=self._extended_floors(), files=files)
+                self.assertEqual("FAIL", value["status"])
+                self.assertEqual(["coverage-artifact-invalid"], [x["code"] for x in value["blockers"]])
+        for meta in (
+            {},
+            {"format": 99, "version": "7.10.6", "branch_coverage": True},
+            {"format": 3, "version": "unknown", "branch_coverage": True},
+            {"format": 3, "version": "7.10.6", "branch_coverage": False},
+        ):
+            value = self._coverage_result(totals, coverage_overrides=self._extended_floors(), files=valid, meta=meta)
+            self.assertEqual("FAIL", value["status"])
+
+    def test_windows_coverage_names_normalize_but_alias_duplicates_refuse(self) -> None:
+        totals = self._summary(100, 90, 100, 90)
+        files = {"src\\example.py": {"summary": totals}}
+        value = self._coverage_result(totals, coverage_overrides=self._extended_floors(), files=files)
+        self.assertEqual("PASS", value["status"], value)
+        files["src/example.py"] = {"summary": totals}
+        value = self._coverage_result(totals, coverage_overrides=self._extended_floors(), files=files)
+        self.assertEqual("FAIL", value["status"])
+        self.assertEqual(["coverage-artifact-invalid"], [x["code"] for x in value["blockers"]])
+
+    def test_extended_policy_rejects_unsafe_paths_nonfinite_and_incomplete_floors(self) -> None:
+        from tools.release.validate_python_quality import _validate_policy
+
+        policy = _policy("0" * 64)
+        policy["coverage"].update(self._extended_floors(), minimumCombinedPercent=76)
+        self.assertEqual([], _validate_policy(policy))
+        for path in (
+            "/src/example.py",
+            "../src/example.py",
+            "src/../example.py",
+            "src//example.py",
+            "src\\example.py",
+            "",
+        ):
+            bad = copy.deepcopy(policy)
+            floors = bad["coverage"]["criticalFileFloors"]
+            floors[path] = floors.pop("src/example.py")
+            self.assertIn("quality-coverage-policy-invalid", {x["code"] for x in _validate_policy(bad)})
+        for change in (
+            {"minimumBranchPercent": float("nan")},
+            {"minimumBranchPercent": 0},
+            {"minimumBranchPercent": True},
+            {"criticalFileFloors": {}},
+            {"criticalFileFloors": {"src/example.py": {"minimumBranchPercent": 71}}},
+        ):
+            bad = copy.deepcopy(policy)
+            bad["coverage"].update(change)
+            self.assertIn("quality-coverage-policy-invalid", {x["code"] for x in _validate_policy(bad)})
 
     def test_modern_coverage_requires_both_line_and_combined_floors_via_actual_cli(self) -> None:
         cases = [

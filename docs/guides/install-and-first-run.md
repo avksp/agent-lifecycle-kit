@@ -1,12 +1,15 @@
 # Install ALK and make the first run
 
+Install version 2.31 for the current core checks. Repository secret and coverage checks use the supported formats and thresholds documented in the [CLI reference](../reference/cli.md#release-231-bounded-quality-checks).
+
+
 The portable plugin supplies skills and documents. Install the Python package
 shown below to use workflow migration and authorization renewal in 2.30.
 
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.30.0. Verify frozen plans before execution
+These instructions target ALK v2.31.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -99,7 +102,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.30.0
+python -m pip install agent-lifecycle-kit==2.31.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -110,7 +113,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.30.0
+python -m pip install agent-lifecycle-kit==2.31.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```

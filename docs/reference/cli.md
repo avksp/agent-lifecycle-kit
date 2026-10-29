@@ -1,5 +1,25 @@
 # CLI reference
 
+## Release 2.31: bounded quality checks
+
+The repository secret guard checks UTF-8 (including BOM) and UTF-16LE/BE with BOM.
+Supported text is limited to 2 MiB per file. Oversize or malformed supported text
+is refused without printing credential values. Binary files and BOM-less UTF-16
+remain outside its decoded-text claim. Exact harmless path/key/value exceptions
+are checked separately; the guard supplies repository evidence only.
+
+The Python quality policy keeps the 76% statement and combined floors, adds a
+71% global branch floor, and sets separate line/branch floors for four critical
+files. Branch-enabled reports must use the pinned format and tool version, contain
+all required files, and have consistent counters. Legacy policy receipts retain
+their original interpretation. These floors provide regression checks.
+
+Legacy adoption preparation validates state structure before reading mandatory
+identity fields. Malformed v4/v5 input receives a bounded lifecycle error.
+Preparation remains a read-only data candidate; history, expenses, original clocks
+and expired authorization remain intact. Install the Python package for this fix.
+
+
 ## Workflow history and authorization renewal in 2.30
 
 Install Python package 2.30 to use these commands. The portable plugin contains
@@ -104,7 +124,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.30.0
+python -m pip install agent-lifecycle-kit==2.31.0
 ```
 
 ## Task evidence identity

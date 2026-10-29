@@ -9,7 +9,7 @@ import json
 import math
 import re
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 try:
@@ -436,14 +436,48 @@ def _valid_percent(value: Any) -> bool:
     return type(value) in (int, float) and 0 <= value <= 100 and math.isfinite(value)
 
 
+def _coverage_file_name(value: Any) -> str | None:
+    if not isinstance(value, str) or not value or "\x00" in value or ":" in value:
+        return None
+    name = value.replace("\\", "/")
+    path = PurePosixPath(name)
+    if path.is_absolute() or ".." in path.parts or path.as_posix() != name:
+        return None
+    return name
+
+
 def _valid_coverage_policy(coverage: Any) -> bool:
     legacy = {"minimumStatementLinePercent", "baseline"}
-    if not isinstance(coverage, dict) or set(coverage) not in (legacy, legacy | {"minimumCombinedPercent"}):
+    modern = legacy | {"minimumCombinedPercent"}
+    extended = modern | {"minimumBranchPercent", "criticalFileFloors"}
+    if not isinstance(coverage, dict) or set(coverage) not in (legacy, modern, extended):
         return False
-    return isinstance(coverage["baseline"], dict) and all(
-        _valid_percent(coverage[key]) and ("minimumCombinedPercent" not in coverage or coverage[key] >= 76)
-        for key in coverage
-        if key != "baseline"
+    if not isinstance(coverage["baseline"], dict) or not _valid_percent(coverage["minimumStatementLinePercent"]):
+        return False
+    if set(coverage) == legacy:
+        return True
+    if (
+        not _valid_percent(coverage["minimumCombinedPercent"])
+        or min(coverage["minimumCombinedPercent"], coverage["minimumStatementLinePercent"]) < 76
+    ):
+        return False
+    if set(coverage) == modern:
+        return True
+    if not _valid_percent(coverage["minimumBranchPercent"]) or coverage["minimumBranchPercent"] <= 0:
+        return False
+    floors = coverage["criticalFileFloors"]
+    return (
+        isinstance(floors, dict)
+        and bool(floors)
+        and all(
+            isinstance(name, str)
+            and _coverage_file_name(name) == name
+            and "\\" not in name
+            and isinstance(floor, dict)
+            and set(floor) == {"minimumStatementLinePercent", "minimumBranchPercent"}
+            and all(_valid_percent(value) for value in floor.values())
+            for name, floor in floors.items()
+        )
     )
 
 
@@ -452,16 +486,18 @@ def _coverage_percent(covered: int, total: int) -> float:
     return covered / total * 100.0 if total else 100.0
 
 
+_COVERAGE_COUNTS = (
+    "num_statements",
+    "covered_lines",
+    "missing_lines",
+    "num_branches",
+    "covered_branches",
+    "missing_branches",
+)
+
+
 def _modern_coverage_metrics(totals: dict[str, Any]) -> dict[str, float]:
-    counts = (
-        "num_statements",
-        "covered_lines",
-        "missing_lines",
-        "num_branches",
-        "covered_branches",
-        "missing_branches",
-    )
-    if any(type(totals.get(key)) is not int or totals[key] < 0 for key in counts):
+    if any(type(totals.get(key)) is not int or totals[key] < 0 for key in _COVERAGE_COUNTS):
         raise ValueError("Coverage requires nonnegative integer statement and branch counts")
     lines, branches = totals["num_statements"], totals["num_branches"]
     covered, covered_branches = totals["covered_lines"], totals["covered_branches"]
@@ -492,6 +528,57 @@ def _modern_coverage_metrics(totals: dict[str, Any]) -> dict[str, float]:
     return computed
 
 
+def _critical_coverage_metrics(
+    policy: dict[str, Any], value: dict[str, Any], totals: dict[str, Any]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    meta = value.get("meta")
+    if (
+        not isinstance(meta, dict)
+        or type(meta.get("format")) is not int
+        or meta["format"] != 3
+        or (meta.get("version") != policy["toolchain"]["coverage"] or meta.get("branch_coverage") is not True)
+    ):
+        raise ValueError("Extended coverage requires the pinned branch-enabled coverage JSON format")
+    files = value.get("files")
+    if not isinstance(files, dict) or not files or totals["num_branches"] == 0:
+        raise ValueError("Extended coverage requires per-file counters and branch opportunities")
+    summaries = {}
+    sums = dict.fromkeys(_COVERAGE_COUNTS, 0)
+    for name, record in files.items():
+        normalized = _coverage_file_name(name)
+        if normalized is None or normalized in summaries or not isinstance(record, dict):
+            raise ValueError("Coverage file identities must be unique repository-relative paths")
+        summary = record.get("summary")
+        if not isinstance(summary, dict):
+            raise ValueError("Coverage file summary is missing")
+        summaries[normalized] = (_modern_coverage_metrics(summary), summary["num_branches"])
+        for key in _COVERAGE_COUNTS:
+            sums[key] += summary[key]
+    if any(sums[key] != totals[key] for key in _COVERAGE_COUNTS):
+        raise ValueError("Coverage file counters disagree with global totals")
+    observed, blockers = {}, []
+    for name, floors in policy["coverage"]["criticalFileFloors"].items():
+        if name not in summaries or summaries[name][1] == 0:
+            raise ValueError("Critical coverage file or branch opportunities are missing")
+        measured = summaries[name][0]
+        observed[name] = measured
+        for metric, floor in (
+            ("statementLinePercent", floors["minimumStatementLinePercent"]),
+            ("branchPercent", floors["minimumBranchPercent"]),
+        ):
+            if measured[metric] < floor:
+                blockers.append(
+                    {
+                        "code": "coverage-critical-floor-failed",
+                        "path": name,
+                        "metric": metric,
+                        "actual": measured[metric],
+                        "minimum": floor,
+                    }
+                )
+    return observed, blockers
+
+
 def _validate_coverage(
     policy: dict[str, Any], path: Path | None, *, metrics: dict[str, Any] | None = None
 ) -> list[dict[str, Any]]:
@@ -520,8 +607,14 @@ def _validate_coverage(
                 raise ValueError("Coverage percentage must be finite and within 0..100")
             observed = {"combinedPercent": percent}
             thresholds = (("combinedPercent", coverage_policy["minimumStatementLinePercent"]),)
+        critical, critical_blockers = {}, []
+        if "minimumBranchPercent" in coverage_policy:
+            thresholds += (("branchPercent", coverage_policy["minimumBranchPercent"]),)
+            critical, critical_blockers = _critical_coverage_metrics(policy, value, totals)
         if metrics is not None:
             metrics.update(observed)
+            if critical:
+                metrics["criticalFiles"] = critical
             metrics["interpretation"] = "explicit-combined-and-lines" if modern else "legacy-aggregate-alias"
     except (OSError, KeyError, TypeError, ValueError, OverflowError, json.JSONDecodeError) as exc:
         return [{"code": "coverage-artifact-invalid", "message": str(exc)}]
@@ -529,7 +622,7 @@ def _validate_coverage(
         {"code": "coverage-floor-failed", "metric": key, "actual": observed[key], "minimum": minimum}
         for key, minimum in thresholds
         if observed[key] < minimum
-    ]
+    ] + critical_blockers
 
 
 def _validate_intentional_findings(_policy: dict[str, Any], ruff: dict[str, Any], _root: Path) -> list[dict[str, Any]]:
