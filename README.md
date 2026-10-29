@@ -4,22 +4,6 @@
 
 # Agent Lifecycle Kit
 
-Release 2.32 adds a shared advisory observation of process costs, paired EN/RU
-manual checks, and shorter reading routes for eight selected stage cases. Process
-means pipeline compliance plus coordination; useful work means implementation
-plus product validation. Reported and confirmed subtotals retain their scope
-and confidence. An attested subset does not establish whole-run completeness.
-Missing whole-run shares and provider usage stay null/UNAVAILABLE. Existing
-pipeline verdicts, limits and lifecycle authority retain their meaning.
-
-The fixed source-reading comparison reduces plan authoring from 25,643 to
-23,570 UTF-8 bytes (8.084%) and defect repair from 26,247 to 24,174 (7.898%).
-Both miss the 10% engineering target. All seven complete role contracts and
-skill routers are unchanged. These are selected-stage source bytes, not whole
-host input or measured token/model savings. A fixed local comparison reduces
-CLI/facade calls from two to one with identical state/event bytes; its wall time
-can be higher. See [the CLI release notes](docs/reference/cli.md#release-232-process-observations-and-reading-scope) for scope and refusal boundaries.
-
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.15-blue.svg)
@@ -28,7 +12,7 @@ can be higher. See [the CLI release notes](docs/reference/cli.md#release-232-pro
 
 The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling stay in adapters or host-local profiles.
 
-ALK provides a verifiable finish for external-agent work with proportionate control. Release 2.31 strengthens supported-text secret checks, enforces global branch and critical-file coverage floors, and gives a bounded structural refusal for malformed legacy state. See [the 2.31 check boundaries](docs/reference/cli.md#release-231-bounded-quality-checks). See [workflow history and recovery](docs/reference/workflow-state-storage.md) for the earlier storage and renewal features. Install the Python package as well as the plugin for the new CLI commands.
+Release 2.32 adds [advisory process observations and eight selected reading routes](docs/reference/cli.md#release-232-process-observations-and-reading-scope); missing whole-run evidence and provider usage remain null/UNAVAILABLE. ALK provides a verifiable finish for external-agent work with proportionate control. Release 2.31 strengthens supported-text secret checks, enforces global branch and critical-file coverage floors, and gives a bounded structural refusal for malformed legacy state. See [the 2.31 check boundaries](docs/reference/cli.md#release-231-bounded-quality-checks). See [workflow history and recovery](docs/reference/workflow-state-storage.md) for the earlier storage and renewal features. Install the Python package as well as the plugin for the new CLI commands.
 
 Release 2.28 adds [bounded lifecycle and accounting baselines](docs/reference/performance-and-resource-budgets.md#release-228-lifecycle-and-accounting-baselines). Repository tools measure real read-only operations and separate fixture preparation from operation and subprocess time. The Windows fixture comparison observed a 13.08% median reduction in one six-sample experiment; it is not a universal speed promise. All security and platform checks remain required.
 
