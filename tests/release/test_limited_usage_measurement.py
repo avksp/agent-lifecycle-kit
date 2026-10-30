@@ -539,5 +539,343 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), b"original")
 
 
+class Release234MeasurementTests(unittest.TestCase):
+    def test_exact_runtime_candidate_refuses_every_other_ast_and_source_change(self):
+        module = subject()
+        legacy = "src/agent_lifecycle/accounting/declared_ledger_legacy.py"
+        candidate = (ROOT / legacy).read_text()
+        tree = ast.parse(candidate)
+        method = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_r11_git")
+        method.body = method.body[2:]
+        call = next(n for n in ast.walk(method) if isinstance(n, ast.Call) and ast.unparse(n.func) == "subprocess.run")
+        call.args[0].elts[0] = ast.Constant(value="git")
+        baseline = ast.unparse(tree)
+        with tempfile.TemporaryDirectory() as directory:
+            roots = {side: Path(directory) / side for side in ("baseline", "candidate")}
+            inputs = {
+                side: {
+                    "files": [
+                        {"path": name, "sha256": "same"}
+                        for name in (
+                            legacy,
+                            module.HOT_PATH,
+                            "tests/workflow/limited_usage_fixture_support.py",
+                            "src/other.py",
+                        )
+                    ]
+                }
+                for side in roots
+            }
+            for side, text in (("baseline", baseline), ("candidate", candidate)):
+                path = roots[side] / legacy
+                path.parent.mkdir(parents=True)
+                path.write_text(text)
+            module.release234_contract(roots, inputs)
+            path = roots["candidate"] / legacy
+            for changed in (
+                candidate.replace("timeout=15", "timeout=14"),
+                candidate.replace("Path(executable).is_absolute()", "True"),
+                candidate.replace('executable if executable is not None else "git"', '"git"'),
+            ):
+                path.write_text(changed)
+                with self.assertRaises(ValueError):
+                    module.release234_contract(roots, inputs)
+            path.write_text(candidate)
+            inputs["candidate"]["files"][-1]["sha256"] = "changed"
+            with self.assertRaises(ValueError):
+                module.release234_contract(roots, inputs)
+
+    def test_new_threshold_uses_each_versions_baseline_mad_and_original_deadline(self):
+        module = subject()
+        samples = [
+            {"side": side, "wallSeconds": 100 if side == "baseline" else 94, "join": {}} for side in module.ORDER
+        ]
+        self.assertEqual(module.release234_comparison(samples)["status"], "MEASURED_IMPROVEMENT")
+        samples[1]["wallSeconds"] = samples[2]["wallSeconds"] = samples[5]["wallSeconds"] = 95
+        self.assertEqual(module.release234_comparison(samples)["status"], "STOP_NO_BENEFIT")
+        samples[0]["wallSeconds"], samples[3]["wallSeconds"], samples[4]["wallSeconds"] = 80, 100, 120
+        self.assertEqual(module.release234_comparison(samples)["requiredRelativeGainExclusive"], 0.2)
+
+        class FixedClock(datetime):
+            @classmethod
+            def now(cls, _tz=None):
+                return module.RELEASE234_DEADLINE - timedelta(hours=2)
+
+        with patch.object(module, "datetime", FixedClock):
+            self.assertEqual(module.release234_seconds("2026-10-31T01:47:46Z"), 7200)
+            for value in (None, "bad", "2026-10-31T01:47:47Z", "2026-10-31T01:47:45Z"):
+                with self.assertRaises(ValueError):
+                    module.release234_seconds(value)
+        with patch.object(module.sys, "platform", "linux"):
+            self.assertEqual(
+                module.process_peak(), {"scope": "worker-process-only", "bytes": None, "status": "UNAVAILABLE"}
+            )
+
+    def test_contract_probe_preserves_inputs_and_rejects_a_wrong_locked_interpreter(self):
+        module = subject()
+        with checkout() as (parent, root, head):
+            names = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().strip("\0").split("\0")
+            before = module.input_manifest(root, names)
+            scratch = parent / "scratch"
+            scratch.mkdir()
+            expected = list(__import__("sys").version_info[:2])
+            path = parent / "probe-request.json"
+            request = {
+                "root": str(root),
+                "output": str(parent / "contract.json"),
+                "sourceHead": head,
+                "trackedInputs": names,
+                "inputSha256": before["sha256"],
+                "testContract": {"wrong-schema": True},
+                "contractOnly": True,
+                "expectedVersion": expected,
+            }
+            module.write_new(path, request)
+            records = []
+            module.command(
+                module.worker_argv(HELPER, path, root, scratch, version=expected), root, time.monotonic() + 30, records
+            )
+            value = module.read_object(Path(request["output"]))
+            self.assertEqual(value, {"testContract": module.test_contract(root), "version": expected})
+            self.assertEqual(module.input_manifest(root, names), before)
+            wrong = [3, 11] if expected == [3, 15] else [3, 15]
+            rejected = parent / "wrong-request.json"
+            module.write_new(
+                rejected, {**request, "output": str(parent / "wrong.json"), "experiment": 5, "expectedVersion": wrong}
+            )
+            with self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, rejected, root, scratch, version=wrong),
+                    root,
+                    time.monotonic() + 30,
+                    records,
+                )
+            self.assertFalse((parent / "wrong.json").exists())
+            malformed = parent / "missing-version-request.json"
+            module.write_new(malformed, {**request, "output": str(parent / "missing.json"), "experiment": 5})
+            with self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, malformed, root, scratch), root, time.monotonic() + 30, records
+                )
+            self.assertFalse((parent / "missing.json").exists())
+
+    def test_candidate_treatment_is_the_only_worker_environment_difference(self):
+        module = subject()
+        key = "ALK_ACCOUNTING_GIT_EXECUTABLE"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            backend = str(root / "selected Git Ω.exe")
+            environments = {}
+            with patch.dict(os.environ, {key: backend, "GIT_TRACE2_EVENT": "must-not-reach-workload"}):
+                for side in ("baseline", "candidate"):
+                    request = root / (side + ".json")
+                    module.write_new(request, {"accountingGitExecutable": backend if side == "candidate" else None})
+                    argv = module.worker_argv(HELPER, request, root, root, version=[3, 11])
+                    options = json.loads(argv[-1])
+                    environments[side] = options["environment"]
+                    self.assertNotIn("GIT_TRACE2_EVENT", options["environment"])
+            self.assertNotIn(key, environments["baseline"])
+            self.assertEqual(environments["candidate"].pop(key), backend)
+            self.assertEqual(environments["baseline"], environments["candidate"])
+
+    def test_workflow_backend_selection_and_postcheck_preserve_path_and_refuse_drift(self):
+        from contextlib import redirect_stdout
+
+        workflow = (ROOT / ".github/workflows/ci-timing-control.yml").read_text()
+        setup, after = [textwrap.dedent(part.split("'@", 1)[0]) for part in workflow.split("$code = @'")[1:]]
+        for scenario in ("positive", "version-mismatch", "binary-drift"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                prefix = root / "Git spaced Ω"
+                core = prefix / "libexec/git-core"
+                core.mkdir(parents=True)
+                wrapper, backend = prefix / "cmd/git.exe", prefix / "bin/git.exe"
+                for path in (wrapper, backend):
+                    path.parent.mkdir(parents=True)
+                    path.write_bytes(b"fixed mocked binary")
+                (root / "work/ci").mkdir(parents=True)
+                previous = Path.cwd()
+                original_path = os.environ["PATH"]
+
+                def git_output(argv, *, scenario=scenario, wrapper=wrapper, backend=backend, core=core, **_kwargs):
+                    self.assertIn(argv[0], (str(wrapper), str(backend)))
+                    if argv[1:] == ["--exec-path"]:
+                        return str(core).encode()
+                    self.assertEqual(argv[1:], ["--version"])
+                    return (
+                        b"different"
+                        if scenario == "version-mismatch" and argv[0] == str(backend)
+                        else b"git version fixture"
+                    )
+
+                try:
+                    os.chdir(root)
+                    with (
+                        patch.dict(os.environ, GITHUB_SHA="f" * 40, GITHUB_OUTPUT=str(root / "outputs")),
+                        patch("shutil.which", return_value=str(wrapper)),
+                        patch("subprocess.check_output", side_effect=git_output),
+                        redirect_stdout(io.StringIO()),
+                    ):
+                        if scenario == "version-mismatch":
+                            with self.assertRaises(AssertionError):
+                                exec(compile(setup, "<workflow-backend-setup>", "exec"), {})
+                            self.assertFalse((root / "work/ci/release234-git-backend.json").exists())
+                            continue
+                        exec(compile(setup, "<workflow-backend-setup>", "exec"), {})
+                        metadata = json.loads((root / "work/ci/release234-git-backend.json").read_bytes())
+                        self.assertEqual(metadata["backend"]["path"], str(backend))
+                        self.assertEqual(os.environ["PATH"], original_path)
+                        if scenario == "binary-drift":
+                            backend.write_bytes(b"changed binary")
+                            with self.assertRaises(AssertionError):
+                                exec(compile(after, "<workflow-backend-after>", "exec"), {})
+                        else:
+                            exec(compile(after, "<workflow-backend-after>", "exec"), {})
+                        result = json.loads((root / "work/ci/release234-git-backend-after.json").read_bytes())
+                        self.assertTrue(result["pathUnchanged"])
+                        self.assertEqual(
+                            all(item["unchanged"] for item in result["executables"]), scenario == "positive"
+                        )
+                finally:
+                    os.chdir(previous)
+
+    def test_two_version_barrier_stops_without_full_samples_and_preserves_all_twelve_pairs(self):
+        module = subject()
+        candidate = "1" * 40
+        for benefit in (False, True):
+            with self.subTest(benefit=benefit), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory)
+                for version in ("311", "315"):
+                    exe = source / f"work/ci/release234-py{version}/Scripts/python.exe"
+                    exe.parent.mkdir(parents=True)
+                    exe.touch()
+                backend_record = source / "work/ci/release234-git-backend.json"
+                backend_record.write_text(
+                    json.dumps({"sourceHead": candidate, "backend": {"path": str(source / "selected backend.exe")}})
+                )
+                started = []
+
+                def git(arguments, root, _deadline, _records):
+                    if arguments[0] == "clone":
+                        root = Path(arguments[-1])
+                        root.mkdir()
+                        for name in (
+                            ".gitattributes",
+                            module.HOT_PATH,
+                            "src/agent_lifecycle/contracts/authority_io.py",
+                        ):
+                            path = root / name
+                            path.parent.mkdir(parents=True, exist_ok=True)
+                            path.write_text("same")
+                    if arguments[0] == "rev-parse":
+                        return (module.RELEASE234_BASELINE if root.name == "baseline" else candidate).encode()
+                    if arguments[0] == "diff":
+                        return "\n".join(sorted(module.RELEASE234_OWNED)).encode()
+                    return b"tracked\0" if arguments[0] == "ls-files" else b""
+
+                def command(argv, _root, _deadline, records, *, started=started, benefit=benefit, **_kwargs):
+                    options = json.loads(argv[-1])
+                    request = module.read_object(Path(options["request"]))
+                    side, version = request["profileSourceRole"], str(options["version"][1])
+                    phase = (
+                        "contract"
+                        if request.get("contractOnly")
+                        else "profile"
+                        if request["profileOnly"]
+                        else "regression"
+                        if request["regressionOnly"]
+                        else "module"
+                    )
+                    started.append((version, side, phase))
+                    contract = {
+                        "testAndFixtureAstSha256": "schema-" + version,
+                        "assertionAstSha256": "same",
+                        "assertionSites": 287,
+                    }
+                    if phase == "contract":
+                        module.write_new(
+                            Path(request["output"]),
+                            {
+                                "testContract": contract,
+                                "version": options["version"],
+                                "sourceHead": request["sourceHead"],
+                                "inputSha256": request["inputSha256"],
+                            },
+                        )
+                        records.append({"processStarted": True, "exitCode": 0})
+                        return
+                    self.assertEqual(request["testContract"], contract)
+                    self.assertEqual(request["expectedVersion"], options["version"])
+                    seconds = 100 if side == "baseline" else 90 if benefit or version == "11" else 99
+                    value = {
+                        "status": "PASS",
+                        "testsRun": request["expectedTests"],
+                        "inputHashesUnchanged": True,
+                        "sourceHead": request["sourceHead"],
+                        "sourceRole": side,
+                        "mode": request["profileMode"],
+                        "testContract": request["testContract"],
+                        "testId": f"{module.HOT_MODULE}.{module.SLOW_CASE}",
+                        "python": version,
+                        "inputSha256": "same",
+                        "environment": module.environment_identity(),
+                        "performanceAcceptanceClaimed": False,
+                        "phases": [{"phase": "slow-case", "elapsedSeconds": seconds}],
+                        "runtimeProvenance": {"executable": argv[0]},
+                        "lockedEnvironment": {"version": version},
+                        "wallSeconds": seconds,
+                        "immutableGitSeedPreparationSeconds": 0,
+                    }
+                    if phase == "profile":
+                        value["status"] = "PROFILE_COMPLETE"
+                    module.write_new(Path(request["output"]), value)
+                    records.append({"processStarted": True, "exitCode": 0})
+
+                args = SimpleNamespace(
+                    baseline=module.RELEASE234_BASELINE,
+                    candidate=candidate,
+                    experiment=5,
+                    mode="paired",
+                    deadline_utc="2026-10-31T01:47:46Z",
+                    out=str(source / "report.json"),
+                )
+                with (
+                    patch.object(module.Path, "cwd", return_value=source),
+                    patch.object(module, "git", side_effect=git),
+                    patch.object(module, "command", side_effect=command),
+                    patch.object(module, "input_manifest", return_value={"sha256": "same", "files": []}),
+                    patch.object(module, "test_contract", return_value={}),
+                    patch.object(module, "restore_fixture"),
+                    patch.object(module, "release234_contract", return_value={}),
+                    patch.object(module, "release234_seconds", return_value=10000),
+                    patch.object(module, "validate_sample", return_value={}),
+                    patch.object(module.platform, "system", return_value="Windows"),
+                    patch.object(module.sys, "version_info", (3, 11)),
+                    patch.dict(
+                        os.environ,
+                        {
+                            **{key: "bound" for key in module.IDENTITY_KEYS},
+                            "RUNNER_OS": "Windows",
+                            "GITHUB_SHA": candidate,
+                            "ALK_ACCOUNTING_GIT_EXECUTABLE": str(source / "selected backend.exe"),
+                        },
+                    ),
+                ):
+                    report = io.StringIO()
+                    code = module.execute(args, report)
+                value = json.loads(report.getvalue())
+                self.assertEqual(code, 0 if benefit else 1, value.get("failure"))
+                self.assertEqual(
+                    [phase for _, _, phase in started[:8]], ["contract"] * 2 + ["regression"] * 2 + ["profile"] * 4
+                )
+                self.assertEqual(value["validationUnits"]["contractChildrenStarted"], 2)
+                full = [(version, side) for version, side, phase in started if phase == "module"]
+                self.assertEqual(
+                    full, [(version, side) for version in ("11", "15") for side in module.ORDER] if benefit else []
+                )
+                self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 12 if benefit else 0)
+                self.assertEqual(value["status"], "MEASURED_IMPROVEMENT" if benefit else "STOP_NO_PRELIMINARY_BENEFIT")
+
+
 if __name__ == "__main__":
     unittest.main()

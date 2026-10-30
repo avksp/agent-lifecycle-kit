@@ -13,6 +13,7 @@ from unittest.mock import patch
 from agent_lifecycle.accounting import declared_ledger_legacy as legacy
 from agent_lifecycle.contracts import LifecycleError
 from tests.contracts.test_private_storage import unsafe_private_access
+from tests.release import test_parallel_unittest as fixture_controls
 
 
 class DeclaredLedgerTests(unittest.TestCase):
@@ -270,3 +271,211 @@ class CoordinatorDurabilityTests(unittest.TestCase):
         self.assertEqual(sum(isinstance(v, dict) for v in outcomes), 1, outcomes)
         self.assertEqual(sum(isinstance(v, Exception) for v in outcomes), 1, outcomes)
         self.assertEqual(ledger.read_coordinator_cost_head(root)['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
+
+
+class GitLaunchContractTests(fixture_controls.DeclaredFixtureIsolationTests):
+    """Explicit accounting Git selection plus unchanged inherited isolation controls."""
+
+    def configured(self, value):
+        stack = ExitStack()
+        environment = dict(os.environ)
+        if value is None:
+            environment.pop("ALK_ACCOUNTING_GIT_EXECUTABLE", None)
+        else:
+            environment["ALK_ACCOUNTING_GIT_EXECUTABLE"] = value
+        stack.enter_context(patch.object(legacy.os, "environ", environment))
+        return stack
+
+    def test_default_and_explicit_keep_argv_capture_timeout_and_environment(self):
+        selected = str(Path(tempfile.gettempdir()).resolve() / "Git spaced Ω" / "git.exe")
+        for value in (None, selected):
+            with self.subTest(configured=value), self.configured(value):
+                completed = SimpleNamespace(returncode=0, stdout=b"raw\x00bytes\n", stderr=b"separate stderr")
+                with patch.object(legacy.subprocess, "run", return_value=completed) as call:
+                    self.assertEqual(legacy._r11_git(Path("root"), "rev-parse", "--show-toplevel"), completed.stdout)
+                self.assertEqual(call.call_args.args, ([value or "git", "rev-parse", "--show-toplevel"],))
+                options = call.call_args.kwargs
+                self.assertEqual(options["cwd"], Path("root"))
+                self.assertEqual(options["timeout"], 15)
+                self.assertTrue(options["capture_output"])
+                self.assertFalse(options["check"])
+                self.assertNotIn("creationflags", options)
+                self.assertTrue(options["env"] == {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}, "Git environment differs")
+
+    def test_empty_relative_and_nul_configuration_refuse_before_subprocess(self):
+        values = ("", "git", "relative/git.exe", "   ", str(Path(tempfile.gettempdir()).resolve()) + "/bad\x00git")
+        for value in values:
+            with (
+                self.subTest(value=repr(value)),
+                self.configured(value),
+                patch.object(legacy.subprocess, "run") as call,
+            ):
+                with self.assertRaises(LifecycleError) as caught:
+                    legacy._r11_git(Path("root"), "--version")
+                self.assertEqual(caught.exception.code, "r11-source-unavailable")
+                self.assertEqual(call.call_count, 0, "Invalid configuration launched a subprocess")
+
+    def test_selected_errors_timeout_and_overflow_never_fall_back(self):
+        selected = str(Path(tempfile.gettempdir()).resolve() / "selected git.exe")
+        cases = (
+            OSError("missing"),
+            subprocess.TimeoutExpired([selected], 15),
+            SimpleNamespace(returncode=1, stdout=b"", stderr=b"error"),
+            SimpleNamespace(returncode=0, stdout=b"x" * 8388609, stderr=b""),
+            SimpleNamespace(returncode=0, stdout=b"", stderr=b"x" * 65537),
+        )
+        for value in cases:
+            behavior = {"side_effect": value} if isinstance(value, Exception) else {"return_value": value}
+            with (
+                self.subTest(case=type(value).__name__),
+                self.configured(selected),
+                patch.object(legacy.subprocess, "run", **behavior) as call,
+            ):
+                with self.assertRaises(LifecycleError) as caught:
+                    legacy._r11_git(Path("root"), "--version")
+                self.assertEqual(caught.exception.code, "r11-source-unavailable")
+                self.assertEqual(call.call_count, 1)
+                self.assertEqual(call.call_args.args[0][0], selected)
+
+    def test_actual_default_and_selected_git_match_home_and_spaced_unicode_roots(self):
+        import json
+        from shutil import which
+
+        selected = os.environ.get("ALK_ACCOUNTING_GIT_EXECUTABLE") or which("git")
+        self.assertIsNotNone(selected)
+        observations = []
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve() / "spaced Ω 工作"
+            root.mkdir()
+            subprocess.run(["git", "init", "-q", str(root)], check=True, capture_output=True, timeout=15)
+            (root / "untracked Ω.txt").write_bytes(b"original bytes\n")
+            home = root / "home Ω"
+            home.mkdir()
+            for home_value in (None, str(home)):
+                with (
+                    self.subTest(home=home_value),
+                    patch.dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1"),
+                ):
+                    if home_value is None:
+                        os.environ.pop("HOME", None)
+                    else:
+                        os.environ["HOME"] = home_value
+                    for args in (
+                        ("--version",),
+                        ("rev-parse", "--path-format=absolute", "--git-common-dir"),
+                        ("rev-parse", "--show-toplevel"),
+                        ("status", "--porcelain=v1", "-z"),
+                    ):
+                        with self.configured(None):
+                            baseline = legacy._r11_git(root, *args)
+                        with self.configured(selected):
+                            candidate = legacy._r11_git(root, *args)
+                        self.assertTrue(baseline == candidate, "Default/selected Git raw outputs differ")
+                        observations.append(
+                            {
+                                "homePreset": home_value is not None,
+                                "argvSuffix": list(args),
+                                "defaultRawHex": baseline.hex(),
+                                "selectedRawHex": candidate.hex(),
+                            }
+                        )
+        print("accounting-git-equivalence " + json.dumps(observations, sort_keys=True))
+
+    def test_actual_missing_absolute_executable_refuses_without_fallback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            selected = str(Path(directory).resolve() / "missing Ω git.exe")
+            actual_run = subprocess.run
+            with (
+                self.configured(selected),
+                patch.object(legacy.subprocess, "run", wraps=actual_run) as call,
+                self.assertRaises(LifecycleError) as caught,
+            ):
+                legacy._r11_git(Path(directory), "--version")
+            self.assertEqual(caught.exception.code, "r11-source-unavailable")
+            self.assertEqual(call.call_count, 1)
+            self.assertEqual(call.call_args.args[0][0], selected)
+
+    def test_timeout_terminates_and_reaps_own_child_for_both_routes(self):
+        import json
+        import shlex
+        from shutil import which
+
+        actual_run, actual_popen = subprocess.run, subprocess.Popen
+        selected = os.environ.get("ALK_ACCOUNTING_GIT_EXECUTABLE") or which("git")
+        self.assertIsNotNone(selected)
+        fixed_sleep = "!" + shlex.quote(sys.executable) + " -c " + shlex.quote("import time; time.sleep(0.5)")
+        arguments = ["-c", "alias.accounting-timeout-probe=" + fixed_sleep, "accounting-timeout-probe"]
+        observations = []
+        for configured in (None, selected):
+            children, production_timeouts = [], []
+
+            def launch(argv, *, children=children, configured=configured, **kwargs):
+                self.assertEqual(argv, [configured or "git", *arguments])
+                child = actual_popen(argv, **kwargs)
+                children.append(child)
+                return child
+
+            def bounded(argv, *, production_timeouts=production_timeouts, **kwargs):
+                production_timeouts.append(kwargs["timeout"])
+                self.assertEqual(kwargs["timeout"], 15)
+                return actual_run(argv, **{**kwargs, "timeout": 0.1})
+
+            with (
+                tempfile.TemporaryDirectory() as directory,
+                self.configured(configured),
+                patch.object(legacy.subprocess, "Popen", side_effect=launch),
+                patch.object(legacy.subprocess, "run", side_effect=bounded),
+                self.assertRaises(LifecycleError) as caught,
+            ):
+                legacy._r11_git(Path(directory), *arguments)
+            self.assertEqual(caught.exception.code, "r11-source-unavailable")
+            self.assertEqual(len(children), 1)
+            self.assertIsNotNone(children[0].poll())
+            observations.append(
+                {
+                    "configuredExecutable": configured,
+                    "actualArgv": children[0].args,
+                    "observedProductionTimeoutSeconds": production_timeouts[0],
+                    "scaledControlTimeoutSeconds": 0.1,
+                    "ownedLeafSleepSeconds": 0.5,
+                    "ownPid": children[0].pid,
+                    "ownChildExitCode": children[0].returncode,
+                    "ownChildReaped": True,
+                }
+            )
+        print("accounting-git-timeout-own-child " + json.dumps(observations, sort_keys=True))
+
+    def test_two_fresh_primary_observations_and_mismatch_still_refuse(self):
+        for changed in (False, True):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                common = root / ".git"
+                common.mkdir()
+                raw = (str(common) + "\n").encode()
+                with patch.object(legacy, "_r11_git", side_effect=[raw, b"different\n" if changed else raw]) as call:
+                    if changed:
+                        with self.assertRaises(LifecycleError) as caught:
+                            legacy._r11_coordinator_root(root)
+                        self.assertEqual(caught.exception.code, "r11-opening-origin")
+                    else:
+                        self.assertEqual(legacy._r11_coordinator_root(root), root)
+                self.assertEqual(call.call_count, 2)
+                self.assertEqual(call.call_args_list[0].args[0], root)
+                self.assertEqual(call.call_args_list[1].args[0], root)
+
+    def test_actual_primary_identity_is_read_twice_on_both_routes(self):
+        from shutil import which
+
+        selected = os.environ.get("ALK_ACCOUNTING_GIT_EXECUTABLE") or which("git")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(root)], check=True, capture_output=True, timeout=15)
+            actual_git = legacy._r11_git
+            for configured in (None, selected):
+                with (
+                    self.subTest(configured=configured),
+                    self.configured(configured),
+                    patch.object(legacy, "_r11_git", wraps=actual_git) as call,
+                ):
+                    self.assertEqual(legacy._r11_coordinator_root(root), root)
+                    self.assertEqual(call.call_count, 2)
