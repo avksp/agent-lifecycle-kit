@@ -59,16 +59,11 @@ LINE_SELECTORS = {
 }
 OWNED = frozenset(
     (
-        HOT_PATH,
-        "tests/workflow/limited_usage_fixture_support.py",
-        "tests/release/test_parallel_unittest.py",
-        "tests/release/test_limited_usage_measurement.py",
-        "tools/ci/run_parallel_unittest.py",
-        "tools/ci/measure_limited_usage.py",
-        ".github/workflows/ci-timing-control.yml",
-        "src/agent_lifecycle/contracts/authority_io.py",
-        "tests/contracts/test_windows_authority_bindings.py",
-    )
+        f"{HOT_PATH} tests/workflow/limited_usage_fixture_support.py "
+        "tests/release/test_parallel_unittest.py tests/release/test_limited_usage_measurement.py "
+        "tools/ci/run_parallel_unittest.py tools/ci/measure_limited_usage.py .github/workflows/ci-timing-control.yml "
+        "src/agent_lifecycle/contracts/authority_io.py tests/contracts/test_windows_authority_bindings.py"
+    ).split()
 )
 ENV_KEYS = tuple(
     (
@@ -77,15 +72,8 @@ ENV_KEYS = tuple(
         "GITHUB_JOB RUNNER_OS RUNNER_ARCH ImageOS ImageVersion"
     ).split()
 )
-IDENTITY_KEYS = (
-    "GITHUB_SHA",
-    "GITHUB_RUN_ID",
-    "GITHUB_RUN_ATTEMPT",
-    "GITHUB_JOB",
-    "RUNNER_OS",
-    "RUNNER_ARCH",
-    "ImageOS",
-    "ImageVersion",
+IDENTITY_KEYS = tuple(
+    ("GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT GITHUB_JOB RUNNER_OS RUNNER_ARCH ImageOS ImageVersion").split()
 )
 
 
@@ -448,8 +436,14 @@ def sample(request_path):
     if head.is_symlink() or head.read_text(encoding="ascii").strip() != source_sha(request["sourceHead"]):
         raise ValueError("Sample requires the exact detached source commit")
     before = input_manifest(root, request["trackedInputs"])
-    if before["sha256"] != request["inputSha256"] or test_contract(root) != request["testContract"]:
+    contract = test_contract(root)
+    if before["sha256"] != request["inputSha256"] or (
+        not request.get("contractOnly") and contract != request["testContract"]
+    ):
         raise ValueError("Sample input or assertion contract differs")
+    if request.get("contractOnly"):
+        write_new(output, {"testContract": contract, "version": list(sys.version_info[:2])})
+        return 0
     package = importlib.import_module("agent_lifecycle")
     if not Path(package.__file__).resolve().is_relative_to(root / "src"):
         raise ValueError("Sample imported a different installed runtime")
@@ -631,7 +625,9 @@ def worker_argv(helper, request_path, root, scratch, *, executable=None, version
         "os.environ.clear();os.environ.update(v['environment']);os.chdir(v['root']);"
         "sys.path[:0]=[os.path.join(v['root'],'src'),v['root']];"
         "r=__import__('pathlib').Path(v['request']);"
-        "f='profile_sample' if json.loads(r.read_bytes()).get('profileOnly') else 'sample';"
+        "q=json.loads(r.read_bytes());assert q.get('experiment')!=5 or "
+        "(q.get('expectedVersion')==v['version'] and v['version'] in ([3,11],[3,15]));"
+        "f='profile_sample' if q.get('profileOnly') else 'sample';"
         "sys.exit(runpy.run_path(v['helper'],run_name='alk_measurement_worker')[f](r))"
     )
     return [str(executable or sys.executable), "-I", "-B", "-c", bootstrap, json.dumps(options)]
@@ -845,13 +841,15 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
         "sourceHead": args.baseline if side == "baseline" else args.candidate,
         "trackedInputs": [item["path"] for item in inputs[side]["files"]],
         "inputSha256": inputs[side]["sha256"],
-        "testContract": contracts[side],
+        "testContract": contracts[version] if release234 and phase != "contract" else contracts[side],
         "expectedTests": 5 if phase == "regression" else 78,
         "profileOnly": profile_mode,
         "profileSourceRole": side,
         "profileMode": payload["mode"],
         "experiment": args.experiment,
         "regressionOnly": phase == "regression",
+        "contractOnly": phase == "contract",
+        "expectedVersion": [3, int(version[1:])] if release234 else None,
     }
     request_path = destination / "request.json"
     write_new(request_path, request)
@@ -861,9 +859,10 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
         root,
         scratch,
         executable=executable,
-        version=[3, int(version[1:])] if release234 else None,
+        version=request["expectedVersion"],
     )
     counter = {
+        "contract": "contractChildrenStarted",
         "profile": "profileChildrenStarted",
         "regression": "regressionChildrenStarted",
         "module": "moduleChildrenStarted",
@@ -885,6 +884,15 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
             payload["validationUnits"]["unknownChildStartHolds"] += 1
         payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
     value = read_object(destination / "test-timings.json")
+    if phase == "contract":
+        if (
+            value["version"] != request["expectedVersion"]
+            or input_manifest(root, request["trackedInputs"])["sha256"] != request["inputSha256"]
+        ):
+            raise ValueError("Wrong-interpreter or mutated-input contract probe")
+        contracts[version] = value["testContract"]
+        payload.setdefault("versionTestContracts", {})[version] = value
+        return False
     if profile_mode:
         if (
             value["status"] != "PROFILE_COMPLETE"
@@ -903,25 +911,19 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
             raise ValueError("Incomplete or wrong-source feasibility profile")
         if release234 and value["lockedEnvironment"] != payload["versions"][version]["lockedEnvironment"]:
             raise ValueError("Release234 profile locked environment differs")
-        payload["profiles"].append(
-            {
-                "side": side,
-                **(
-                    {
-                        "version": version,
-                        "lockedEnvironment": value["lockedEnvironment"],
-                        "commonCaseSeconds": next(
-                            p["elapsedSeconds"] for p in value["phases"] if p["phase"] == "slow-case"
-                        ),
-                    }
-                    if release234
-                    else {}
-                ),
-                "sourceHead": request["sourceHead"],
-                "report": reference(destination / "test-timings.json"),
-                "inputSha256": request["inputSha256"],
-            }
-        )
+        profile = {
+            "side": side,
+            "sourceHead": request["sourceHead"],
+            "report": reference(destination / "test-timings.json"),
+            "inputSha256": request["inputSha256"],
+        }
+        if release234:
+            profile.update(
+                version=version,
+                lockedEnvironment=value["lockedEnvironment"],
+                commonCaseSeconds=next(p["elapsedSeconds"] for p in value["phases"] if p["phase"] == "slow-case"),
+            )
+        payload["profiles"].append(profile)
         return False
     if release234:
         provenance = value["runtimeProvenance"]
@@ -1100,11 +1102,12 @@ def execute(args, report):
             executions = [(None, side, "profile" if profile_mode else "module") for side in order]
             if release234:
                 versions = ("311", "315")
-                executions = [(v, "candidate", "regression") for v in versions]
+                executions = [(v, "baseline", "contract") for v in versions]
+                executions += [(v, "candidate", "regression") for v in versions]
                 executions += [(v, side, "profile") for v in versions for side in ("baseline", "candidate")]
                 executions += [(v, side, "module") for v in versions for side in ORDER]
             for number, (version, side, phase) in enumerate(executions, 1):
-                if release234 and number == 7:
+                if release234 and number == 9:
                     screens = {
                         v: [p["commonCaseSeconds"] for p in payload["profiles"] if p["version"] == v] for v in versions
                     }
@@ -1161,6 +1164,7 @@ def execute(args, report):
         + payload["validationUnits"]["moduleChildrenStarted"]
         + payload["validationUnits"]["profileChildrenStarted"]
         + payload["validationUnits"].get("regressionChildrenStarted", 0)
+        + payload["validationUnits"].get("contractChildrenStarted", 0)
         + payload["validationUnits"]["unknownChildStartHolds"]
     )
     if payload["totalSeconds"] > limit:

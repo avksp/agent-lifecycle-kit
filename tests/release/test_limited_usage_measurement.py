@@ -610,6 +610,54 @@ class Release234MeasurementTests(unittest.TestCase):
                 module.process_peak(), {"scope": "worker-process-only", "bytes": None, "status": "UNAVAILABLE"}
             )
 
+    def test_contract_probe_preserves_inputs_and_rejects_a_wrong_locked_interpreter(self):
+        module = subject()
+        with checkout() as (parent, root, head):
+            names = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().strip("\0").split("\0")
+            before = module.input_manifest(root, names)
+            scratch = parent / "scratch"
+            scratch.mkdir()
+            expected = list(__import__("sys").version_info[:2])
+            path = parent / "probe-request.json"
+            request = {
+                "root": str(root),
+                "output": str(parent / "contract.json"),
+                "sourceHead": head,
+                "trackedInputs": names,
+                "inputSha256": before["sha256"],
+                "testContract": {"wrong-schema": True},
+                "contractOnly": True,
+                "expectedVersion": expected,
+            }
+            module.write_new(path, request)
+            records = []
+            module.command(
+                module.worker_argv(HELPER, path, root, scratch, version=expected), root, time.monotonic() + 30, records
+            )
+            value = module.read_object(Path(request["output"]))
+            self.assertEqual(value, {"testContract": module.test_contract(root), "version": expected})
+            self.assertEqual(module.input_manifest(root, names), before)
+            wrong = [3, 11] if expected == [3, 15] else [3, 15]
+            rejected = parent / "wrong-request.json"
+            module.write_new(
+                rejected, {**request, "output": str(parent / "wrong.json"), "experiment": 5, "expectedVersion": wrong}
+            )
+            with self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, rejected, root, scratch, version=wrong),
+                    root,
+                    time.monotonic() + 30,
+                    records,
+                )
+            self.assertFalse((parent / "wrong.json").exists())
+            malformed = parent / "missing-version-request.json"
+            module.write_new(malformed, {**request, "output": str(parent / "missing.json"), "experiment": 5})
+            with self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, malformed, root, scratch), root, time.monotonic() + 30, records
+                )
+            self.assertFalse((parent / "missing.json").exists())
+
     def test_two_version_barrier_stops_without_full_samples_and_preserves_all_twelve_pairs(self):
         module = subject()
         candidate = "1" * 40
@@ -645,9 +693,34 @@ class Release234MeasurementTests(unittest.TestCase):
                     request = module.read_object(Path(options["request"]))
                     side, version = request["profileSourceRole"], str(options["version"][1])
                     phase = (
-                        "profile" if request["profileOnly"] else "regression" if request["regressionOnly"] else "module"
+                        "contract"
+                        if request.get("contractOnly")
+                        else "profile"
+                        if request["profileOnly"]
+                        else "regression"
+                        if request["regressionOnly"]
+                        else "module"
                     )
                     started.append((version, side, phase))
+                    contract = {
+                        "testAndFixtureAstSha256": "schema-" + version,
+                        "assertionAstSha256": "same",
+                        "assertionSites": 287,
+                    }
+                    if phase == "contract":
+                        module.write_new(
+                            Path(request["output"]),
+                            {
+                                "testContract": contract,
+                                "version": options["version"],
+                                "sourceHead": request["sourceHead"],
+                                "inputSha256": request["inputSha256"],
+                            },
+                        )
+                        records.append({"processStarted": True, "exitCode": 0})
+                        return
+                    self.assertEqual(request["testContract"], contract)
+                    self.assertEqual(request["expectedVersion"], options["version"])
                     seconds = 100 if side == "baseline" else 90 if benefit or version == "11" else 99
                     value = {
                         "status": "PASS",
@@ -656,7 +729,7 @@ class Release234MeasurementTests(unittest.TestCase):
                         "sourceHead": request["sourceHead"],
                         "sourceRole": side,
                         "mode": request["profileMode"],
-                        "testContract": {},
+                        "testContract": request["testContract"],
                         "testId": f"{module.HOT_MODULE}.{module.SLOW_CASE}",
                         "python": version,
                         "inputSha256": "same",
@@ -706,7 +779,10 @@ class Release234MeasurementTests(unittest.TestCase):
                     code = module.execute(args, report)
                 value = json.loads(report.getvalue())
                 self.assertEqual(code, 0 if benefit else 1, value.get("failure"))
-                self.assertEqual([phase for _, _, phase in started[:6]], ["regression"] * 2 + ["profile"] * 4)
+                self.assertEqual(
+                    [phase for _, _, phase in started[:8]], ["contract"] * 2 + ["regression"] * 2 + ["profile"] * 4
+                )
+                self.assertEqual(value["validationUnits"]["contractChildrenStarted"], 2)
                 full = [(version, side) for version, side, phase in started if phase == "module"]
                 self.assertEqual(
                     full, [(version, side) for version in ("11", "15") for side in module.ORDER] if benefit else []
