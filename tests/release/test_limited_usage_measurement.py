@@ -539,5 +539,181 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), b"original")
 
 
+class Release234MeasurementTests(unittest.TestCase):
+    def test_exact_runtime_candidate_refuses_every_other_ast_and_source_change(self):
+        module = subject()
+        legacy = "src/agent_lifecycle/accounting/declared_ledger_legacy.py"
+        candidate = (ROOT / legacy).read_text()
+        baseline = candidate.replace(
+            '            creationflags=(\n                subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0\n            ),\n',
+            "",
+        )
+        self.assertNotEqual(baseline, candidate)
+        with tempfile.TemporaryDirectory() as directory:
+            roots = {side: Path(directory) / side for side in ("baseline", "candidate")}
+            inputs = {
+                side: {
+                    "files": [
+                        {"path": name, "sha256": "same"}
+                        for name in (
+                            legacy,
+                            module.HOT_PATH,
+                            "tests/workflow/limited_usage_fixture_support.py",
+                            "src/other.py",
+                        )
+                    ]
+                }
+                for side in roots
+            }
+            for side, text in (("baseline", baseline), ("candidate", candidate)):
+                path = roots[side] / legacy
+                path.parent.mkdir(parents=True)
+                path.write_text(text)
+            module.release234_contract(roots, inputs)
+            path = roots["candidate"] / legacy
+            for changed in (
+                candidate.replace("timeout=15", "timeout=14"),
+                candidate.replace("else 0", "else 1"),
+                candidate.replace("if sys.platform", "if os.name"),
+            ):
+                path.write_text(changed)
+                with self.assertRaises(ValueError):
+                    module.release234_contract(roots, inputs)
+            path.write_text(candidate)
+            inputs["candidate"]["files"][-1]["sha256"] = "changed"
+            with self.assertRaises(ValueError):
+                module.release234_contract(roots, inputs)
+
+    def test_new_threshold_uses_each_versions_baseline_mad_and_original_deadline(self):
+        module = subject()
+        samples = [
+            {"side": side, "wallSeconds": 100 if side == "baseline" else 94, "join": {}} for side in module.ORDER
+        ]
+        self.assertEqual(module.release234_comparison(samples)["status"], "MEASURED_IMPROVEMENT")
+        samples[1]["wallSeconds"] = samples[2]["wallSeconds"] = samples[5]["wallSeconds"] = 95
+        self.assertEqual(module.release234_comparison(samples)["status"], "STOP_NO_BENEFIT")
+        samples[0]["wallSeconds"], samples[3]["wallSeconds"], samples[4]["wallSeconds"] = 80, 100, 120
+        self.assertEqual(module.release234_comparison(samples)["requiredRelativeGainExclusive"], 0.2)
+
+        class FixedClock(datetime):
+            @classmethod
+            def now(cls, _tz=None):
+                return module.RELEASE234_DEADLINE - timedelta(hours=2)
+
+        with patch.object(module, "datetime", FixedClock):
+            self.assertEqual(module.release234_seconds("2026-10-31T03:37:52Z"), 7200)
+            for value in (None, "bad", "2026-10-31T03:37:53Z", "2026-10-31T03:37:51Z"):
+                with self.assertRaises(ValueError):
+                    module.release234_seconds(value)
+        with patch.object(module.sys, "platform", "linux"):
+            self.assertEqual(
+                module.process_peak(), {"scope": "worker-process-only", "bytes": None, "status": "UNAVAILABLE"}
+            )
+
+    def test_two_version_barrier_stops_without_full_samples_and_preserves_all_twelve_pairs(self):
+        module = subject()
+        candidate = "1" * 40
+        for benefit in (False, True):
+            with self.subTest(benefit=benefit), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory)
+                for version in ("311", "315"):
+                    exe = source / f"work/ci/release234-py{version}/Scripts/python.exe"
+                    exe.parent.mkdir(parents=True)
+                    exe.touch()
+                started = []
+
+                def git(arguments, root, _deadline, _records):
+                    if arguments[0] == "clone":
+                        root = Path(arguments[-1])
+                        root.mkdir()
+                        for name in (
+                            ".gitattributes",
+                            module.HOT_PATH,
+                            "src/agent_lifecycle/contracts/authority_io.py",
+                        ):
+                            path = root / name
+                            path.parent.mkdir(parents=True, exist_ok=True)
+                            path.write_text("same")
+                    if arguments[0] == "rev-parse":
+                        return (module.RELEASE234_BASELINE if root.name == "baseline" else candidate).encode()
+                    if arguments[0] == "diff":
+                        return "\n".join(sorted(module.RELEASE234_OWNED)).encode()
+                    return b"tracked\0" if arguments[0] == "ls-files" else b""
+
+                def command(argv, _root, _deadline, records, *, started=started, benefit=benefit, **_kwargs):
+                    options = json.loads(argv[-1])
+                    request = module.read_object(Path(options["request"]))
+                    side, version = request["profileSourceRole"], str(options["version"][1])
+                    phase = (
+                        "profile" if request["profileOnly"] else "regression" if request["regressionOnly"] else "module"
+                    )
+                    started.append((version, side, phase))
+                    seconds = 100 if side == "baseline" else 90 if benefit or version == "11" else 99
+                    value = {
+                        "status": "PASS",
+                        "testsRun": request["expectedTests"],
+                        "inputHashesUnchanged": True,
+                        "sourceHead": request["sourceHead"],
+                        "sourceRole": side,
+                        "mode": request["profileMode"],
+                        "testContract": {},
+                        "testId": f"{module.HOT_MODULE}.{module.SLOW_CASE}",
+                        "python": version,
+                        "inputSha256": "same",
+                        "environment": module.environment_identity(),
+                        "performanceAcceptanceClaimed": False,
+                        "phases": [{"phase": "slow-case", "elapsedSeconds": seconds}],
+                        "runtimeProvenance": {"executable": argv[0]},
+                        "lockedEnvironment": {"version": version},
+                        "wallSeconds": seconds,
+                        "immutableGitSeedPreparationSeconds": 0,
+                    }
+                    if phase == "profile":
+                        value["status"] = "PROFILE_COMPLETE"
+                    module.write_new(Path(request["output"]), value)
+                    records.append({"processStarted": True, "exitCode": 0})
+
+                args = SimpleNamespace(
+                    baseline=module.RELEASE234_BASELINE,
+                    candidate=candidate,
+                    experiment=5,
+                    mode="paired",
+                    deadline_utc="2026-10-31T03:37:52Z",
+                    out=str(source / "report.json"),
+                )
+                with (
+                    patch.object(module.Path, "cwd", return_value=source),
+                    patch.object(module, "git", side_effect=git),
+                    patch.object(module, "command", side_effect=command),
+                    patch.object(module, "input_manifest", return_value={"sha256": "same", "files": []}),
+                    patch.object(module, "test_contract", return_value={}),
+                    patch.object(module, "restore_fixture"),
+                    patch.object(module, "release234_contract", return_value={}),
+                    patch.object(module, "release234_seconds", return_value=10000),
+                    patch.object(module, "validate_sample", return_value={}),
+                    patch.object(module.platform, "system", return_value="Windows"),
+                    patch.object(module.sys, "version_info", (3, 11)),
+                    patch.dict(
+                        os.environ,
+                        {
+                            **{key: "bound" for key in module.IDENTITY_KEYS},
+                            "RUNNER_OS": "Windows",
+                            "GITHUB_SHA": candidate,
+                        },
+                    ),
+                ):
+                    report = io.StringIO()
+                    code = module.execute(args, report)
+                value = json.loads(report.getvalue())
+                self.assertEqual(code, 0 if benefit else 1, value.get("failure"))
+                self.assertEqual([phase for _, _, phase in started[:6]], ["regression"] * 2 + ["profile"] * 4)
+                full = [(version, side) for version, side, phase in started if phase == "module"]
+                self.assertEqual(
+                    full, [(version, side) for version in ("11", "15") for side in module.ORDER] if benefit else []
+                )
+                self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 12 if benefit else 0)
+                self.assertEqual(value["status"], "MEASURED_IMPROVEMENT" if benefit else "STOP_NO_PRELIMINARY_BENEFIT")
+
+
 if __name__ == "__main__":
     unittest.main()

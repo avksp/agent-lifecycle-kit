@@ -49,6 +49,9 @@ def _r11_git(root: Path, *args: str) -> bytes:
         result = subprocess.run(
             ["git", *args],
             cwd=root,
+            creationflags=(
+                subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            ),
             capture_output=True,
             timeout=15,
             check=False,

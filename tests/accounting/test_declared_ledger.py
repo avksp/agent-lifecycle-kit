@@ -270,3 +270,91 @@ class CoordinatorDurabilityTests(unittest.TestCase):
         self.assertEqual(sum(isinstance(v, dict) for v in outcomes), 1, outcomes)
         self.assertEqual(sum(isinstance(v, Exception) for v in outcomes), 1, outcomes)
         self.assertEqual(ledger.read_coordinator_cost_head(root)['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
+
+
+class GitLaunchContractTests(unittest.TestCase):
+    def test_git_launch_mode_preserves_captured_bytes(self):
+        root = Path("unused-mocked-root")
+        for platform in ("win32", "linux"):
+            with self.subTest(platform=platform):
+                completed = SimpleNamespace(returncode=0, stdout=b"checked\n", stderr=b"")
+                with (
+                    patch.object(legacy, "sys", SimpleNamespace(platform=platform)),
+                    patch.object(legacy.subprocess, "CREATE_NO_WINDOW", 134217728, create=True),
+                    patch.object(legacy.subprocess, "run", return_value=completed) as call,
+                ):
+                    self.assertEqual(b"checked\n", legacy._r11_git(root, "rev-parse"))
+                self.assertEqual((["git", "rev-parse"],), call.call_args.args)
+                kwargs = call.call_args.kwargs
+                self.assertEqual(root, kwargs["cwd"])
+                self.assertTrue(kwargs["capture_output"])
+                self.assertFalse(kwargs["check"])
+                self.assertEqual(15, kwargs["timeout"])
+                self.assertTrue(
+                    kwargs["env"] == {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}, "Git child environment differs"
+                )
+                self.assertEqual(134217728 if platform == "win32" else 0, kwargs.get("creationflags", 0))
+
+    def test_git_errors_and_output_bounds_remain_source_unavailable(self):
+        cases = (
+            OSError("missing Git"),
+            subprocess.TimeoutExpired(["git"], 15),
+            SimpleNamespace(returncode=1, stdout=b"", stderr=b"failure"),
+            SimpleNamespace(returncode=0, stdout=b"x" * 8388609, stderr=b""),
+            SimpleNamespace(returncode=0, stdout=b"", stderr=b"x" * 65537),
+        )
+        for number, value in enumerate(cases):
+            with self.subTest(case=number):
+                behavior = {"side_effect": value} if isinstance(value, Exception) else {"return_value": value}
+                with patch.object(legacy.subprocess, "run", **behavior), self.assertRaises(LifecycleError) as caught:
+                    legacy._r11_git(Path("unused-mocked-root"), "rev-parse")
+                self.assertEqual("r11-source-unavailable", caught.exception.code)
+
+    def test_actual_git_captured_output_remains_available(self):
+        with tempfile.TemporaryDirectory() as directory:
+            value = legacy._r11_git(Path(directory), "--version")
+        self.assertTrue(value.startswith(b"git version "))
+
+    def test_timeout_still_terminates_and_waits_for_own_child(self):
+        real_run, real_popen = (subprocess.run, subprocess.Popen)
+        children = []
+
+        def launch(argv, **kwargs):
+            self.assertEqual(["git", "--version"], argv)
+            child = real_popen([sys.executable, "-c", "import time; time.sleep(5)"], **kwargs)
+            children.append(child)
+            return child
+
+        def bounded(argv, **kwargs):
+            self.assertEqual(15, kwargs["timeout"])
+            return real_run(argv, **{**kwargs, "timeout": 0.1})
+
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(legacy.subprocess, "Popen", side_effect=launch),
+            patch.object(legacy.subprocess, "run", side_effect=bounded),
+            self.assertRaises(LifecycleError) as caught,
+        ):
+            legacy._r11_git(Path(directory), "--version")
+        self.assertEqual("r11-source-unavailable", caught.exception.code)
+        self.assertEqual(1, len(children))
+        self.assertIsNotNone(children[0].poll())
+
+    def test_primary_checkout_still_requires_two_matching_git_observations(self):
+        for changed in (False, True):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                common = root / ".git"
+                common.mkdir()
+                raw = (str(common) + "\n").encode("utf-8")
+                second = b"different-primary\n" if changed else raw
+                with patch.object(legacy, "_r11_git", side_effect=[raw, second]) as call:
+                    if changed:
+                        with self.assertRaises(LifecycleError) as caught:
+                            legacy._r11_coordinator_root(root)
+                        self.assertEqual("r11-opening-origin", caught.exception.code)
+                    else:
+                        self.assertEqual(root, legacy._r11_coordinator_root(root))
+                self.assertEqual(2, call.call_count)
+                self.assertEqual(root, call.call_args_list[0].args[0])
+                self.assertEqual(root, call.call_args_list[1].args[0])

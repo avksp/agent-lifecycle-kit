@@ -7,9 +7,9 @@ on:
         description: Timing route (fixture profile is feasibility only)
         type: choice
         default: suite
-        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility]
+        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility, release-2-34]
       baseline_sha:
-        description: Exact accepted 2.27 baseline commit for fixture measurement
+        description: Exact baseline (2.27 legacy; published 2.33 for release-2-34)
         type: string
         default: ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5
       candidate_sha:
@@ -20,9 +20,9 @@ on:
         description: Bounded candidate experiment number
         type: choice
         default: "1"
-        options: ["1", "2", "3", "4"]
+        options: ["1", "2", "3", "4", "5"]
       deadline_utc:
-        description: Required for experiments3/4; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
+        description: Required for experiments3/4/5; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
         type: string
         default: ""
 
@@ -31,6 +31,7 @@ permissions:
 
 jobs:
   paired-windows311:
+    if: inputs.mode != 'release-2-34'
     name: windows-paired-control / py3.11
     runs-on: windows-latest
     timeout-minutes: 330
@@ -149,5 +150,51 @@ jobs:
             work/ci/limited-usage-feasibility.json
             work/ci/limited-usage-feasibility/
             work/ci/control-environment.json
+          if-no-files-found: error
+          retention-days: 14
+
+  release234-windows:
+    if: inputs.mode == 'release-2-34'
+    name: windows-git-launch-control / py3.11+3.15
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+      - name: Install locked Python 3.11 environment
+        env:
+          UV_PROJECT_ENVIRONMENT: work/ci/release234-py311
+        run: uv sync --frozen --group quality --python 3.11
+      - name: Install locked Python 3.15 environment
+        env:
+          UV_PROJECT_ENVIRONMENT: work/ci/release234-py315
+        run: uv sync --frozen --group quality --python 3.15
+      - name: Run both Windows prechecks then three pairs per version
+        env:
+          BASELINE_SHA: ${{ inputs.baseline_sha }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
+          MEASUREMENT_DEADLINE: ${{ inputs.deadline_utc }}
+        run: >-
+          & work/ci/release234-py311/Scripts/python.exe tools/ci/measure_limited_usage.py
+          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
+          --experiment "$env:EXPERIMENT_NUMBER" --mode paired
+          --deadline-utc "$env:MEASUREMENT_DEADLINE"
+          --out work/ci/release234-measurement.json
+      - name: Retain release234 raw prechecks and paired evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: limited-usage-windows-release234-py311-py315-experiment5
+          path: |
+            work/ci/release234-measurement.json
+            work/ci/release234-measurement/
           if-no-files-found: error
           retention-days: 14
