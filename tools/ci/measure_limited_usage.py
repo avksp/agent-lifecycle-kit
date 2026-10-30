@@ -20,16 +20,17 @@ import time
 import traceback
 import unittest
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path, PurePosixPath
 
 BASELINE = "ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5"
 RELEASE234_BASELINE = "e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2"
-RELEASE234_DEADLINE = datetime(2026, 10, 31, 1, 47, 46, tzinfo=UTC)
+RELEASE234_DEADLINE = datetime(2026, 10, 31, 2, 35, 35, tzinfo=UTC)
 RELEASE234_OWNED = frozenset(
     (
         ".github/workflows/ci-timing-control.yml src/agent_lifecycle/accounting/declared_ledger_legacy.py "
         "tests/accounting/test_declared_ledger.py tests/release/test_limited_usage_measurement.py "
-        "tools/ci/measure_limited_usage.py"
+        "tools/ci/measure_limited_usage.py tools/ci/limited_usage_transport.py"
     ).split()
 )
 # AST prefix from this accepted commit's DeclaredFixture.__init__, before seed_path.
@@ -82,6 +83,20 @@ def digest(value):
 def reference(path):
     data = path.read_bytes()
     return {"path": str(path), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def controller_sources(expected=None):
+    helper = Path(__file__).resolve()
+    paths = (helper, helper.with_name("limited_usage_transport.py"))
+    if any(path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_BYTES for path in paths):
+        raise ValueError("Unsafe controller helper or fixed sibling transport")
+    observed = [reference(path) for path in paths]
+    if expected is not None and observed != expected:
+        raise ValueError("Controller helper or companion source drift")
+    return observed
+
+
+CONTROLLER_SOURCE_BINDING = controller_sources()
 
 
 def write_new(path, value):
@@ -327,82 +342,49 @@ def sanitized_environment(scratch):
     return value
 
 
-def command(argv, root, deadline, records, *, timeout=120, logs=None):
-    from agent_lifecycle.changesets.git_io import BoundedProcess
-
-    started = time.perf_counter()
-    record = {
-        "argv": argv,
-        "cwd": str(root),
-        "exitCode": None,
-        "timeoutSeconds": min(timeout, deadline - time.monotonic()),
-        "processStarted": None,
-    }
-    records.append(record)
-    chunks, process = [], None
+def command(argv, root, deadline, records, *, timeout=120, logs=None, owned_gate=False):
+    binding = controller_sources(CONTROLLER_SOURCE_BINDING)
+    path = Path(binding[1]["path"])
+    source = path.read_bytes()
+    if hashlib.sha256(source).hexdigest() != binding[1]["sha256"]:
+        raise ValueError("Companion changed before compilation")
+    transport = {"__name__": "alk_limited_usage_transport", "__file__": str(path)}
+    exec(compile(source, str(path), "exec"), transport)
     try:
-        process = BoundedProcess(
+        return transport["command"](
             argv,
-            cwd=root,
-            deadline=min(deadline, time.monotonic() + timeout),
-            max_stdout_bytes=MAX_BYTES,
-            max_stderr_bytes=MAX_BYTES,
+            root,
+            deadline,
+            records,
+            timeout=timeout,
+            logs=logs,
+            owned_gate=owned_gate,
+            max_bytes=MAX_BYTES,
+            reference=reference,
         )
-        record["processStarted"] = True
-        while data := process.stdout.read(65536):
-            chunks.append(data)
-        record["exitCode"] = process.wait()
-        if record["exitCode"]:
-            raise ValueError("Measurement child command failed; retained exit and output hashes")
-        return b"".join(chunks)
-    except BaseException as exc:
-        if (
-            getattr(exc, "code", None)
-            in ("bounded-process-timeout", "bounded-process-argv-invalid", "bounded-process-limit-invalid")
-            and process is None
-        ):
-            record["processStarted"] = False
-        record["transportError"] = f"{type(exc).__name__}: {exc}"
-        raise
     finally:
-        cleanup_error = None
-        if process is not None:
-            process.fail("measurement-supervision-finished")
-            try:
-                process.close()
-            except BaseException as exc:
-                cleanup_error = exc
-                record["cleanupError"] = f"{type(exc).__name__}: {exc}"
-        stdout = b"".join(chunks)
-        stderr = bytes(process.stderr) if process is not None else b""
-        record.update(
-            stdoutBytes=len(stdout),
-            stderrBytes=len(stderr),
-            stdoutSha256=hashlib.sha256(stdout).hexdigest(),
-            stderrSha256=hashlib.sha256(stderr).hexdigest(),
-        )
-        if logs is not None:
-            for name, data in (("stdout.log", stdout), ("stderr.log", stderr)):
-                path = logs / name
-                with path.open("xb") as stream:
-                    stream.write(data)
-                record[name] = reference(path)
-        record["elapsedSeconds"] = time.perf_counter() - started
-        if cleanup_error is not None:
-            raise cleanup_error
+        controller_sources(binding)
 
 
-def git(arguments, root, deadline, records):
+def git(arguments, root, deadline, records, *, owned_gate=False):
     argv = ["git", *arguments]
     options = {"argv": argv, "environment": sanitized_environment(Path(tempfile.gettempdir()))}
     bootstrap = (
         "import json,subprocess,sys;v=json.loads(sys.argv[1]);"
         "sys.exit(subprocess.run(v['argv'],env=v['environment'],shell=False).returncode)"
     )
+    offset = len(records)
     try:
-        return command([sys.executable, "-I", "-B", "-c", bootstrap, json.dumps(options)], root, deadline, records)
+        return command(
+            [sys.executable, "-I", "-B", "-c", bootstrap, json.dumps(options)],
+            root,
+            deadline,
+            records,
+            owned_gate=owned_gate,
+        )
     finally:
-        records[-1]["gitArgv"] = argv
+        if len(records) > offset:
+            records[-1]["gitArgv"] = argv
 
 
 def restore_fixture(root):
@@ -736,8 +718,8 @@ def release234_seconds(deadline_text):
         raise ValueError("Release234 requires the explicit native UTC task deadline")
     requested = datetime.strptime(deadline_text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
     remaining = (requested - datetime.now(UTC)).total_seconds()
-    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 25200:
-        raise ValueError("Release234 native task deadline differs, expired or exceeds twelve hours")
+    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 21600:
+        raise ValueError("Release234 native task deadline differs, expired or exceeds the authorized task window")
     return remaining
 
 
@@ -874,6 +856,7 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
         "module": "moduleChildrenStarted",
     }[phase]
     payload["validationUnits"].setdefault(counter, 0)
+    offset = len(records)
     try:
         command(
             argv,
@@ -882,11 +865,14 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
             records,
             timeout=min(limit if profile_mode else SAMPLE_SECONDS, deadline - time.monotonic()),
             logs=destination,
+            owned_gate=release234,
         )
     finally:
-        if records[-1]["processStarted"] is True:
+        record = records[-1] if len(records) > offset else {"processStarted": False}
+        child_started = record.get("logicalProcessStarted", record["processStarted"])
+        if child_started is True:
             payload["validationUnits"][counter] += 1
-        elif records[-1]["processStarted"] is None:
+        elif child_started is None:
             payload["validationUnits"]["unknownChildStartHolds"] += 1
         payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
     value = read_object(destination / "test-timings.json")
@@ -958,7 +944,7 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
             "report": reference(destination / "test-timings.json"),
         }
     )
-    if git(["status", "--porcelain", "--untracked-files=all"], root, deadline, records):
+    if git(["status", "--porcelain", "--untracked-files=all"], root, deadline, records, owned_gate=release234):
         raise ValueError("Sample mutated its isolated source checkout")
     if args.experiment in (3, 4) and len(samples) == 2:
         payload["viabilityPrefix"] = viability_prefix(samples, ratio_stop=args.experiment == 3)
@@ -971,6 +957,7 @@ def measurement_child(args, payload, sources, output, selection, deadline, limit
 def execute(args, report):
     started = time.perf_counter()
     release234 = args.experiment == 5
+    measure_git = partial(git, owned_gate=True) if release234 else git
     profile_mode = args.mode in ("profile", "feasibility")
     limit = (
         FEASIBILITY_SECONDS if args.mode == "feasibility" else PROFILE_SECONDS if profile_mode else EXPERIMENT_SECONDS
@@ -1004,7 +991,11 @@ def execute(args, report):
             "unknownChildStartHolds": 0,
         },
     }
+    binding = None
     try:
+        if release234:
+            binding = controller_sources(CONTROLLER_SOURCE_BINDING)
+            payload["controllerSourcesBefore"] = binding
         baseline = RELEASE234_BASELINE if release234 else BASELINE
         if (
             args.baseline != baseline
@@ -1026,7 +1017,7 @@ def execute(args, report):
                 raise ValueError("Release234 closeout reserve reached")
             deadline = time.monotonic() + limit
             payload.update(absoluteDeadlineUtc=args.deadline_utc, experimentTimeoutSeconds=limit, versions={})
-            payload["gitVersion"] = git(["--version"], source, deadline, records).decode().strip()
+            payload["gitVersion"] = measure_git(["--version"], source, deadline, records).decode().strip()
             payload["gitBackend"] = read_object(source / "work/ci/release234-git-backend.json")
             assert payload["gitBackend"]["backend"]["path"] == os.environ["ALK_ACCOUNTING_GIT_EXECUTABLE"]
             assert payload["gitBackend"]["sourceHead"] == args.candidate
@@ -1039,13 +1030,13 @@ def execute(args, report):
         ):
             raise ValueError("Performance proof requires real Windows Actions/image/Python 3.11 identity")
         if (
-            git(["rev-parse", "HEAD"], source, deadline, records).decode().strip() != args.candidate
+            measure_git(["rev-parse", "HEAD"], source, deadline, records).decode().strip() != args.candidate
             or os.environ["GITHUB_SHA"] != args.candidate
-            or git(["status", "--porcelain", "--untracked-files=all"], source, deadline, records)
+            or measure_git(["status", "--porcelain", "--untracked-files=all"], source, deadline, records)
         ):
             raise ValueError("Coordinator must be the exact clean dispatched candidate commit")
         changed = (
-            git(["diff", "--name-only", args.baseline, args.candidate, "--"], source, deadline, records)
+            measure_git(["diff", "--name-only", args.baseline, args.candidate, "--"], source, deadline, records)
             .decode()
             .splitlines()
         )
@@ -1062,20 +1053,20 @@ def execute(args, report):
                 sources.append(("candidate", args.candidate))
             for side, sha in sources:
                 root = Path(directory).resolve() / side
-                git(
+                measure_git(
                     ["clone", "--quiet", "--no-hardlinks", "--no-checkout", str(source), str(root)],
                     source,
                     deadline,
                     records,
                 )
-                git(["checkout", "--quiet", "--detach", sha], root, deadline, records)
-                if git(["rev-parse", "HEAD"], root, deadline, records).decode().strip() != sha:
+                measure_git(["checkout", "--quiet", "--detach", sha], root, deadline, records)
+                if measure_git(["rev-parse", "HEAD"], root, deadline, records).decode().strip() != sha:
                     raise ValueError("Isolated checkout source differs")
-                names = git(["ls-files", "-z"], root, deadline, records).decode().strip("\0").split("\0")
+                names = measure_git(["ls-files", "-z"], root, deadline, records).decode().strip("\0").split("\0")
                 inputs[side] = input_manifest(root, names)
                 materialization = []
                 for name in (".gitattributes", HOT_PATH, "src/agent_lifecycle/contracts/authority_io.py"):
-                    raw_blob = git(["show", sha + ":" + name], root, deadline, records)
+                    raw_blob = measure_git(["show", sha + ":" + name], root, deadline, records)
                     raw_file = (root / name).read_bytes()
                     materialization.append(
                         {
@@ -1162,6 +1153,14 @@ def execute(args, report):
             failure=f"{type(exc).__name__}: {exc}",
         )
         traceback.print_exc()
+    if binding is not None:
+        payload["controllerSourcesAfter"] = None
+        try:
+            payload["controllerSourcesAfter"] = controller_sources()
+            if payload["controllerSourcesAfter"] != binding:
+                raise ValueError("Controller helper or companion changed during workload")
+        except (OSError, ValueError) as exc:
+            payload.update(status="STOP_UNRESOLVED", failure=f"Controller source guard: {exc}")
     payload["totalSeconds"] = time.perf_counter() - started
     payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
     payload["validationUnits"]["total"] = sum(

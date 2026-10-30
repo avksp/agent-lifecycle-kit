@@ -602,8 +602,8 @@ class Release234MeasurementTests(unittest.TestCase):
                 return module.RELEASE234_DEADLINE - timedelta(hours=2)
 
         with patch.object(module, "datetime", FixedClock):
-            self.assertEqual(module.release234_seconds("2026-10-31T01:47:46Z"), 7200)
-            for value in (None, "bad", "2026-10-31T01:47:47Z", "2026-10-31T01:47:45Z"):
+            self.assertEqual(module.release234_seconds("2026-10-31T02:35:35Z"), 7200)
+            for value in (None, "bad", "2026-10-31T02:35:36Z", "2026-10-31T02:35:34Z"):
                 with self.assertRaises(ValueError):
                     module.release234_seconds(value)
         with patch.object(module.sys, "platform", "linux"):
@@ -755,7 +755,7 @@ class Release234MeasurementTests(unittest.TestCase):
                 )
                 started = []
 
-                def git(arguments, root, _deadline, _records):
+                def git(arguments, root, _deadline, _records, **_options):
                     if arguments[0] == "clone":
                         root = Path(arguments[-1])
                         root.mkdir()
@@ -836,7 +836,7 @@ class Release234MeasurementTests(unittest.TestCase):
                     candidate=candidate,
                     experiment=5,
                     mode="paired",
-                    deadline_utc="2026-10-31T01:47:46Z",
+                    deadline_utc="2026-10-31T02:35:35Z",
                     out=str(source / "report.json"),
                 )
                 with (
@@ -864,6 +864,8 @@ class Release234MeasurementTests(unittest.TestCase):
                     report = io.StringIO()
                     code = module.execute(args, report)
                 value = json.loads(report.getvalue())
+                self.assertEqual(value["controllerSourcesBefore"], value["controllerSourcesAfter"])
+                self.assertEqual(len(value["controllerSourcesBefore"]), 2)
                 self.assertEqual(code, 0 if benefit else 1, value.get("failure"))
                 self.assertEqual(
                     [phase for _, _, phase in started[:8]], ["contract"] * 2 + ["regression"] * 2 + ["profile"] * 4
@@ -875,6 +877,194 @@ class Release234MeasurementTests(unittest.TestCase):
                 )
                 self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 12 if benefit else 0)
                 self.assertEqual(value["status"], "MEASURED_IMPROVEMENT" if benefit else "STOP_NO_PRELIMINARY_BENEFIT")
+
+
+class OwnedMeasurementTransportTests(unittest.TestCase):
+    def transport(self):
+        return __import__("runpy").run_path(str(HELPER.with_name("limited_usage_transport.py")))
+
+    def marker_argv(self, marker):
+        import sys
+
+        return [
+            sys.executable,
+            "-I",
+            "-B",
+            "-c",
+            "import pathlib,sys;pathlib.Path(sys.argv[1]).write_text(str(len(sys.stdin.buffer.read())))",
+            str(marker),
+        ]
+
+    def test_actual_gate_waits_for_go_and_refuses_eof_wrong_token_or_version(self):
+        from agent_lifecycle.changesets.git_io import BoundedProcess
+
+        transport = self.transport()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for token in (b"G", None, b"X", "wrong-version"):
+                with self.subTest(token=token):
+                    marker = root / str(token)
+                    argv = transport["owned_gate_argv"](self.marker_argv(marker), max_bytes=8_388_608)
+                    if token == "wrong-version":
+                        value = json.loads(argv[-1])
+                        value["version"] = [0, 0, 0]
+                        argv[-1] = json.dumps(value)
+                    process = BoundedProcess(
+                        argv, cwd=root, deadline=time.monotonic() + 5, max_stdout_bytes=1024, writable=True
+                    )
+                    try:
+                        time.sleep(0.05)
+                        self.assertFalse(marker.exists())
+                        if token != "wrong-version":
+                            process.write_request(token)
+                            if token is not None:
+                                process.write_request(None)
+                        while process.stdout.read(1024):
+                            pass
+                        self.assertEqual(
+                            process.wait(), 126 if token == "wrong-version" else 0 if token == b"G" else 125
+                        )
+                        self.assertEqual(marker.exists(), token == b"G")
+                        if token == b"G":
+                            self.assertEqual(marker.read_text(), "0")
+                    finally:
+                        process.close()
+
+    def test_gate_keeps_deadline_output_caps_and_original_argv_base_guards(self):
+        from agent_lifecycle.changesets.git_io import BoundedProcess
+        import sys
+
+        transport = self.transport()
+        for argv in ([], "not-a-list", [sys.executable, "bad\0arg"]):
+            with self.subTest(argvType=type(argv).__name__), self.assertRaises(LifecycleError):
+                transport["owned_gate_argv"](argv, max_bytes=8_388_608)
+        with patch.object(sys, "_base_executable", "relative-python"), self.assertRaises(ValueError):
+            transport["owned_gate_argv"]([sys.executable], max_bytes=8_388_608)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for label in ("timeout", "output"):
+                argv = (
+                    self.marker_argv(root / label) if label == "timeout" else [sys.executable, "-c", "print('x'*4096)"]
+                )
+                process = BoundedProcess(
+                    transport["owned_gate_argv"](argv, max_bytes=8_388_608),
+                    cwd=root,
+                    deadline=time.monotonic() + (0.15 if label == "timeout" else 3),
+                    max_stdout_bytes=32,
+                    writable=True,
+                )
+                try:
+                    if label == "output":
+                        process.write_request(b"G")
+                        process.write_request(None)
+                    with self.assertRaises(LifecycleError):
+                        while process.stdout.read(1024):
+                            pass
+                        process.wait()
+                finally:
+                    process.close()
+                self.assertIsNotNone(process.process.poll())
+                if label == "timeout":
+                    self.assertFalse((root / label).exists())
+
+    def test_existing_ownership_refusal_sends_no_go_and_retains_unknown_start(self):
+        from agent_lifecycle.changesets.git_io import BoundedProcess
+
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            marker = root / "marker"
+            records = []
+            with (
+                patch(
+                    "agent_lifecycle.changesets.git_io._windows_cleanup",
+                    side_effect=LifecycleError("bounded-process-group-unavailable", "controlled"),
+                ),
+                patch.object(BoundedProcess, "write_request", side_effect=AssertionError("No Go permitted")) as write,
+            ):
+                with self.assertRaises(LifecycleError):
+                    module.command(self.marker_argv(marker), root, time.monotonic() + 3, records, owned_gate=True)
+                self.assertEqual(write.call_count, 0)
+            self.assertFalse(marker.exists())
+            self.assertIsNone(records[-1]["processStarted"])
+            self.assertIsNone(records[-1]["logicalProcessStarted"])
+            self.assertFalse(records[-1]["goSent"])
+
+    def test_fixed_sibling_loader_refuses_companion_drift_before_and_after_work(self):
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            helper = root / "measure_limited_usage.py"
+            companion = root / "limited_usage_transport.py"
+            helper.write_bytes(HELPER.read_bytes())
+            companion.write_bytes(HELPER.with_name(companion.name).read_bytes())
+            module.__file__ = str(helper)
+            module.CONTROLLER_SOURCE_BINDING = module.controller_sources()
+            self.assertEqual(module.controller_sources()[1]["sha256"], module.reference(companion)["sha256"])
+            original = companion.read_bytes()
+            companion.write_bytes(original + b"\n# changed\n")
+            records = []
+            with self.assertRaises(ValueError):
+                module.command(self.marker_argv(root / "before"), root, time.monotonic() + 3, records, owned_gate=True)
+            self.assertFalse((root / "before").exists())
+            self.assertEqual(records, [])
+            companion.write_bytes(original)
+            import sys
+
+            argv = [
+                sys.executable,
+                "-c",
+                "import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.write_bytes(p.read_bytes()+b'\\n# after\\n')",
+                str(companion),
+            ]
+            with self.assertRaises(ValueError):
+                module.command(argv, root, time.monotonic() + 3, records, owned_gate=True)
+            self.assertTrue(records[-1]["logicalProcessStarted"])
+
+    def test_loader_refusal_does_not_count_a_previous_setup_as_new_workload(self):
+        import sys
+
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            folder = root / "output"
+            folder.mkdir()
+            records = [{"processStarted": True, "gitArgv": ["previous-setup"]}]
+            payload = {"commands": records, "samples": [], "validationUnits": {}, "mode": "CONTROL"}
+            args = SimpleNamespace(experiment=5, baseline=module.RELEASE234_BASELINE, candidate="f" * 40)
+            sources = ({"candidate": root}, {"candidate": {"files": [], "sha256": "same"}}, {"311": {}})
+            with (
+                patch.dict(os.environ, ALK_ACCOUNTING_GIT_EXECUTABLE=sys.executable),
+                patch.object(module, "command", side_effect=ValueError("controlled source drift")),
+                self.assertRaises(ValueError),
+            ):
+                module.measurement_child(
+                    args,
+                    payload,
+                    sources,
+                    (folder, str(root)),
+                    (1, "311", "candidate", "module", Path(sys.executable)),
+                    time.monotonic() + 3,
+                    3,
+                )
+            self.assertEqual(payload["validationUnits"]["moduleChildrenStarted"], 0)
+            self.assertEqual(len(records), 1)
+
+    def test_candidate_only_module_inventory_does_not_overlay_missing_baseline(self):
+        module = subject()
+        name = "tools/ci/limited_usage_transport.py"
+        self.assertIn(name, module.RELEASE234_OWNED)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "existing").write_bytes(b"same")
+            baseline = module.input_manifest(root, ["existing"])
+            self.assertEqual([item["path"] for item in baseline["files"]], ["existing"])
+            with self.assertRaises(ValueError):
+                module.input_manifest(root, ["existing", name])
+            path = root / name
+            path.parent.mkdir(parents=True)
+            path.write_bytes(HELPER.with_name("limited_usage_transport.py").read_bytes())
+            self.assertEqual(len(module.input_manifest(root, ["existing", name])["files"]), 2)
 
 
 if __name__ == "__main__":
