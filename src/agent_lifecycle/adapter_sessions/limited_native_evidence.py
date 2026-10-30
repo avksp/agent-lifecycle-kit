@@ -10,7 +10,14 @@ import hashlib
 from datetime import UTC, datetime
 from pathlib import Path
 
-from agent_lifecycle.accounting.host_bridge import ARTIFACT_BYTES, PROFILE_BYTES, BoundedReader, _json
+from agent_lifecycle.accounting.host_bridge import (
+    ARTIFACT_BYTES,
+    PROFILE_BYTES,
+    BoundedReader,
+)
+from agent_lifecycle.accounting.host_bridge import (
+    decode_json_object as _json,
+)
 from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace, require_positive_attempt_result
 from agent_lifecycle.adapter_sessions.ordinary_audit import verify_area_report
 from agent_lifecycle.adapter_sessions.qualification_context import (

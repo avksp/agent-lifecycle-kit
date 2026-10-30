@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.release.validate_python_quality import validate_quality
+from tools.release.validate_python_quality import _validate_policy, validate_quality
 
 
 def _digest(path: Path) -> str:
@@ -63,6 +63,31 @@ def _run_receipt() -> dict:
 
 
 class PythonQualityValidatorTests(unittest.TestCase):
+    def test_selected_tool_scopes_refuse_invalid_paths_and_runtime_baseline_reuse(self) -> None:
+        path = Path(__file__).resolve().parents[2] / "policy/python-quality.json"
+        policy = json.loads(path.read_text())
+        self.assertEqual(_validate_policy(policy), [])
+        for value in (None, {}, {"paths": None}):
+            invalid = copy.deepcopy(policy)
+            invalid["tooling"] = value
+            self.assertIn("quality-tooling-policy-invalid", {row["code"] for row in _validate_policy(invalid)})
+        invalid = copy.deepcopy(policy)
+        del invalid["tooling"]
+        self.assertIn("quality-tooling-policy-invalid", {row["code"] for row in _validate_policy(invalid)})
+        for selected in ("../outside.py", "/outside.py", "tools/release/../outside.py", None):
+            with self.subTest(path=selected):
+                invalid = copy.deepcopy(policy)
+                invalid["tooling"]["paths"] = [selected]
+                self.assertTrue(_validate_policy(invalid))
+        invalid = copy.deepcopy(policy)
+        invalid["tooling"]["paths"] *= 2
+        self.assertTrue(_validate_policy(invalid))
+        for baseline in ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline"):
+            invalid = copy.deepcopy(policy)
+            invalid["ruff"][baseline].append({"path": policy["tooling"]["paths"][0], "code": "F401",
+                                               "count": 1, "sourceDigest": "a" * 64})
+            self.assertIn("quality-tooling-baseline-forbidden", {row["code"] for row in _validate_policy(invalid)})
+
     def _coverage_result(
         self,
         totals: dict,

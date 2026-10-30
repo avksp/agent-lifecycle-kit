@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -16,15 +17,71 @@ import time
 from pathlib import Path
 from typing import Any
 
-try:
-    from release_common import digest_value, write_json
-except ImportError:  # pragma: no cover - package imports use the relative path
+if __package__:
     from .release_common import digest_value, write_json
+else:
+    from release_common import digest_value, write_json
 
 
 SCHEMA = "agent-python-quality-run.v1"
 DEFAULT_TIMEOUT_SECONDS = 900
 DEFAULT_OUTPUT_BYTES = 16 * 1024 * 1024
+
+
+def quality_command_argv(policy: dict[str, Any], package_root: Path) -> dict[str, list[str]]:
+    """One selected-scope command inventory, used by runner and receipt validator."""
+    python = [sys.executable, "-m"]
+    scopes = [package_root.as_posix(), *policy.get("tooling", {}).get("paths", [])]
+    ruff = policy.get("ruff", {})
+    commands = {
+        "ruff-correctness": [
+            *python,
+            "ruff",
+            "check",
+            *scopes,
+            "--select",
+            ",".join(ruff.get("correctnessSelectors", [])),
+            "--output-format",
+            "json",
+        ],
+        "ruff-migration": [
+            *python,
+            "ruff",
+            "check",
+            *scopes,
+            "--select",
+            ",".join(ruff.get("migrationSelectors", [])),
+            "--output-format",
+            "json",
+        ],
+        "ruff-format": [*python, "ruff", "format", *scopes, "--check", "--output-format", "json"],
+        "ruff-line-length": [*python, "ruff", "check", *scopes, "--select", "E501", "--output-format", "json"],
+        "mypy": [*python, "mypy", package_root.as_posix(), "--show-error-codes"],
+    }
+    strict = [*policy.get("mypy", {}).get("strictClean", []), *policy.get("tooling", {}).get("paths", [])]
+    if strict:
+        commands["mypy-strict"] = [*python, "mypy", "--strict", *strict, "--show-error-codes"]
+    return commands
+
+
+def source_inventory(root: Path, policy_path: Path, package: Path, policy: dict[str, Any]) -> dict[str, str]:
+    """Bind all checked sources and their command/policy inputs to this invocation."""
+    paths = set(package.rglob("*.py")) | {policy_path}
+    paths.update(root / name for name in policy.get("tooling", {}).get("paths", []))
+    paths.update(root / name for name in policy.get("mypy", {}).get("strictClean", []))
+    paths.update(
+        root / name
+        for name in (
+            "tools/release/run_python_quality.py",
+            "tools/release/validate_python_quality.py",
+            "tools/release/release_common.py",
+            "pyproject.toml",
+        )
+    )
+    return {
+        path.resolve().relative_to(root.resolve()).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(paths)
+    }
 
 
 def run_quality(
@@ -37,6 +94,7 @@ def run_quality(
     base_sha: str,
     work_root: Path,
 ) -> dict[str, Any]:
+    package_root = (repository_root / package_root).resolve()
     policy = _read_object(policy_path)
     limits = policy.get("limits", {})
     timeout = int(limits.get("maxWallSeconds", DEFAULT_TIMEOUT_SECONDS))
@@ -63,89 +121,29 @@ def run_quality(
         version = result["stdout"].strip().splitlines()[0] if result["stdout"].strip() else ""
         commands.append(_command_record(f"{tool}-version", [sys.executable, "-m", tool, "--version"], result))
         if result["status"] != "PASS" or expected not in version:
-            blockers.append({
-                "code": "quality-tool-version-mismatch",
-                "tool": tool,
-                "expected": expected,
-                "reported": version,
-            })
+            blockers.append(
+                {
+                    "code": "quality-tool-version-mismatch",
+                    "tool": tool,
+                    "expected": expected,
+                    "reported": version,
+                }
+            )
 
-    ruff_config = policy.get("ruff", {})
-    correctness = _run_tool(
-        "ruff-correctness",
-        [
-            sys.executable,
-            "-m",
-            "ruff",
-            "check",
-            package_root.as_posix(),
-            "--select",
-            ",".join(ruff_config.get("correctnessSelectors", [])),
-            "--output-format",
-            "json",
-        ],
-        repository_root,
-        work_root,
-        timeout,
-        output_limit,
-        expected_exit_codes={0, 1},
-    )
-    migration = _run_tool(
-        "ruff-migration",
-        [
-            sys.executable,
-            "-m",
-            "ruff",
-            "check",
-            package_root.as_posix(),
-            "--select",
-            ",".join(ruff_config.get("migrationSelectors", [])),
-            "--output-format",
-            "json",
-        ],
-        repository_root,
-        work_root,
-        timeout,
-        output_limit,
-        expected_exit_codes={0, 1},
-    )
-    formatting = _run_tool(
-        "ruff-format",
-        [sys.executable, "-m", "ruff", "format", package_root.as_posix(), "--check", "--output-format", "json"],
-        repository_root,
-        work_root,
-        timeout,
-        output_limit,
-        expected_exit_codes={0, 1},
-    )
-    line_length = _run_tool(
-        "ruff-line-length",
-        [
-            sys.executable,
-            "-m",
-            "ruff",
-            "check",
-            package_root.as_posix(),
-            "--select",
-            "E501",
-            "--output-format",
-            "json",
-        ],
-        repository_root,
-        work_root,
-        timeout,
-        output_limit,
-        expected_exit_codes={0, 1},
-    )
-    mypy_result = _run_tool(
-        "mypy",
-        [sys.executable, "-m", "mypy", package_root.as_posix(), "--show-error-codes"],
-        repository_root,
-        work_root,
-        timeout,
-        output_limit,
-        expected_exit_codes={0, 1},
-    )
+    inventory = source_inventory(repository_root, policy_path, package_root, policy) if "tooling" in policy else None
+    selected = []
+    for identifier, argv in quality_command_argv(policy, package_root).items():
+        selected.append(
+            _run_tool(
+                identifier,
+                argv,
+                repository_root,
+                work_root,
+                timeout,
+                output_limit,
+                expected_exit_codes={0} if identifier == "mypy-strict" else {0, 1},
+            )
+        )
 
     coverage_file = work_root / "coverage.data"
     coverage_json = work_root / "coverage.json"
@@ -193,7 +191,7 @@ def run_quality(
     else:
         blockers.append({"code": "coverage-data-missing"})
 
-    for record in (correctness, migration, formatting, line_length, mypy_result, coverage_result):
+    for record in (*selected, coverage_result):
         commands.append(record)
         if record["status"] == "FAIL":
             blockers.append({"code": "quality-command-failed", "id": record["id"]})
@@ -203,6 +201,8 @@ def run_quality(
         "schemaVersion": SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "sourceRevision": base_sha,
+        "packageRoot": _relative(repository_root, package_root),
+        "sourceInventory": inventory,
         "workRoot": _relative(repository_root, requested_work_root),
         "runDirectory": _relative(repository_root, work_root),
         "toolchain": {"ruff": ruff, "mypy": mypy, "coverage": coverage},
@@ -354,7 +354,7 @@ class _Drain:
 
 def _terminate(process: subprocess.Popen[bytes]) -> None:
     try:
-        if os.name != "nt":
+        if sys.platform != "win32":
             os.killpg(process.pid, signal.SIGKILL)
         else:
             process.kill()

@@ -1,6 +1,6 @@
 # Install ALK and make the first run
 
-Install version 2.32 for advisory process observations and the maintained EN/RU reading routes. The plugin supplies instructions and documents; install the Python package below for CLI behavior. See [2.32 scope and limits](../reference/cli.md#release-232-process-observations-and-reading-scope). Repository secret and coverage checks retain the [2.31 boundaries](../reference/cli.md#release-231-bounded-quality-checks).
+Install version 2.33 for selected architecture simplification and release-tool quality checks. Earlier advisory process observations and EN/RU reading routes remain available. The plugin supplies instructions and documents; install the Python package below for CLI behavior. See [2.32 scope and limits](../reference/cli.md#release-232-process-observations-and-reading-scope). Repository secret and coverage checks retain the [2.31 boundaries](../reference/cli.md#release-231-bounded-quality-checks).
 
 
 The portable plugin supplies skills and documents. Install the Python package
@@ -9,7 +9,7 @@ shown below to use workflow migration and authorization renewal in 2.30.
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.32.0. Verify frozen plans before execution
+These instructions target ALK v2.33.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -102,7 +102,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.32.0
+python -m pip install agent-lifecycle-kit==2.33.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -113,7 +113,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.32.0
+python -m pip install agent-lifecycle-kit==2.33.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -213,7 +213,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.15.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.33.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```

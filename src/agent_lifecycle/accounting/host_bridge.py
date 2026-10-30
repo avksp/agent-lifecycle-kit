@@ -64,7 +64,8 @@ def _no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return value
 
 
-def _json(raw: bytes) -> dict[str, Any]:
+def decode_json_object(raw: bytes) -> dict[str, Any]:
+    """Decode raw accounting JSON with the existing strict object/error contract."""
     try:
         value = json.loads(
             raw, object_pairs_hook=_no_duplicates, parse_constant=lambda _value: _fail("accounting-json-invalid")
@@ -74,6 +75,9 @@ def _json(raw: bytes) -> dict[str, Any]:
     if not isinstance(value, dict):
         _fail("accounting-json-not-object")
     return value
+
+
+_json = decode_json_object
 
 
 class BoundedReader:

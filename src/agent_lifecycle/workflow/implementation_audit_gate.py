@@ -295,6 +295,32 @@ def _revalidate_task_evidence_report(
         raise LifecycleError("evidence-contract-invalid", "audit evidence summary is stale or incomplete")
 
 
+def _accepted_final_typed_tasks(state: dict[str, Any], frozen: dict[Any, Any], typed_ids: set[str]) -> dict[Any, Any]:
+    """Check frozen evidence membership before any final report is loaded."""
+    expected = {}
+    for task in state.get("tasks", []):
+        if not isinstance(task, dict) or task.get("status") != "ACCEPTED":
+            continue
+        task_id = task.get("id")
+        owner = frozen.get(task_id)
+        if owner is None:
+            raise LifecycleError("evidence-contract-invalid", "accepted task is outside frozen plan")
+        required = owner.get("evidenceIds")
+        if not isinstance(required, list) or any(not isinstance(item, str) for item in required):
+            raise LifecycleError("evidence-contract-invalid", "frozen task evidence inventory is invalid")
+        if typed_ids.intersection(required):
+            if task.get("evidenceIds") != required or task_id in expected:
+                raise LifecycleError("evidence-contract-invalid", "typed task evidence inventory changed")
+            expected[task_id] = task
+    for owner in frozen.values():
+        ids = owner.get("evidenceIds", [])
+        if not isinstance(ids, list) or any(not isinstance(item, str) for item in ids):
+            raise LifecycleError("evidence-contract-invalid", "frozen evidence IDs are invalid")
+        if owner.get("required", True) and typed_ids.intersection(ids) and owner["id"] not in expected:
+            raise LifecycleError("evidence-contract-invalid", "required typed task is not accepted")
+    return expected
+
+
 def validate_final_task_evidence_reports(
     state_path: Path,
     state: dict[str, Any],
@@ -328,27 +354,7 @@ def validate_final_task_evidence_reports(
     frozen = {item["id"]: item for item in workstreams if isinstance(item, dict) and isinstance(item.get("id"), str)}
     if len(frozen) != len(workstreams):
         raise LifecycleError("evidence-contract-invalid", "typed workstream IDs are ambiguous")
-    expected = {}
-    for task in state.get("tasks", []):
-        if not isinstance(task, dict) or task.get("status") != "ACCEPTED":
-            continue
-        task_id = task.get("id")
-        owner = frozen.get(task_id)
-        if owner is None:
-            raise LifecycleError("evidence-contract-invalid", "accepted task is outside frozen plan")
-        required = owner.get("evidenceIds")
-        if not isinstance(required, list) or any(not isinstance(item, str) for item in required):
-            raise LifecycleError("evidence-contract-invalid", "frozen task evidence inventory is invalid")
-        if typed_ids.intersection(required):
-            if task.get("evidenceIds") != required or task_id in expected:
-                raise LifecycleError("evidence-contract-invalid", "typed task evidence inventory changed")
-            expected[task_id] = task
-    for owner in frozen.values():
-        ids = owner.get("evidenceIds", [])
-        if not isinstance(ids, list) or any(not isinstance(item, str) for item in ids):
-            raise LifecycleError("evidence-contract-invalid", "frozen evidence IDs are invalid")
-        if owner.get("required", True) and typed_ids.intersection(ids) and owner["id"] not in expected:
-            raise LifecycleError("evidence-contract-invalid", "required typed task is not accepted")
+    expected = _accepted_final_typed_tasks(state, frozen, typed_ids)
     reports = audit.get("reports")
     if not isinstance(reports, list) or audit.get("missingTaskIds") != []:
         raise LifecycleError("evidence-contract-invalid", "final audit report inventory is incomplete")

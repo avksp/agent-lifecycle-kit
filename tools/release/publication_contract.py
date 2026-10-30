@@ -373,6 +373,18 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "fieldForm": "package.pin",
     },
     {
+        "id": "install-guide-codex-ref",
+        "path": "docs/guides/install-and-first-run.md",
+        "kind": "text-codex-plugin-ref",
+        "fieldForm": "source.ref",
+    },
+    {
+        "id": "install-guide-ru-codex-ref",
+        "path": "docs/ru/guides/install-and-first-run.md",
+        "kind": "text-codex-plugin-ref",
+        "fieldForm": "source.ref",
+    },
+    {
         "id": "root-readme-package-pin",
         "path": "README.md",
         "kind": "text-package-pin",
@@ -553,6 +565,13 @@ def _read_entry_value(*, path: Path, entry: dict[str, Any]) -> str | None:
             return None
         pins = [f"{PLUGIN_NAME}=={version}" for version in matches]
         return pins[0] if len(set(pins)) == 1 else ";".join(pins)
+    if kind == "text-codex-plugin-ref":
+        refs = re.findall(
+            r"^[ \t]*codex plugin marketplace add avksp/agent-lifecycle-kit --ref ([^\s]+)[ \t]*$",
+            path.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        return refs[0] if refs and len(set(refs)) == 1 else ";".join(refs) or None
     if kind == "text-changelog-version":
         match = re.search(
             r"^##\s+([0-9]+(?:\.[0-9]+){2})(?:\s+-|$)",

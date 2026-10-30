@@ -360,6 +360,27 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertEqual(result["targetVersion"], TARGET_VERSION)
         self.assertFalse(result["productionPromotionClaimed"])
 
+    def test_install_codex_refs_refuse_missing_stale_and_conflicting_examples(self) -> None:
+        for path, entry_id in (
+            ("docs/guides/install-and-first-run.md", "install-guide-codex-ref"),
+            ("docs/ru/guides/install-and-first-run.md", "install-guide-ru-codex-ref"),
+        ):
+            for refs in ((), ("v2.15.0",), (TARGET_REF, "v2.15.0")):
+                with self.subTest(path=path, refs=refs), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+                    guide = root / path
+                    guide.write_text(
+                        f"python -m pip install agent-lifecycle-kit=={TARGET_VERSION}\n"
+                        + "".join(
+                            f"codex plugin marketplace add avksp/agent-lifecycle-kit --ref {ref}\n" for ref in refs
+                        ),
+                        encoding="utf-8",
+                    )
+                    result = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+                    self.assertEqual("FAIL", result["status"])
+                    self.assertEqual({entry_id}, {row["entryId"] for row in result["blockers"]})
+
     def test_stale_plugin_version_fails(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -582,6 +603,12 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
         target = root / path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(f"python -m pip install agent-lifecycle-kit=={version}\n", encoding="utf-8")
+    for path in ("docs/guides/install-and-first-run.md", "docs/ru/guides/install-and-first-run.md"):
+        guide = root / path
+        guide.write_text(
+            guide.read_text(encoding="utf-8") + f"codex plugin marketplace add avksp/agent-lifecycle-kit --ref {ref}\n",
+            encoding="utf-8",
+        )
     russian_index = root / "docs/ru/README.md"
     russian_index.write_text(
         russian_index.read_text(encoding="utf-8") + f"**Версия:** {version}\n",

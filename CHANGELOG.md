@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.33.0 - 2026-10-30
+
+- Simplify two selected private interfaces through existing public contracts;
+  retain decoder compatibility, error ordering and authority boundaries.
+- Reduce private-import allowances from 83 to 81 and one final-evidence flow
+  from 58 to 41 branches, with a 17-branch helper and unchanged total score.
+- Check selected release validators and their one internal rules helper with
+  Ruff, formatting and strict mypy; fix 11 type findings without increasing
+  runtime baselines, coverage floors or changing toolchain pins.
+- Split documentation validation below the 1,200-line hard limit while retaining
+  all 130 ordered rules, finding order and 15 EN/RU manual pairs.
+- Correct both Codex install refs to the current release and reject missing,
+  stale or conflicting example refs during publication validation.
+- Retain partial release accounting, failed attempts and unavailable provider
+  telemetry. No new host capability or model/token/performance claim is made.
+
 ## Unreleased
 
 - No changes yet.

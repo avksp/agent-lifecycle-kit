@@ -12,10 +12,12 @@ from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-try:
-    from release_common import digest_value, write_json
-except ImportError:  # pragma: no cover - package imports use the relative path
+if __package__:
     from .release_common import digest_value, write_json
+    from .run_python_quality import quality_command_argv, source_inventory
+else:
+    from release_common import digest_value, write_json
+    from run_python_quality import quality_command_argv, source_inventory
 
 
 SCHEMA = "agent-python-quality-validation.v1"
@@ -49,6 +51,7 @@ def validate_quality(
     for command in run.get("commands", []):
         if isinstance(command, dict) and command.get("status") != "PASS":
             blockers.append({"code": "quality-command-not-passing", "id": command.get("id")})
+    blockers.extend(_scope_blockers(repository_root, policy_path, policy, run))
 
     changed_paths = set(run.get("changedPaths", []))
     ruff = policy.get("ruff", {})
@@ -116,6 +119,7 @@ def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
         "toolchain",
         "ruff",
         "mypy",
+        "tooling",
         "coverage",
         "limits",
         "productionPromotionClaimed",
@@ -164,6 +168,53 @@ def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
         blockers.extend(_validate_intentional_shape(ruff.get("intentionalFindings")))
     if isinstance(mypy, dict):
         blockers.extend(_validate_baseline_shape(mypy.get("baseline"), "mypy.baseline"))
+    tooling = policy.get("tooling")
+    if tooling is None and isinstance(policy.get("revision"), int) and policy["revision"] >= 7:
+        blockers.append({"code": "quality-tooling-policy-invalid"})
+    if tooling is not None:
+        if not isinstance(tooling, dict) or set(tooling) != {"paths"} or not _valid_scope(tooling.get("paths")):
+            blockers.append({"code": "quality-tooling-policy-invalid"})
+        elif isinstance(ruff, dict):
+            for key in ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline"):
+                if any(item.get("path") in tooling["paths"] for item in ruff.get(key, []) if isinstance(item, dict)):
+                    blockers.append({"code": "quality-tooling-baseline-forbidden", "baseline": key})
+        if not isinstance(mypy, dict) or not _valid_scope(mypy.get("strictClean")):
+            blockers.append({"code": "quality-strict-scope-invalid"})
+    return blockers
+
+
+def _valid_scope(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(set(item for item in value if isinstance(item, str))) == len(value)
+        and all(isinstance(item, str) and _coverage_file_name(item) == item and item.endswith(".py") for item in value)
+    )
+
+
+def _scope_blockers(root: Path, policy_path: Path, policy: dict[str, Any], run: dict[str, Any]) -> list[dict[str, Any]]:
+    if "tooling" not in policy:
+        return []  # Preserve immutable historical receipt interpretation.
+    tooling = policy.get("tooling")
+    if not isinstance(tooling, dict) or not _valid_scope(tooling.get("paths")):
+        return [{"code": "quality-tooling-policy-invalid"}]
+    if not isinstance(policy.get("mypy"), dict) or not _valid_scope(policy["mypy"].get("strictClean")):
+        return [{"code": "quality-strict-scope-invalid"}]
+    package = run.get("packageRoot")
+    if not isinstance(package, str) or _coverage_file_name(package) != package:
+        return [{"code": "quality-package-root-invalid"}]
+    blockers: list[dict[str, Any]] = []
+    try:
+        expected = source_inventory(root, policy_path, root / package, policy)
+    except (OSError, ValueError):
+        return [{"code": "quality-source-inventory-unavailable"}]
+    if run.get("sourceInventory") != expected:
+        blockers.append({"code": "quality-source-inventory-drift"})
+    for identifier, argv in quality_command_argv(policy, root / package).items():
+        commands = [row for row in run.get("commands", []) if isinstance(row, dict) and row.get("id") == identifier]
+        if len(commands) != 1 or commands[0].get("argv") != argv:
+            blockers.append({"code": "quality-command-scope-mismatch", "id": identifier})
+        elif identifier == "mypy-strict" and commands[0].get("returncode") != 0:
+            blockers.append({"code": "quality-strict-command-failed"})
     return blockers
 
 
@@ -252,7 +303,10 @@ def _format_counts(path: Path | None, root: Path, blockers: list[dict[str, Any]]
             for row in rows:
                 if not isinstance(row, dict) or row.get("code") != "unformatted":
                     raise ValueError("Unrecognized format diagnostic")
-                names.append(row.get("filename"))
+                filename = row.get("filename")
+                if not isinstance(filename, str):
+                    raise ValueError("Format filename must be a string")
+                names.append(filename)
         else:
             names = []
             summary_count: int | None = None
@@ -591,6 +645,7 @@ def _validate_coverage(
         totals = value["totals"]
         coverage_policy = policy["coverage"]
         modern = "minimumCombinedPercent" in coverage_policy
+        thresholds: tuple[tuple[str, Any], ...]
         if not isinstance(totals, dict):
             raise ValueError("Coverage totals must be an object")
         if modern:
@@ -607,7 +662,8 @@ def _validate_coverage(
                 raise ValueError("Coverage percentage must be finite and within 0..100")
             observed = {"combinedPercent": percent}
             thresholds = (("combinedPercent", coverage_policy["minimumStatementLinePercent"]),)
-        critical, critical_blockers = {}, []
+        critical: dict[str, Any] = {}
+        critical_blockers: list[dict[str, Any]] = []
         if "minimumBranchPercent" in coverage_policy:
             thresholds += (("branchPercent", coverage_policy["minimumBranchPercent"]),)
             critical, critical_blockers = _critical_coverage_metrics(policy, value, totals)

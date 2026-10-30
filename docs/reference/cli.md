@@ -1,5 +1,42 @@
 # CLI reference
 
+## Release 2.33: selected architecture and tooling quality
+
+This release changes selected internal code and repository quality checks. The
+public `host_bridge.decode_json_object` keeps the bounded decoder behavior;
+its legacy `_json` name remains an alias. Closing policy uses the existing
+public `closing_time.closing_instant` contract. No new wrapper layer is added.
+
+The private-import allowance count falls from 83 to 81. One final-evidence
+flow falls from 58 to 41 branches; its new pure helper has 17. The total runtime
+branch score remains 29,348. The remaining 81 allowances and other complex
+functions remain recorded debt. Error order and authority boundaries retain
+their existing meaning.
+
+The existing quality runner checks the documentation validator, its one
+internal rules helper, and the Python-quality validator with selected Ruff,
+format and strict mypy checks. Eleven observed strict-type findings are fixed.
+The existing runtime baselines, coverage floors and toolchain pins are retained.
+Two selected runtime contracts have strict checks; the two earlier contract
+checks remain separate, with no duplicate strict path.
+
+The documentation validator and helper contain 1,148 and 1,193 lines. Both
+stay below the 1,200-line hard limit and above the 800-line warning. All 130
+ordered documentation rules, their finding order and 15 EN/RU manual pairs are
+retained. These are bounded code and guard changes, not removal of all debt.
+
+Both installation manuals pin the Codex marketplace example to `v2.33.0`.
+Publication validation rejects missing, stale or conflicting refs in these
+examples. The plugin provides instructions and documents; CLI behavior still
+requires the matching Python package.
+
+The version-specific release-accounting fixture contains a partial cutoff of
+actual identified command receipts and actor presence. Failed attempts and
+original clocks are retained; actor presence is not a measured model-turn
+count. Provider input, output, cached tokens and USD stay null/UNAVAILABLE.
+The fixture does not prove whole-run billing or publication. These changes do
+not add host enforcement, model capability or measured token/speed savings.
+
 ## Release 2.32: process observations and reading scope
 
 Existing cost reports add `processObservation` from one shared calculation:
@@ -174,7 +211,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.32.0
+python -m pip install agent-lifecycle-kit==2.33.0
 ```
 
 ## Task evidence identity

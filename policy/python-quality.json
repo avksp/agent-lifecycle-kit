@@ -1,6 +1,6 @@
 {
   "schemaVersion": "agent-python-quality-policy.v1",
-  "revision": 6,
+  "revision": 7,
   "toolchain": {
     "ruff": "0.17.1",
     "mypy": "2.4.0",
@@ -3302,7 +3302,9 @@
   },
   "mypy": {
     "strictClean": [
-      "src/agent_lifecycle/__init__.py"
+      "src/agent_lifecycle/__init__.py",
+      "src/agent_lifecycle/contracts/closing_time.py",
+      "src/agent_lifecycle/contracts/redaction.py"
     ],
     "baseline": []
   },
@@ -3347,5 +3349,12 @@
     "maxOutputBytes": 16777216,
     "maxBaselineEntries": 20000
   },
-  "productionPromotionClaimed": false
+  "productionPromotionClaimed": false,
+  "tooling": {
+    "paths": [
+      "tools/release/validate_docs_compat.py",
+      "tools/release/validate_python_quality.py",
+      "tools/release/docs_compat_rules.py"
+    ]
+  }
 }
