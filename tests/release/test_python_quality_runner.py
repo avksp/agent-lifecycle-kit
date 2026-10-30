@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tools.release.run_python_quality import _run_command, run_quality
+from tools.release.validate_python_quality import validate_quality
 
 
 class PythonQualityRunnerTests(unittest.TestCase):
@@ -57,6 +59,8 @@ class PythonQualityRunnerTests(unittest.TestCase):
         policy = json.loads((Path(__file__).resolve().parents[2] / "policy/python-quality.json").read_text())
         policy["limits"]["maxWallSeconds"] = 30
         policy["limits"]["maxOutputBytes"] = 65536
+        policy.pop("tooling")
+        policy["mypy"]["strictClean"] = []
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             package = root / "src/agent_lifecycle"
@@ -98,6 +102,90 @@ class PythonQualityRunnerTests(unittest.TestCase):
                                 for name, digest in prior.items()))
             format_command = next(row for row in current["commands"] if row["id"] == "ruff-format")
             self.assertEqual(format_command["argv"][-2:], ["--output-format", "json"])
+
+    def test_selected_tool_gate_rejects_real_lint_type_format_and_source_drift(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        policy = json.loads((repository / "policy/python-quality.json").read_text())
+        # A tiny runtime isolates the selected tool gate. Production floors and
+        # runtime baselines are untouched; these fixture sources have no debt.
+        for name in ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline"):
+            policy["ruff"][name] = []
+        policy["mypy"]["strictClean"] = ["src/agent_lifecycle/__init__.py"]
+        policy["coverage"] = {"minimumStatementLinePercent": 76, "baseline": {}}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in (*policy["tooling"]["paths"], "tools/release/run_python_quality.py",
+                             "tools/release/release_common.py", "pyproject.toml"):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(repository / relative, target)
+            package = root / "src/agent_lifecycle"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text("value = 1\n")
+            tests = root / "tests"
+            tests.mkdir()
+            (tests / "__init__.py").write_text("")
+            (tests / "test_case.py").write_text(
+                "import unittest\nfrom agent_lifecycle import value\n"
+                "class Example(unittest.TestCase):\n"
+                "    def test_value(self):\n        self.assertEqual(value, 1)\n"
+            )
+            policy_path, run_path = root / "policy.json", root / "run.json"
+            policy_path.write_text(json.dumps(policy))
+
+            def execute() -> tuple[dict, dict]:
+                with patch.dict(os.environ, {"PYTHONPATH": str(root / "src"), "PYTHONDONTWRITEBYTECODE": "1"}):
+                    run = run_quality(repository_root=root, policy_path=policy_path, package_root=package,
+                                      tests_root=tests, test_top_level=root, base_sha="", work_root=root / "work")
+                run_path.write_text(json.dumps(run))
+                checked = validate_quality(repository_root=root, policy_path=policy_path,
+                                           run_receipt_path=run_path, work_root=root / "work")
+                return run, checked
+
+            control, checked = execute()
+            self.assertEqual(checked["status"], "PASS", checked["blockers"])
+            print(json.dumps({"case": "selected-tool-unchanged-control", "status": checked["status"],
+                              "sourceInventory": control["sourceInventory"], "commands": control["commands"]}))
+            for selected in policy["tooling"]["paths"]:
+                self.assertIn(selected, control["sourceInventory"])
+                for identifier in ("ruff-correctness", "ruff-migration", "ruff-format", "mypy-strict"):
+                    command = next(row for row in control["commands"] if row["id"] == identifier)
+                    self.assertIn(selected, command["argv"])
+            selected = root / policy["tooling"]["paths"][0]
+            original = selected.read_text()
+            seeds = {
+                "lint": ("\n\nunused_import_probe = undefined_quality_probe\n", "new-quality-finding"),
+                "type": ('\n\ntyped_quality_probe: int = "wrong"\n', "quality-strict-command-failed"),
+                "format": ("\n\nformat_quality_probe=[1,2,3]\n", "new-quality-finding"),
+            }
+            for label, (seed, expected) in seeds.items():
+                with self.subTest(seed=label):
+                    selected.write_text(original + seed)
+                    run, checked = execute()
+                    self.assertEqual(checked["status"], "FAIL", checked)
+                    self.assertIn(expected, {row["code"] for row in checked["blockers"]})
+                    print(json.dumps({"case": label, "status": checked["status"],
+                                      "blockers": checked["blockers"], "commands": run["commands"]}))
+                    selected.write_text(original)
+            # Reuse real passing outputs, then change otherwise clean source.
+            run_path.write_text(json.dumps(control))
+            selected.write_text(original + "\n# clean source changed after the run\n")
+            checked = validate_quality(repository_root=root, policy_path=policy_path,
+                                       run_receipt_path=run_path, work_root=root / "work")
+            self.assertEqual(checked["status"], "FAIL")
+            self.assertIn("quality-source-inventory-drift", {row["code"] for row in checked["blockers"]})
+            print(json.dumps({"case": "source-drift", "status": checked["status"], "blockers": checked["blockers"]}))
+            selected.write_text(original)
+            checked = validate_quality(repository_root=root, policy_path=policy_path,
+                                       run_receipt_path=run_path, work_root=root / "work")
+            self.assertEqual(checked["status"], "PASS", checked["blockers"])
+            # An omitted selected argv cannot reuse the same successful results.
+            command = next(row for row in control["commands"] if row["id"] == "ruff-correctness")
+            command["argv"].remove(policy["tooling"]["paths"][0])
+            run_path.write_text(json.dumps(control))
+            checked = validate_quality(repository_root=root, policy_path=policy_path,
+                                       run_receipt_path=run_path, work_root=root / "work")
+            self.assertIn("quality-command-scope-mismatch", {row["code"] for row in checked["blockers"]})
 
 
 if __name__ == "__main__":

@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_lifecycle.contracts.closing_time import closing_instant
 from agent_lifecycle.contracts.errors import LifecycleError
-from agent_lifecycle.contracts.workflow_state_schemas import _closing_instant, validate_closing_context
+from agent_lifecycle.contracts.workflow_state_schemas import validate_closing_context
 
 
 def evaluate_closing_action(context: dict[str, Any], action: str, now: str, subject: dict[str, Any]) -> dict[str, Any]:
     """Classify supplied data before independent native authority and gate checks."""
     validated = validate_closing_context(context)
-    current = _closing_instant(now, "now")
+    current = closing_instant(now, "now")
     if type(subject) is not dict or set(subject) != {
         "runId",
         "packageId",
@@ -26,9 +27,9 @@ def evaluate_closing_action(context: dict[str, Any], action: str, now: str, subj
         raise LifecycleError("closing-context-invalid", "Closing subject differs from the active window")
     matched = type(action) is str and action in validated["allowedActions"]
     in_window = (
-        _closing_instant(validated["validFrom"], "validFrom")
+        closing_instant(validated["validFrom"], "validFrom")
         <= current
-        < _closing_instant(validated["expiresAt"], "expiresAt")
+        < closing_instant(validated["expiresAt"], "expiresAt")
     )
     return {
         "schemaVersion": "agent-closing-action-classification.v1",

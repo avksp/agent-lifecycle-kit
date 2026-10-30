@@ -13,11 +13,34 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from agent_lifecycle.accounting.host_bridge import BoundedReader
+from agent_lifecycle.accounting.host_bridge import BoundedReader, _json, decode_json_object
 from agent_lifecycle.adapter_sessions import limited_native_evidence as native
 from agent_lifecycle.adapter_sessions.attempt_authority import _invocation_namespace
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from tests.adapter_sessions import codex_limited_native_support as producer
+
+
+class AccountingJsonDecoderTests(unittest.TestCase):
+    def test_public_decoder_preserves_compatibility_identity_and_objects(self):
+        self.assertIs(decode_json_object, _json)
+        self.assertEqual(decode_json_object(b'{"a": [1, null, {"b": true}]}'), {"a": [1, None, {"b": True}]})
+
+    def test_exact_refusal_envelopes_and_duplicate_order(self):
+        for raw, code, message in (
+            (b'{"x": 1, "x": 2}', "accounting-json-duplicate-key", "Accounting profile input check refused"),
+            (b'{"x": {"a": 1, "a": 2}, "n": NaN}', "accounting-json-duplicate-key", "Accounting profile input check refused"),
+            (b'{"n": NaN, "x": {"a": 1, "a": 2}}', "accounting-json-invalid", "Accounting profile input check refused"),
+            (b'{"n": Infinity}', "accounting-json-invalid", "Accounting profile input check refused"),
+            (b'{', "accounting-json-invalid", "Accounting input is invalid JSON"),
+            (b'\xff', "accounting-json-invalid", "Accounting input is invalid JSON"),
+            (b'[]', "accounting-json-not-object", "Accounting profile input check refused"),
+            (b'null', "accounting-json-not-object", "Accounting profile input check refused"),
+        ):
+            with self.subTest(raw=raw), self.assertRaises(LifecycleError) as caught:
+                decode_json_object(raw)
+            self.assertEqual(caught.exception.to_json(), {
+                "schemaVersion": "agent-lifecycle-error.v1", "code": code, "message": message, "details": {},
+            })
 
 
 class LimitedNativeEvidenceTests(unittest.TestCase):

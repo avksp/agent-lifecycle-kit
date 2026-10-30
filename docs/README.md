@@ -1,5 +1,7 @@
 # Agent Lifecycle Kit documentation
 
+Release 2.33 simplifies selected internal boundaries and checks the release validators themselves. It removes two private-import allowances (83 to 81), reduces one final-evidence flow from 58 to 41 branches, and adds selected Ruff/strict-mypy checks without increasing runtime baselines. Existing architecture debt remains visible. See [the 2.33 scope](reference/cli.md#release-233-selected-architecture-and-tooling-quality).
+
 Release 2.32 adds a shared advisory observation of process costs, paired EN/RU
 manual checks, and shorter reading routes for eight selected stage cases. Process
 means pipeline compliance plus coordination; useful work means implementation
@@ -65,7 +67,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.32.0` from
+  `python -m pip install agent-lifecycle-kit==2.33.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

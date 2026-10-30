@@ -12,7 +12,7 @@ from agent_lifecycle.contracts.workflow_state_schemas import (
     validate_closing_context,
     validate_workflow_state,
 )
-from agent_lifecycle.workflow.closing_policy import evaluate_closing_action
+from agent_lifecycle.workflow.closing_policy import evaluate_closing_action, require_native_closing_action
 from tests.contracts.test_workflow_state_schemas import _state
 
 
@@ -49,6 +49,21 @@ def _subject() -> dict:
 
 
 class ClosingPolicyTests(unittest.TestCase):
+    def test_exact_native_refusal_preserves_expiry_and_error_order(self) -> None:
+        state = {**_subject(), "closingWindow": _context()}
+        for now, code, message in (
+            ("2026-09-23T02:00:00Z", "closing-action-refused", "Closing-only action is outside the validated data scope"),
+            ("2026-09-23T01:30:00Z", "closing-native-authority-required", "Closing-only finalization requires the native authority, resource and deadline transaction"),
+        ):
+            with self.subTest(now=now), self.assertRaises(LifecycleError) as caught:
+                require_native_closing_action(state, "finalize", now)
+            self.assertEqual(caught.exception.code, code)
+            self.assertEqual(str(caught.exception), message)
+            self.assertEqual(caught.exception.details, {})
+        with self.assertRaises(LifecycleError) as caught:
+            evaluate_closing_action(_context(), "finalize", "bad", {})
+        self.assertEqual(str(caught.exception), "now is invalid")
+
     def test_enumerated_scope_is_only_a_data_candidate(self) -> None:
         context = _context()
         original = copy.deepcopy(context)

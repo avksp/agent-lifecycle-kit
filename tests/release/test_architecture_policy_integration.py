@@ -26,6 +26,12 @@ ROOT = Path(__file__).resolve().parents[2]
 class ArchitecturePolicyIntegrationTests(unittest.TestCase):
     def test_named_private_edges_cannot_return(self) -> None:
         forbidden = {
+            "workflow/closing_policy.py": {
+                ("agent_lifecycle.contracts.workflow_state_schemas", "_closing_instant"),
+            },
+            "adapter_sessions/limited_native_evidence.py": {
+                ("agent_lifecycle.accounting.host_bridge", "_json"),
+            },
             "adapter_sessions/attempt_authority.py": {
                 ("agent_lifecycle.accounting.declared_ledger", "_sync_directory"),
                 ("agent_lifecycle.accounting.declared_ledger_records", "_require"),
@@ -48,6 +54,16 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
     def test_removed_private_debt_cannot_authorize_reintroduction(self) -> None:
         policy = json.loads((ROOT / "policy/architecture-dependencies.json").read_text())
         for module, symbol, consumer in (
+            (
+                "agent_lifecycle.contracts.workflow_state_schemas",
+                "_closing_instant",
+                "agent_lifecycle.workflow.closing_policy",
+            ),
+            (
+                "agent_lifecycle.accounting.host_bridge",
+                "_json",
+                "agent_lifecycle.adapter_sessions.limited_native_evidence",
+            ),
             (
                 "agent_lifecycle.contracts.workflow_state_schemas",
                 "_closing_instant",
@@ -91,6 +107,18 @@ class ArchitecturePolicyIntegrationTests(unittest.TestCase):
                 self.assertFalse(any(row["path"] == path for row in policy["branchExceptions"]))
                 excess = {"path": path, "name": entrypoint, "score": 21, "fingerprint": "0" * 64}
                 self.assertEqual(len(branch_findings([excess], policy)), 1)
+
+    def test_final_typed_flow_reduces_existing_branch_debt(self) -> None:
+        path = "workflow/implementation_audit_gate.py"
+        records = function_branch_records(ast.parse((ROOT / "src/agent_lifecycle" / path).read_text()), path)
+        selected = [row for row in records if row["name"] == "validate_final_task_evidence_reports"]
+        helpers = [row for row in records if row["name"] == "_accepted_final_typed_tasks"]
+        self.assertEqual(len(selected), 1)
+        self.assertLessEqual(selected[0]["score"], 48)
+        self.assertEqual(len(helpers), 1)
+        self.assertLessEqual(helpers[0]["score"], 20)
+        policy = load_architecture_limits(ROOT / "policy/architecture-limits.json")
+        self.assertEqual(branch_findings(selected + helpers, policy), [])
 
     def test_canonical_limits_and_ci_selection_cannot_drift(self) -> None:
         policy = load_architecture_limits(ROOT / "policy/architecture-limits.json")

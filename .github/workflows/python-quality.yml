@@ -32,7 +32,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check uv==0.12.5
           uv sync --locked --group quality
-      - name: Run bounded quality evidence
+      - name: Run bounded runtime and selected tooling quality evidence
         run: >-
           uv run --frozen --group quality python tools/release/run_python_quality.py
           --policy policy/python-quality.json

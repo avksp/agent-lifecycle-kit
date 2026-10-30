@@ -26,6 +26,7 @@ from agent_lifecycle.workflow.finalization import _validate_final_implementation
 from agent_lifecycle.workflow.implementation_audit_gate import (
     _security_assignment_payload,
     _expected_task_evidence_subject,
+    validate_final_task_evidence_reports,
     validate_task_evidence_paths,
     validate_task_implementation_audit_artifact,
 )
@@ -444,6 +445,41 @@ class CompositeOriginConsumerTests(unittest.TestCase):
 
 
 class FinalTypedEvidenceConsumerTests(unittest.TestCase):
+    def test_final_inventory_refuses_exact_errors_in_original_order(self) -> None:
+        descriptor = {
+            "schemaVersion": "agent-expected-evidence.v1", "kind": "command-observation",
+            "scope": "TASK", "components": [{"id": "alk", "repositoryPath": ".",
+                "configurationPaths": [], "oraclePaths": ["oracle.txt"], "buildArtifactPath": None}],
+            "producerRequirement": "DECLARED", "requirements": {
+                "commandDigests": [canonical_digest("python3 -m unittest")], "caseIds": ["case-1"],
+            },
+        }
+        owner = {"id": "WS-01", "evidenceIds": ["EV-1"]}
+        task = {**owner, "status": "ACCEPTED"}
+        for owners, tasks, reports, message in (
+            ([owner], [{**task, "id": "outside"}], None, "accepted task is outside frozen plan"),
+            ([{**owner, "evidenceIds": None}], [task], None, "frozen task evidence inventory is invalid"),
+            ([owner], [{**task, "evidenceIds": []}], None, "typed task evidence inventory changed"),
+            ([owner], [task, task], None, "typed task evidence inventory changed"),
+            ([{**owner, "evidenceIds": [1]}], [], None, "frozen evidence IDs are invalid"),
+            ([owner], [], None, "required typed task is not accepted"),
+            ([owner], [task], None, "final audit report inventory is incomplete"),
+            ([owner], [task], [{}], "final audit report identity is invalid"),
+            ([owner], [task], [], "typed accepted task report is missing"),
+        ):
+            manifest = {"status": "FROZEN", "workstreams": owners,
+                        "acceptance": {"evidence": [{"id": "EV-1", "validation": descriptor}]}}
+            state = {"planDigest": canonical_digest(manifest), "tasks": tasks}
+            audit = {"reports": reports, "missingTaskIds": []}
+            original = copy.deepcopy((manifest, state, audit))
+            with self.subTest(message=message), self.assertRaises(LifecycleError) as caught:
+                validate_final_task_evidence_reports(Path("unused.state.json"), state, audit, manifest=manifest)
+            self.assertEqual(caught.exception.to_json(), {
+                "schemaVersion": "agent-lifecycle-error.v1", "code": "evidence-contract-invalid",
+                "message": message, "details": {},
+            })
+            self.assertEqual((manifest, state, audit), original)
+
     def test_final_acceptance_rechecks_exact_typed_reference(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

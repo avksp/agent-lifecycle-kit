@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import subprocess
 import sys
@@ -10,10 +11,22 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools/release"))
 TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
 class ReleaseDocumentationGateTests(unittest.TestCase):
+    def test_split_document_rules_preserve_full_ordered_contract(self) -> None:
+        from validate_docs_compat import DOC_RULES, MANUAL_PAIRS
+
+        # Golden digest captured from the complete pre-split executable table,
+        # including its six later additions. Reordering affects finding order.
+        raw = json.dumps(DOC_RULES, ensure_ascii=False, separators=(",", ":")).encode()
+        self.assertEqual(len(DOC_RULES), 130)
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),
+                         "cf000617dff9260270141d08ba9941504bc579c1e11fa6b59090978e11955437")
+        self.assertEqual(len(MANUAL_PAIRS), 15)
+
     def test_compact_documented_json_examples_compile_as_drafts_without_authority(self) -> None:
         from agent_lifecycle.contracts.compact_plan_schemas import load_compact_plan_input
         from agent_lifecycle.planning.compact_packages import compile_compact_plan
