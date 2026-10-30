@@ -18,7 +18,7 @@ from tools.release.validate_python_quality import validate_quality
 class PythonQualityRunnerTests(unittest.TestCase):
     def test_selected_tool_strict_types_cover_supported_platforms(self) -> None:
         repository = Path(__file__).resolve().parents[2]
-        policy = json.loads((repository / "policy/python-quality.json").read_text())
+        policy = json.loads((repository / "policy/python-quality.json").read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as directory:
             for platform in ("win32", "linux", "darwin"):
                 with self.subTest(platform=platform):
@@ -83,7 +83,9 @@ class PythonQualityRunnerTests(unittest.TestCase):
         self.assertTrue(result["stderr"].strip())
 
     def test_failed_current_coverage_is_retained_and_next_run_cannot_reuse_it(self) -> None:
-        policy = json.loads((Path(__file__).resolve().parents[2] / "policy/python-quality.json").read_text())
+        policy = json.loads(
+            (Path(__file__).resolve().parents[2] / "policy/python-quality.json").read_text(encoding="utf-8")
+        )
         policy["limits"]["maxWallSeconds"] = 30
         policy["limits"]["maxOutputBytes"] = 65536
         policy.pop("tooling")
@@ -92,20 +94,20 @@ class PythonQualityRunnerTests(unittest.TestCase):
             root = Path(directory)
             package = root / "src/agent_lifecycle"
             package.mkdir(parents=True)
-            (package / "__init__.py").write_text("")
-            (package / "example.py").write_text("value = 1\n")
+            (package / "__init__.py").write_text("", encoding="utf-8")
+            (package / "example.py").write_text("value = 1\n", encoding="utf-8")
             tests = root / "tests"
             tests.mkdir()
-            (tests / "__init__.py").write_text("")
+            (tests / "__init__.py").write_text("", encoding="utf-8")
             test = tests / "test_case.py"
             test_source = (
                 "import unittest\nfrom agent_lifecycle.example import value\n"
                 "class Sample(unittest.TestCase):\n"
                 "    def test_value(self):\n        self.assertEqual(value, {expected})\n"
             )
-            test.write_text(test_source.format(expected=2))
+            test.write_text(test_source.format(expected=2), encoding="utf-8")
             policy_path = root / "policy.json"
-            policy_path.write_text(json.dumps(policy))
+            policy_path.write_text(json.dumps(policy), encoding="utf-8")
             arguments = dict(
                 repository_root=root,
                 policy_path=policy_path,
@@ -122,13 +124,13 @@ class PythonQualityRunnerTests(unittest.TestCase):
                 self.assertEqual(coverage["returncode"], 1)
                 self.assertFalse(coverage["timedOut"])
                 exported = root / failed["artifacts"]["coverage"]
-                self.assertGreater(json.loads(exported.read_text())["totals"]["num_statements"], 0)
+                self.assertGreater(json.loads(exported.read_text(encoding="utf-8"))["totals"]["num_statements"], 0)
                 self.assertTrue((root / failed["artifacts"]["coverageData"]).is_file())
                 prior = {
                     name: hashlib.sha256((root / name).read_bytes()).hexdigest()
                     for name in failed["artifacts"].values()
                 }
-                test.write_text(test_source.format(expected=1))
+                test.write_text(test_source.format(expected=1), encoding="utf-8")
                 current = run_quality(**arguments)
             self.assertEqual(current["status"], "PASS", current["blockers"])
             self.assertNotEqual(current["runDirectory"], failed["runDirectory"])
@@ -141,7 +143,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
 
     def test_selected_tool_gate_rejects_real_lint_type_format_and_source_drift(self) -> None:
         repository = Path(__file__).resolve().parents[2]
-        policy = json.loads((repository / "policy/python-quality.json").read_text())
+        policy = json.loads((repository / "policy/python-quality.json").read_text(encoding="utf-8"))
         # A tiny runtime isolates the selected tool gate. Production floors and
         # runtime baselines are untouched; these fixture sources have no debt.
         for name in ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline"):
@@ -163,7 +165,8 @@ class PythonQualityRunnerTests(unittest.TestCase):
             package.mkdir(parents=True)
             # Real CLIs use the canonical writer outside the tiny checked runtime.
             (package / "__init__.py").write_text(
-                "__path__.append(\n    " + repr(str(repository)) + "\n    '/src/agent_lifecycle'\n)\nvalue = 1\n"
+                "__path__.append(\n    " + repr(str(repository)) + "\n    '/src/agent_lifecycle'\n)\nvalue = 1\n",
+                encoding="utf-8",
             )
             subprocess.run(
                 [sys.executable, "-m", "ruff", "format", str(package / "__init__.py")],
@@ -173,14 +176,15 @@ class PythonQualityRunnerTests(unittest.TestCase):
             )
             tests = root / "tests"
             tests.mkdir()
-            (tests / "__init__.py").write_text("")
+            (tests / "__init__.py").write_text("", encoding="utf-8")
             (tests / "test_case.py").write_text(
                 "import unittest\nfrom agent_lifecycle import value\n"
                 "class Example(unittest.TestCase):\n"
-                "    def test_value(self):\n        self.assertEqual(value, 1)\n"
+                "    def test_value(self):\n        self.assertEqual(value, 1)\n",
+                encoding="utf-8",
             )
             policy_path, run_path = root / "policy.json", root / "run.json"
-            policy_path.write_text(json.dumps(policy))
+            policy_path.write_text(json.dumps(policy), encoding="utf-8")
 
             def execute(package_argument: str | None = None) -> tuple[dict, dict]:
                 with patch.dict(os.environ, {"PYTHONPATH": str(root / "src"), "PYTHONDONTWRITEBYTECODE": "1"}):
@@ -267,7 +271,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
                     command = next(row for row in control["commands"] if row["id"] == identifier)
                     self.assertIn(selected, command["argv"])
             selected = root / policy["tooling"]["paths"][0]
-            original = selected.read_text()
+            original = selected.read_bytes()
             seeds = {
                 "lint": ("\n\nunused_import_probe = undefined_quality_probe\n", "new-quality-finding"),
                 "type": ('\n\ntyped_quality_probe: int = "wrong"\n', "quality-strict-command-failed"),
@@ -275,7 +279,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
             }
             for label, (seed, expected) in seeds.items():
                 with self.subTest(seed=label):
-                    selected.write_text(original + seed)
+                    selected.write_bytes(original + seed.encode("utf-8"))
                     run, checked = execute()
                     self.assertEqual(checked["status"], "FAIL", checked)
                     self.assertIn(expected, {row["code"] for row in checked["blockers"]})
@@ -289,17 +293,17 @@ class PythonQualityRunnerTests(unittest.TestCase):
                             }
                         )
                     )
-                    selected.write_text(original)
+                    selected.write_bytes(original)
             # Reuse real passing outputs, then change otherwise clean source.
-            run_path.write_text(json.dumps(control))
-            selected.write_text(original + "\n# clean source changed after the run\n")
+            run_path.write_text(json.dumps(control), encoding="utf-8")
+            selected.write_bytes(original + b"\n# clean source changed after the run\n")
             checked = validate_quality(
                 repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
             )
             self.assertEqual(checked["status"], "FAIL")
             self.assertIn("quality-source-inventory-drift", {row["code"] for row in checked["blockers"]})
             print(json.dumps({"case": "source-drift", "status": checked["status"], "blockers": checked["blockers"]}))
-            selected.write_text(original)
+            selected.write_bytes(original)
             checked = validate_quality(
                 repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
             )
@@ -307,7 +311,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
             # An omitted selected argv cannot reuse the same successful results.
             command = next(row for row in control["commands"] if row["id"] == "ruff-correctness")
             command["argv"].remove(policy["tooling"]["paths"][0])
-            run_path.write_text(json.dumps(control))
+            run_path.write_text(json.dumps(control), encoding="utf-8")
             checked = validate_quality(
                 repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
             )
