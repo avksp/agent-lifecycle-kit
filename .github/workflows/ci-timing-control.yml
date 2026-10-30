@@ -1,153 +1,45 @@
 name: ci-timing-control
-
 on:
   workflow_dispatch:
-    inputs:
-      mode:
-        description: Timing route (fixture profile is feasibility only)
-        type: choice
-        default: suite
-        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility]
-      baseline_sha:
-        description: Exact accepted 2.27 baseline commit for fixture measurement
-        type: string
-        default: ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5
-      candidate_sha:
-        description: Exact dispatched candidate commit (required for fixture routes)
-        type: string
-        default: ""
-      experiment:
-        description: Bounded candidate experiment number
-        type: choice
-        default: "1"
-        options: ["1", "2", "3", "4"]
-      deadline_utc:
-        description: Required for experiments3/4; UTC native task deadline (YYYY-MM-DDTHH:MM:SSZ)
-        type: string
-        default: ""
-
 permissions:
   contents: read
-
 jobs:
-  paired-windows311:
-    name: windows-paired-control / py3.11
+  git-diagnostic:
+    name: immutable233-git-diagnostic / py3.11+3.15
     runs-on: windows-latest
-    timeout-minutes: 330
+    timeout-minutes: 10
     steps:
-      - name: Set git line ending policy
+      - name: Set checkout byte policy
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          fetch-depth: 0
+          ref: e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2
+          fetch-depth: 1
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Prepare isolated observation script
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force work/ci/git-diagnostic | Out-Null
+          [IO.File]::WriteAllBytes((Join-Path $PWD 'work/ci/git-diagnostic/probe.py'), [Convert]::FromBase64String('IiIiUmVzZWFyY2gtb25seSBvYnNlcnZlciBhcm91bmQgaW1tdXRhYmxlIEFMSzIuMzMgR2l0IGhlbHBlcnMgb24gV2luZG93cy4iIiIKaW1wb3J0IGRhdGV0aW1lCmltcG9ydCBoYXNobGliCmltcG9ydCBqc29uCmltcG9ydCBvcwppbXBvcnQgcGxhdGZvcm0KaW1wb3J0IHNodXRpbAppbXBvcnQgc3RhdAppbXBvcnQgc3VicHJvY2VzcwppbXBvcnQgc3lzCmltcG9ydCB0aW1lCmltcG9ydCB0eXBlcwpmcm9tIHBhdGhsaWIgaW1wb3J0IFBhdGgKCkJBU0UgPSAiZTZjZDlhMGYzNTI0YjU1YTkxOTdiYzU0M2Q2MjliNmJjMmVkM2ZkMiIKUk9PVCA9IFBhdGguY3dkKCkucmVzb2x2ZShzdHJpY3Q9VHJ1ZSkKT1VUID0gUk9PVCAvICJ3b3JrL2NpL2dpdC1kaWFnbm9zdGljIiAvIHN5cy5hcmd2WzFdCk9VVC5ta2RpcihwYXJlbnRzPVRydWUsIGV4aXN0X29rPUZhbHNlKQpFWFBFQ1RFRCA9IGpzb24ubG9hZHMoc3lzLmFyZ3ZbMl0pClNUQVJURUQgPSB0aW1lLm1vbm90b25pYygpClJPV1MgPSBbXQpNRVRBREFUQSA9IFtdClJFU1VMVCA9IHsic2NoZW1hVmVyc2lvbiI6ICJhbGstZ2l0LWZlYXNpYmlsaXR5LWRpYWdub3N0aWMudjEiLCAic3RhdHVzIjogIlVOUkVTT0xWRUQiLAogICAgICAgICAgInNvdXJjZUhlYWQiOiBCQVNFLCAicHl0aG9uIjogc3lzLnZlcnNpb24sICJyb3dzIjogUk9XUywgIm1ldGFkYXRhQ29tbWFuZHMiOiBNRVRBREFUQSwKICAgICAgICAgICJzdGFydGVkQXQiOiBkYXRldGltZS5kYXRldGltZS5ub3coZGF0ZXRpbWUudGltZXpvbmUudXRjKS5pc29mb3JtYXQoKSwKICAgICAgICAgICJwZXJmb3JtYW5jZUFjY2VwdGVkIjogRmFsc2UsICJhY3R1YWxUb2tlbnMiOiBOb25lLCAiYWN0dWFsQ29zdCI6IE5vbmUsCiAgICAgICAgICAicnVubmVyIjoge2s6IG9zLmVudmlyb24uZ2V0KGspIGZvciBrIGluCiAgICAgICAgICAgICAgICAgICAgICgiR0lUSFVCX1JVTl9JRCIsICJHSVRIVUJfUlVOX0FUVEVNUFQiLCAiUlVOTkVSX09TIiwgIlJVTk5FUl9BUkNIIiwgIkltYWdlT1MiLCAiSW1hZ2VWZXJzaW9uIil9fQpLRVlTID0gKCJQQVRIIiwgIlN5c3RlbVJvb3QiLCAiU1lTVEVNUk9PVCIsICJXSU5ESVIiLCAiQ09NU1BFQyIsICJQQVRIRVhUIiwgIkhPTUUiLAogICAgICAgICJVU0VSUFJPRklMRSIsICJBUFBEQVRBIiwgIkxPQ0FMQVBQREFUQSIsICJQUk9HUkFNRklMRVMiKQpFTlYgPSB7azogb3MuZW52aXJvbltrXSBmb3IgayBpbiBLRVlTIGlmIGsgaW4gb3MuZW52aXJvbn0KRU5WLnVwZGF0ZShUTVA9c3RyKE9VVCksIFRFTVA9c3RyKE9VVCksIFRNUERJUj1zdHIoT1VUKSwgUFlUSE9ORE9OVFdSSVRFQllURUNPREU9IjEiLAogICAgICAgICAgIEdJVF9DT05GSUdfTk9TWVNURU09IjEiLCBHSVRfQ09ORklHX0dMT0JBTD1vcy5kZXZudWxsLCBHSVRfVEVSTUlOQUxfUFJPTVBUPSIwIiwKICAgICAgICAgICBHSVRfTk9fTEFaWV9GRVRDSD0iMSIpCgoKZGVmIGRpZ2VzdChwYXRoKToKICAgIHJldHVybiBoYXNobGliLnNoYTI1NihwYXRoLnJlYWRfYnl0ZXMoKSkuaGV4ZGlnZXN0KCkKCgpkZWYgbWV0YWRhdGEoYXJncyk6CiAgICBiZWdpbiA9IHRpbWUucGVyZl9jb3VudGVyKCkKICAgIHJlc3VsdCA9IHN1YnByb2Nlc3MucnVuKFsiZ2l0IiwgKmFyZ3NdLCBjd2Q9Uk9PVCwgY2FwdHVyZV9vdXRwdXQ9VHJ1ZSwgdGltZW91dD0xNSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgIGNoZWNrPVRydWUsIGVudj1FTlYpCiAgICBNRVRBREFUQS5hcHBlbmQoeyJhcmdzIjogYXJncywgIndhbGxTZWNvbmRzIjogdGltZS5wZXJmX2NvdW50ZXIoKSAtIGJlZ2luLAogICAgICAgICAgICAgICAgICAgICAic3Rkb3V0U2hhMjU2IjogaGFzaGxpYi5zaGEyNTYocmVzdWx0LnN0ZG91dCkuaGV4ZGlnZXN0KCl9KQogICAgcmV0dXJuIHJlc3VsdC5zdGRvdXQuZGVjb2RlKCJ1dGYtOCIpLnN0cmlwKCkKCgp0cnk6CiAgICBhc3NlcnQgc3lzLnBsYXRmb3JtID09ICJ3aW4zMiIgYW5kIHBsYXRmb3JtLnB5dGhvbl92ZXJzaW9uKCkuc3RhcnRzd2l0aChzeXMuYXJndlsxXSArICIuIikKICAgIGFzc2VydCBtZXRhZGF0YShbInJldi1wYXJzZSIsICJIRUFEIl0pID09IEJBU0UKICAgIFJFU1VMVFsiZ2l0VmVyc2lvbiJdID0gbWV0YWRhdGEoWyItLXZlcnNpb24iXSkKICAgIFJFU1VMVFsiZ2l0RXhlY3V0YWJsZSJdID0gc2h1dGlsLndoaWNoKCJnaXQiLCBwYXRoPUVOVlsiUEFUSCJdKQogICAgYXNzZXJ0IFJFU1VMVFsiZ2l0RXhlY3V0YWJsZSJdCiAgICBSRVNVTFRbImdpdEV4ZWN1dGFibGVTaGEyNTYiXSA9IGRpZ2VzdChQYXRoKFJFU1VMVFsiZ2l0RXhlY3V0YWJsZSJdKSkKICAgIGZvciByZWxhdGl2ZSwgZXhwZWN0ZWQgaW4gRVhQRUNURUQuaXRlbXMoKToKICAgICAgICBhc3NlcnQgZGlnZXN0KFJPT1QgLyByZWxhdGl2ZSkgPT0gZXhwZWN0ZWQsICJJbW11dGFibGUgc291cmNlIGRpZmZlcnMiCiAgICBSRVNVTFRbInNvdXJjZVNoYTI1NiJdID0gRVhQRUNURUQKICAgIG9zLmVudmlyb24uY2xlYXIoKQogICAgb3MuZW52aXJvbi51cGRhdGUoRU5WKQogICAgc3lzLnBhdGguaW5zZXJ0KDAsIHN0cihST09UIC8gInNyYyIpKQogICAgZnJvbSBhZ2VudF9saWZlY3ljbGUuYWNjb3VudGluZyBpbXBvcnQgZGVjbGFyZWRfbGVkZ2VyX2xlZ2FjeSBhcyBsZWdhY3kKICAgIG9yaWdpbmFsID0gbGVnYWN5LnN1YnByb2Nlc3MKICAgIHJlYWxfcnVuID0gc3VicHJvY2Vzcy5ydW4KICAgIHRyYWNlZCA9IEZhbHNlCgogICAgZGVmIG1lYXN1cmVkX3J1bihhcmd2LCAqKmt3YXJncyk6CiAgICAgICAgYXNzZXJ0IHRpbWUubW9ub3RvbmljKCkgLSBTVEFSVEVEIDwgMTgwLCAiRGlhZ25vc3RpYyB3aW5kb3cgZXhoYXVzdGVkIgogICAgICAgIGFzc2VydCBsZW4oUk9XUykgPCAxMiwgIkdpdCBpbnZvY2F0aW9uIGNhcCBleGhhdXN0ZWQiCiAgICAgICAgYXNzZXJ0IGFyZ3YgPT0gWyJnaXQiLCAicmV2LXBhcnNlIiwgIi0tcGF0aC1mb3JtYXQ9YWJzb2x1dGUiLCAiLS1naXQtY29tbW9uLWRpciJdCiAgICAgICAgYXNzZXJ0IGt3YXJnc1siY2FwdHVyZV9vdXRwdXQiXSBpcyBUcnVlIGFuZCBrd2FyZ3NbInRpbWVvdXQiXSA9PSAxNQogICAgICAgIGFzc2VydCBrd2FyZ3NbImNoZWNrIl0gaXMgRmFsc2UgYW5kIGt3YXJnc1siZW52Il1bIkdJVF9PUFRJT05BTF9MT0NLUyJdID09ICIwIgogICAgICAgIHRyYWNlX3BhdGggPSBPVVQgLyAoInRyYWNlLSUwMmQuanNvbmwiICUgbGVuKFJPV1MpKQogICAgICAgIGlmIHRyYWNlZDoKICAgICAgICAgICAga3dhcmdzWyJlbnYiXSA9IGRpY3Qoa3dhcmdzWyJlbnYiXSwgR0lUX1RSQUNFMl9FVkVOVD1zdHIodHJhY2VfcGF0aCkpCiAgICAgICAgYmVnaW4gPSB0aW1lLnBlcmZfY291bnRlcigpCiAgICAgICAgcmVzdWx0ID0gcmVhbF9ydW4oYXJndiwgKiprd2FyZ3MpCiAgICAgICAgZWxhcHNlZCA9IHRpbWUucGVyZl9jb3VudGVyKCkgLSBiZWdpbgogICAgICAgIHJvdyA9IHsibiI6IGxlbihST1dTKSwgInRyYWNlZCI6IHRyYWNlZCwgImN3ZCI6IHN0cihrd2FyZ3NbImN3ZCJdKSwKICAgICAgICAgICAgICAgIm91dGVyV2FsbFNlY29uZHMiOiBlbGFwc2VkLCAicmV0dXJuY29kZSI6IHJlc3VsdC5yZXR1cm5jb2RlLAogICAgICAgICAgICAgICAic3Rkb3V0Qnl0ZXMiOiBsZW4ocmVzdWx0LnN0ZG91dCksICJzdGRlcnJCeXRlcyI6IGxlbihyZXN1bHQuc3RkZXJyKSwKICAgICAgICAgICAgICAgInN0ZG91dFNoYTI1NiI6IGhhc2hsaWIuc2hhMjU2KHJlc3VsdC5zdGRvdXQpLmhleGRpZ2VzdCgpLAogICAgICAgICAgICAgICAic3RkZXJyU2hhMjU2IjogaGFzaGxpYi5zaGEyNTYocmVzdWx0LnN0ZGVycikuaGV4ZGlnZXN0KCl9CiAgICAgICAgUk9XUy5hcHBlbmQocm93KQogICAgICAgIGlmIHRyYWNlZDoKICAgICAgICAgICAgYXNzZXJ0IHRyYWNlX3BhdGguc3RhdCgpLnN0X3NpemUgPD0gMTA0ODU3NgogICAgICAgICAgICBldmVudHMgPSBbanNvbi5sb2FkcyhsaW5lKSBmb3IgbGluZSBpbiB0cmFjZV9wYXRoLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKS5zcGxpdGxpbmVzKCldCiAgICAgICAgICAgIHNlc3Npb25zID0ge2VbInNpZCJdIGZvciBlIGluIGV2ZW50cyBpZiAic2lkIiBpbiBlfQogICAgICAgICAgICBleGl0cyA9IFtlIGZvciBlIGluIGV2ZW50cyBpZiBlLmdldCgiZXZlbnQiKSA9PSAiYXRleGl0Il0KICAgICAgICAgICAgYXNzZXJ0IGxlbihzZXNzaW9ucykgPT0gMSBhbmQgbGVuKGV4aXRzKSA9PSAxIGFuZCBleGl0c1swXVsiY29kZSJdID09IDAKICAgICAgICAgICAgc2Vjb25kcyA9IGV4aXRzWzBdWyJ0X2FicyJdCiAgICAgICAgICAgIGFzc2VydCB0eXBlKHNlY29uZHMpIGluIChpbnQsIGZsb2F0KSBhbmQgMCA8PSBzZWNvbmRzIDw9IGVsYXBzZWQKICAgICAgICAgICAgcm93LnVwZGF0ZShnaXRUcmFjZVNlY29uZHM9c2Vjb25kcywgb3V0ZXJNaW51c1RyYWNlU2Vjb25kcz1lbGFwc2VkIC0gc2Vjb25kcywKICAgICAgICAgICAgICAgICAgICAgICB0cmFjZVNoYTI1Nj1kaWdlc3QodHJhY2VfcGF0aCksIHRyYWNlUGF0aD10cmFjZV9wYXRoLm5hbWUsCiAgICAgICAgICAgICAgICAgICAgICAgZ2l0Q29tbWFuZFBhdGhzPVtlWyJwYXRoIl0gZm9yIGUgaW4gZXZlbnRzIGlmIGUuZ2V0KCJldmVudCIpID09ICJjbWRfcGF0aCJdKQogICAgICAgIHJldHVybiByZXN1bHQKCiAgICBsZWdhY3kuc3VicHJvY2VzcyA9IHR5cGVzLlNpbXBsZU5hbWVzcGFjZShydW49bWVhc3VyZWRfcnVuLCBUaW1lb3V0RXhwaXJlZD1zdWJwcm9jZXNzLlRpbWVvdXRFeHBpcmVkKQogICAgdHJ5OgogICAgICAgIGZvciByZXBlYXQgaW4gcmFuZ2UoMyk6CiAgICAgICAgICAgIGZvciB0cmFjZWQgaW4gKChGYWxzZSwgVHJ1ZSkgaWYgcmVwZWF0ICUgMiA9PSAwIGVsc2UgKFRydWUsIEZhbHNlKSk6CiAgICAgICAgICAgICAgICBhc3NlcnQgbGVnYWN5Ll9yMTFfY29vcmRpbmF0b3Jfcm9vdChST09UKSA9PSBST09UCiAgICBmaW5hbGx5OgogICAgICAgIGxlZ2FjeS5zdWJwcm9jZXNzID0gb3JpZ2luYWwKICAgIGFzc2VydCBsZW4oUk9XUykgPT0gMTIgYW5kIHN1bShyWyJ0cmFjZWQiXSBmb3IgciBpbiBST1dTKSA9PSA2CiAgICBhc3NlcnQgbGVuKHtyWyJzdGRvdXRTaGEyNTYiXSBmb3IgciBpbiBST1dTfSkgPT0gMQogICAgYXNzZXJ0IGFsbChyWyJyZXR1cm5jb2RlIl0gPT0gMCBhbmQgclsic3Rkb3V0Qnl0ZXMiXSA8PSA4Mzg4NjA4IGFuZCByWyJzdGRlcnJCeXRlcyJdIDw9IDY1NTM2IGZvciByIGluIFJPV1MpCiAgICBhc3NlcnQgYWxsKGRpZ2VzdChST09UIC8gcmVsYXRpdmUpID09IHZhbHVlIGZvciByZWxhdGl2ZSwgdmFsdWUgaW4gRVhQRUNURUQuaXRlbXMoKSkKICAgIFJFU1VMVFsic291cmNlVW5jaGFuZ2VkIl0gPSBUcnVlCiAgICBSRVNVTFRbInN0YXR1cyJdID0gIkRJQUdOT1NUSUNfQ09NUExFVEVfTk9UX0FDQ0VQVEFOQ0UiCmV4Y2VwdCBFeGNlcHRpb24gYXMgZXhjOgogICAgUkVTVUxUWyJlcnJvclR5cGUiXSA9IHR5cGUoZXhjKS5fX25hbWVfXwogICAgcmFpc2UKZmluYWxseToKICAgIFJFU1VMVFsiZWxhcHNlZFNlY29uZHMiXSA9IHRpbWUubW9ub3RvbmljKCkgLSBTVEFSVEVECiAgICAoT1VUIC8gInJlc3VsdC5qc29uIikud3JpdGVfdGV4dChqc29uLmR1bXBzKFJFU1VMVCwgaW5kZW50PTIpICsgIlxuIiwgZW5jb2Rpbmc9InV0Zi04IikK'))
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          python-version: "3.11"
-      - name: Install pinned quality runner
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-        with:
-          version: "0.13.1"
-      - name: Restore versioned release test fixture
-        run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
-      - name: Install package
-        run: python -m pip install -e .
-      - name: Validate repository hygiene
-        run: >-
-          python tools/release/validate_repository_hygiene.py
-          --root .
-          --policy policy/repository-hygiene.json
-          --ref HEAD
-          --require-history
-          --evidence work/ci/repository-hygiene.json
-      - name: Capture timing-control environment
-        run: >-
-          python -c "import json,os,pathlib,platform;
-          p=pathlib.Path('work/ci/control-environment.json');
-          v=dict(python=platform.python_version(),platform=platform.platform(),logicalCPUs=os.cpu_count(),
-          environment={k:os.environ.get(k) for k in
-          ('GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','RUNNER_OS','RUNNER_ARCH','ImageOS','ImageVersion')});
-          p.write_text(json.dumps(v,indent=2),encoding='utf-8')"
-      - name: Run parallel stdlib tests
-        id: parallel-tests
-        if: inputs.mode == 'suite'
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/run_parallel_unittest.py --start tests --top .
-          --out work/ci/paired-parallel.json
-      - name: Run serial stdlib tests
-        if: inputs.mode == 'suite'
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/run_unittest.py --start tests --top .
-          --out work/ci/paired-serial.json
-      - name: Measure three alternating serial fixture pairs
-        id: fixture-pairs
-        if: inputs.mode == 'fixture-comparison'
+          python-version: '3.11'
+      - name: Observe immutable Git helpers on Python3.11
         env:
-          BASELINE_SHA: ${{ inputs.baseline_sha }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
-          MEASUREMENT_DEADLINE: ${{ inputs.deadline_utc }}
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/measure_limited_usage.py
-          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
-          --experiment "$env:EXPERIMENT_NUMBER" --mode paired
-          --deadline-utc "$env:MEASUREMENT_DEADLINE"
-          --out work/ci/limited-usage-pairs.json
-      - name: Profile unchanged baseline fixture feasibility
-        id: fixture-profile
-        if: inputs.mode == 'fixture-profile'
-        env:
-          BASELINE_SHA: ${{ inputs.baseline_sha }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/measure_limited_usage.py
-          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
-          --experiment "$env:EXPERIMENT_NUMBER" --mode profile
-          --out work/ci/limited-usage-profile.json
-      - name: Retain paired control evidence
-        if: always() && steps.parallel-tests.outcome != 'skipped'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B work/ci/git-diagnostic/probe.py 3.11 '{"src/agent_lifecycle/accounting/declared_ledger_legacy.py":"2e40d0421c7d67367435422861557b2c7b74f73545e8f9049dfb4bb44abd2d23","src/agent_lifecycle/accounting/declared_ledger_records.py":"b8ef9a6d9a60fcd5d87c7bad494eec2ef81ca3443ddf29d865511714be9c3291","src/agent_lifecycle/contracts/authority_io.py":"b12171bfd5ecc8365149b8936bd838103af5b59d988f34a6c90f9cedf8a71aed"}'
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          name: test-timings-windows-paired-control-py3.11
-          path: |
-            work/ci/paired-parallel.json
-            work/ci/paired-parallel/
-            work/ci/paired-serial.json
-            work/ci/control-environment.json
-          if-no-files-found: error
-          retention-days: 14
-      - name: Profile baseline and candidate feasibility on this runner
-        id: fixture-feasibility
-        if: inputs.mode == 'fixture-profile-feasibility'
+          python-version: '3.15'
+      - name: Observe immutable Git helpers on Python3.15
         env:
-          BASELINE_SHA: ${{ inputs.baseline_sha }}
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          EXPERIMENT_NUMBER: ${{ inputs.experiment }}
-        run: >-
-          uv run --frozen --group quality --python 3.11
-          python tools/ci/measure_limited_usage.py
-          --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
-          --experiment "$env:EXPERIMENT_NUMBER" --mode feasibility
-          --out work/ci/limited-usage-feasibility.json
-      - name: Retain bounded fixture measurement evidence
-        if: >-
-          always() && (steps.fixture-pairs.outcome != 'skipped' || steps.fixture-profile.outcome != 'skipped'
-          || steps.fixture-feasibility.outcome != 'skipped')
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -B work/ci/git-diagnostic/probe.py 3.15 '{"src/agent_lifecycle/accounting/declared_ledger_legacy.py":"2e40d0421c7d67367435422861557b2c7b74f73545e8f9049dfb4bb44abd2d23","src/agent_lifecycle/accounting/declared_ledger_records.py":"b8ef9a6d9a60fcd5d87c7bad494eec2ef81ca3443ddf29d865511714be9c3291","src/agent_lifecycle/contracts/authority_io.py":"b12171bfd5ecc8365149b8936bd838103af5b59d988f34a6c90f9cedf8a71aed"}'
+      - name: Preserve diagnostic, including incomplete results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: limited-usage-windows-py3.11-${{ inputs.mode }}-${{ inputs.experiment }}
-          path: |
-            work/ci/limited-usage-pairs.json
-            work/ci/limited-usage-pairs/
-            work/ci/limited-usage-profile.json
-            work/ci/limited-usage-profile/
-            work/ci/limited-usage-feasibility.json
-            work/ci/limited-usage-feasibility/
-            work/ci/control-environment.json
+          name: immutable233-windows-git-diagnostic-a1
+          path: work/ci/git-diagnostic/
           if-no-files-found: error
           retention-days: 14
