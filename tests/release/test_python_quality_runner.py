@@ -16,6 +16,32 @@ from tools.release.validate_python_quality import validate_quality
 
 
 class PythonQualityRunnerTests(unittest.TestCase):
+    def test_selected_tool_strict_types_cover_supported_platforms(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        policy = json.loads((repository / "policy/python-quality.json").read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            for platform in ("win32", "linux", "darwin"):
+                with self.subTest(platform=platform):
+                    completed = subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "mypy",
+                            "--strict",
+                            "--platform",
+                            platform,
+                            *policy["tooling"]["paths"],
+                            "--cache-dir",
+                            str(Path(directory) / platform),
+                        ],
+                        cwd=repository,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                        check=False,
+                    )
+                    self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
     def test_runner_uses_bounded_command_and_accepts_diagnostic_exit(self) -> None:
         result = _run_command(
             [sys.executable, "-c", "print('diagnostic')"],

@@ -354,7 +354,7 @@ class _Drain:
 
 def _terminate(process: subprocess.Popen[bytes]) -> None:
     try:
-        if os.name != "nt":
+        if sys.platform != "win32":
             os.killpg(process.pid, signal.SIGKILL)
         else:
             process.kill()
