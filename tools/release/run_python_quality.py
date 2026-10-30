@@ -94,6 +94,7 @@ def run_quality(
     base_sha: str,
     work_root: Path,
 ) -> dict[str, Any]:
+    package_root = (repository_root / package_root).resolve()
     policy = _read_object(policy_path)
     limits = policy.get("limits", {})
     timeout = int(limits.get("maxWallSeconds", DEFAULT_TIMEOUT_SECONDS))

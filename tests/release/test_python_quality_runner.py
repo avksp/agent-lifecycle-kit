@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -79,9 +80,15 @@ class PythonQualityRunnerTests(unittest.TestCase):
             test.write_text(test_source.format(expected=2))
             policy_path = root / "policy.json"
             policy_path.write_text(json.dumps(policy))
-            arguments = dict(repository_root=root, policy_path=policy_path,
-                             package_root=package, tests_root=tests, test_top_level=root,
-                             base_sha="", work_root=root / "work")
+            arguments = dict(
+                repository_root=root,
+                policy_path=policy_path,
+                package_root=package,
+                tests_root=tests,
+                test_top_level=root,
+                base_sha="",
+                work_root=root / "work",
+            )
             with patch.dict(os.environ, {"PYTHONPATH": str(root / "src"), "PYTHONDONTWRITEBYTECODE": "1"}):
                 failed = run_quality(**arguments)
                 self.assertEqual(failed["status"], "FAIL")
@@ -91,15 +98,18 @@ class PythonQualityRunnerTests(unittest.TestCase):
                 exported = root / failed["artifacts"]["coverage"]
                 self.assertGreater(json.loads(exported.read_text())["totals"]["num_statements"], 0)
                 self.assertTrue((root / failed["artifacts"]["coverageData"]).is_file())
-                prior = {name: hashlib.sha256((root / name).read_bytes()).hexdigest()
-                         for name in failed["artifacts"].values()}
+                prior = {
+                    name: hashlib.sha256((root / name).read_bytes()).hexdigest()
+                    for name in failed["artifacts"].values()
+                }
                 test.write_text(test_source.format(expected=1))
                 current = run_quality(**arguments)
             self.assertEqual(current["status"], "PASS", current["blockers"])
             self.assertNotEqual(current["runDirectory"], failed["runDirectory"])
             self.assertNotEqual(current["artifacts"]["coverageData"], failed["artifacts"]["coverageData"])
-            self.assertTrue(all(hashlib.sha256((root / name).read_bytes()).hexdigest() == digest
-                                for name, digest in prior.items()))
+            self.assertTrue(
+                all(hashlib.sha256((root / name).read_bytes()).hexdigest() == digest for name, digest in prior.items())
+            )
             format_command = next(row for row in current["commands"] if row["id"] == "ruff-format")
             self.assertEqual(format_command["argv"][-2:], ["--output-format", "json"])
 
@@ -113,15 +123,28 @@ class PythonQualityRunnerTests(unittest.TestCase):
         policy["mypy"]["strictClean"] = ["src/agent_lifecycle/__init__.py"]
         policy["coverage"] = {"minimumStatementLinePercent": 76, "baseline": {}}
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            for relative in (*policy["tooling"]["paths"], "tools/release/run_python_quality.py",
-                             "tools/release/release_common.py", "pyproject.toml"):
+            root = Path(directory).resolve()
+            for relative in (
+                *policy["tooling"]["paths"],
+                "tools/release/run_python_quality.py",
+                "tools/release/release_common.py",
+                "pyproject.toml",
+            ):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(repository / relative, target)
             package = root / "src/agent_lifecycle"
             package.mkdir(parents=True)
-            (package / "__init__.py").write_text("value = 1\n")
+            # Real CLIs use the canonical writer outside the tiny checked runtime.
+            (package / "__init__.py").write_text(
+                "__path__.append(\n    " + repr(str(repository)) + "\n    '/src/agent_lifecycle'\n)\nvalue = 1\n"
+            )
+            subprocess.run(
+                [sys.executable, "-m", "ruff", "format", str(package / "__init__.py")],
+                capture_output=True,
+                check=True,
+                timeout=15,
+            )
             tests = root / "tests"
             tests.mkdir()
             (tests / "__init__.py").write_text("")
@@ -133,19 +156,85 @@ class PythonQualityRunnerTests(unittest.TestCase):
             policy_path, run_path = root / "policy.json", root / "run.json"
             policy_path.write_text(json.dumps(policy))
 
-            def execute() -> tuple[dict, dict]:
+            def execute(package_argument: str | None = None) -> tuple[dict, dict]:
                 with patch.dict(os.environ, {"PYTHONPATH": str(root / "src"), "PYTHONDONTWRITEBYTECODE": "1"}):
-                    run = run_quality(repository_root=root, policy_path=policy_path, package_root=package,
-                                      tests_root=tests, test_top_level=root, base_sha="", work_root=root / "work")
-                run_path.write_text(json.dumps(run))
-                checked = validate_quality(repository_root=root, policy_path=policy_path,
-                                           run_receipt_path=run_path, work_root=root / "work")
+                    completed = subprocess.run(
+                        [
+                            sys.executable,
+                            str(repository / "tools/release/run_python_quality.py"),
+                            "--policy",
+                            "policy.json",
+                            "--package-root",
+                            package_argument or str(package),
+                            "--tests-root",
+                            "tests",
+                            "--test-top-level",
+                            ".",
+                            "--base-sha",
+                            "",
+                            "--work-root",
+                            "work",
+                            "--evidence",
+                            "run.json",
+                        ],
+                        cwd=root,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                        check=False,
+                    )
+                    self.assertTrue(completed.stdout.strip(), completed.stderr)
+                    run = json.loads(completed.stdout)
+                    self.assertEqual(completed.returncode, 0 if run["status"] == "PASS" else 1, completed.stderr)
+                    completed = subprocess.run(
+                        [
+                            sys.executable,
+                            str(repository / "tools/release/validate_python_quality.py"),
+                            "--policy",
+                            "policy.json",
+                            "--run-receipt",
+                            "run.json",
+                            "--work-root",
+                            "work",
+                            "--evidence",
+                            "validation.json",
+                        ],
+                        cwd=root,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                        check=False,
+                    )
+                    self.assertTrue(completed.stdout.strip(), completed.stderr)
+                    checked = json.loads(completed.stdout)
+                    self.assertEqual(completed.returncode, 0 if checked["status"] == "PASS" else 1, completed.stderr)
                 return run, checked
 
             control, checked = execute()
             self.assertEqual(checked["status"], "PASS", checked["blockers"])
-            print(json.dumps({"case": "selected-tool-unchanged-control", "status": checked["status"],
-                              "sourceInventory": control["sourceInventory"], "commands": control["commands"]}))
+            print(
+                json.dumps(
+                    {
+                        "case": "selected-tool-unchanged-control",
+                        "status": checked["status"],
+                        "sourceInventory": control["sourceInventory"],
+                        "commands": control["commands"],
+                    }
+                )
+            )
+            relative, checked = execute("src/agent_lifecycle")
+            print(
+                json.dumps(
+                    {
+                        "case": "relative-cli-control",
+                        "status": checked["status"],
+                        "blockers": checked["blockers"],
+                        "commands": relative["commands"],
+                    }
+                )
+            )
+            self.assertEqual(checked["status"], "PASS", checked["blockers"])
+            self.assertEqual(relative["sourceInventory"], control["sourceInventory"])
             for selected in policy["tooling"]["paths"]:
                 self.assertIn(selected, control["sourceInventory"])
                 for identifier in ("ruff-correctness", "ruff-migration", "ruff-format", "mypy-strict"):
@@ -164,27 +253,38 @@ class PythonQualityRunnerTests(unittest.TestCase):
                     run, checked = execute()
                     self.assertEqual(checked["status"], "FAIL", checked)
                     self.assertIn(expected, {row["code"] for row in checked["blockers"]})
-                    print(json.dumps({"case": label, "status": checked["status"],
-                                      "blockers": checked["blockers"], "commands": run["commands"]}))
+                    print(
+                        json.dumps(
+                            {
+                                "case": label,
+                                "status": checked["status"],
+                                "blockers": checked["blockers"],
+                                "commands": run["commands"],
+                            }
+                        )
+                    )
                     selected.write_text(original)
             # Reuse real passing outputs, then change otherwise clean source.
             run_path.write_text(json.dumps(control))
             selected.write_text(original + "\n# clean source changed after the run\n")
-            checked = validate_quality(repository_root=root, policy_path=policy_path,
-                                       run_receipt_path=run_path, work_root=root / "work")
+            checked = validate_quality(
+                repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
+            )
             self.assertEqual(checked["status"], "FAIL")
             self.assertIn("quality-source-inventory-drift", {row["code"] for row in checked["blockers"]})
             print(json.dumps({"case": "source-drift", "status": checked["status"], "blockers": checked["blockers"]}))
             selected.write_text(original)
-            checked = validate_quality(repository_root=root, policy_path=policy_path,
-                                       run_receipt_path=run_path, work_root=root / "work")
+            checked = validate_quality(
+                repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
+            )
             self.assertEqual(checked["status"], "PASS", checked["blockers"])
             # An omitted selected argv cannot reuse the same successful results.
             command = next(row for row in control["commands"] if row["id"] == "ruff-correctness")
             command["argv"].remove(policy["tooling"]["paths"][0])
             run_path.write_text(json.dumps(control))
-            checked = validate_quality(repository_root=root, policy_path=policy_path,
-                                       run_receipt_path=run_path, work_root=root / "work")
+            checked = validate_quality(
+                repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
+            )
             self.assertIn("quality-command-scope-mismatch", {row["code"] for row in checked["blockers"]})
 
 
