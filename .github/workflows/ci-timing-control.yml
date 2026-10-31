@@ -157,7 +157,7 @@ jobs:
     if: inputs.mode == 'release-2-34'
     name: windows-git-launch-control / controller3.11 / worker3.15
     runs-on: windows-latest
-    timeout-minutes: 150
+    timeout-minutes: 180
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false

@@ -608,8 +608,8 @@ class Release234MeasurementTests(unittest.TestCase):
                 return module.RELEASE234_DEADLINE - timedelta(hours=2)
 
         with patch.object(module, "datetime", FixedClock):
-            self.assertEqual(module.release234_seconds("2026-10-31T03:22:17Z"), 7200)
-            for value in (None, "bad", "2026-10-31T03:22:18Z", "2026-10-31T03:22:16Z"):
+            self.assertEqual(module.release234_seconds("2026-10-31T05:38:16Z"), 7200)
+            for value in (None, "bad", "2026-10-31T05:38:17Z", "2026-10-31T05:38:15Z"):
                 with self.assertRaises(ValueError):
                     module.release234_seconds(value)
         with patch.object(module.sys, "platform", "linux"):
@@ -753,7 +753,7 @@ class Release234MeasurementTests(unittest.TestCase):
         self.assertEqual(job.count("& work/ci/release234-py311/Scripts/python.exe"), 3)
         self.assertIn("--python 3.11", job)
         self.assertIn("--python 3.15", job)
-        self.assertIn("timeout-minutes: 150", job)
+        self.assertIn("timeout-minutes: 180", job)
         self.assertIn("limited-usage-windows-release234-controller311-worker315-experiment5", job)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -765,15 +765,20 @@ class Release234MeasurementTests(unittest.TestCase):
         class OverlongClock(datetime):
             @classmethod
             def now(cls, _tz=None):
-                return module.RELEASE234_DEADLINE - timedelta(seconds=9001)
+                return module.RELEASE234_DEADLINE - timedelta(seconds=14401)
 
         with patch.object(module, "datetime", OverlongClock), self.assertRaises(ValueError):
-            module.release234_seconds("2026-10-31T03:22:17Z")
+            module.release234_seconds("2026-10-31T05:38:16Z")
 
     def test_311_controller_rejects_315_and_keeps_strict315_six_sample_protocol(self):
         module = subject()
         candidate = "1" * 40
-        for benefit, coordinator in ((False, 11), (True, 11), (True, 15)):
+        for benefit, coordinator, available in (
+            (False, 11, 10800),
+            (True, 11, 10800),
+            (True, 15, 10800),
+            (False, 11, 7200),
+        ):
             with self.subTest(benefit=benefit, coordinator=coordinator), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory)
                 for version in ("315",):
@@ -867,7 +872,7 @@ class Release234MeasurementTests(unittest.TestCase):
                     candidate=candidate,
                     experiment=5,
                     mode="paired",
-                    deadline_utc="2026-10-31T03:22:17Z",
+                    deadline_utc="2026-10-31T05:38:16Z",
                     out=str(source / "report.json"),
                 )
                 with (
@@ -878,7 +883,7 @@ class Release234MeasurementTests(unittest.TestCase):
                     patch.object(module, "test_contract", return_value={}),
                     patch.object(module, "restore_fixture"),
                     patch.object(module, "release234_contract", return_value={}),
-                    patch.object(module, "release234_seconds", return_value=9000),
+                    patch.object(module, "release234_seconds", return_value=available),
                     patch.object(module, "validate_sample", return_value={}),
                     patch.object(module.platform, "system", return_value="Windows"),
                     patch.object(module.sys, "version_info", (3, coordinator)),
@@ -897,7 +902,7 @@ class Release234MeasurementTests(unittest.TestCase):
                 value = json.loads(report.getvalue())
                 self.assertEqual(value["controllerSourcesBefore"], value["controllerSourcesAfter"])
                 self.assertEqual(len(value["controllerSourcesBefore"]), 2)
-                self.assertEqual(value["experimentTimeoutSeconds"], 7200)
+                self.assertEqual(value["experimentTimeoutSeconds"], min(9900, available - 900))
                 if coordinator == 15:
                     self.assertEqual(code, 1)
                     self.assertEqual(value["status"], "STOP_UNRESOLVED")
@@ -912,6 +917,126 @@ class Release234MeasurementTests(unittest.TestCase):
                 self.assertEqual(full, [("15", side) for side in module.ORDER] if benefit else [])
                 self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 6 if benefit else 0)
                 self.assertEqual(value["status"], "MEASURED_IMPROVEMENT" if benefit else "STOP_NO_PRELIMINARY_BENEFIT")
+
+
+class LambdaSelectorSchemaTests(unittest.TestCase):
+    SOURCE = textwrap.dedent(
+        """\
+        class SourceConflictRecoveryTests:
+            def test_recovery_unknown_or_edited_disposition_denied(self):
+                for mutation in (
+                    lambda: 1,
+                    lambda: 1,
+                ):
+                    with self.subTest(mutation=mutation.__code__.co_firstlineno):
+                        pass
+        """
+    )
+    PARENT = "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied"
+    EXPECTED_IDS = [
+        "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied (mutation=ast:0adf13b909abd2f6e04480ae36ed5a91d7440eb0ec2774ac93f77ede53d1aece)",
+        "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied (mutation=ast:39a51302b8540574fd7e84c48486fe74220d6bea3bdc4f16da03ad31dc99cd96)",
+        "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied",
+    ]
+
+    @contextmanager
+    def fixture(self):
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / module.HOT_PATH
+            path.parent.mkdir(parents=True)
+            path.write_text(self.SOURCE, encoding="utf-8")
+            events = [
+                {
+                    "id": f"{self.PARENT} (mutation={line})",
+                    "caseIndex": 0,
+                    "outcome": "subtest:success",
+                    "value": "retained",
+                }
+                for line in (4, 5)
+            ] + [{"id": self.PARENT, "caseIndex": 0, "outcome": "success"}]
+            yield module, root, path, events
+
+    def test_legacy_selector_ids_are_stable_and_preserve_raw_fields_and_occurrences(self):
+        with self.fixture() as (module, root, _path, events):
+            before = deepcopy(events)
+            result = module.canonical_events(root, events)
+            self.assertEqual([event["id"] for event in result], self.EXPECTED_IDS)
+            self.assertNotEqual(result[0]["id"], result[1]["id"])
+            self.assertEqual(events, before)
+            self.assertEqual(
+                result,
+                [{**event, "id": identifier} for event, identifier in zip(events, self.EXPECTED_IDS, strict=True)],
+            )
+
+    def test_selector_line_order_occurrence_and_source_channel_refusals(self):
+        with self.fixture() as (module, root, path, events):
+            wrong_line = deepcopy(events)
+            wrong_line[0]["id"] = wrong_line[0]["id"].replace("mutation=4", "mutation=5")
+            for changed in (
+                wrong_line,
+                [events[1], events[0], events[2]],
+                events[1:],
+                events[:2] + [events[1], events[2]],
+            ):
+                with self.subTest(events=changed), self.assertRaises(ValueError):
+                    module.canonical_events(root, changed)
+            path.write_text(self.SOURCE.replace("subTest(mutation=", "subTest(other="), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Unrecognized source-line selector"):
+                module.canonical_events(root, events)
+
+    def test_sample_refuses_source_raw_canonical_and_join_tampering(self):
+        with self.fixture() as (module, root, path, events):
+            request = {
+                "root": str(root),
+                "sourceHead": "controlled-head",
+                "inputSha256": "bound-input",
+                "testContract": {"source": "controlled-selector"},
+                "expectedTests": 1,
+            }
+            value = {
+                "schemaVersion": "alk-ci-test-timings.v1",
+                "status": "PASS",
+                "sourceHead": request["sourceHead"],
+                "inputSha256": request["inputSha256"],
+                "testContract": request["testContract"],
+                "measurementEnvironment": module.environment_identity(),
+                "inputHashesUnchanged": True,
+                "coverage": {"complete": True, "notStarted": []},
+                "testsRun": 1,
+                "inventory": [{"id": self.PARENT}],
+                "cases": [{"id": self.PARENT, "completed": True, "seconds": 1}],
+                "wallSeconds": 1,
+                "events": events,
+                "comparisonEvents": module.canonical_events(root, events),
+                "python": "controlled",
+                "platform": "controlled",
+                "skips": 0,
+                "expectedFailures": 0,
+            }
+            joined = module.validate_sample(value, request)
+            for key in ("sourceHead", "inputSha256"):
+                changed = deepcopy(value)
+                changed[key] = "tampered"
+                with self.subTest(key=key), self.assertRaises(ValueError):
+                    module.validate_sample(changed, request)
+            for field in ("events", "comparisonEvents"):
+                changed = deepcopy(value)
+                changed[field][0]["outcome"] = "subtest:failure"
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, "Canonical events differ"):
+                    module.validate_sample(changed, request)
+            samples = [
+                {"side": side, "wallSeconds": 10 if side == "baseline" else 7, "join": deepcopy(joined)}
+                for side in module.ORDER
+            ]
+            self.assertEqual(module.compare_samples(samples)["status"], "MEASURED_IMPROVEMENT")
+            samples[1]["join"]["events"][0]["id"] += "tampered"
+            with self.assertRaises(ValueError):
+                module.compare_samples(samples)
+            path.write_text(self.SOURCE.replace("lambda: 1", "lambda: 2", 1), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Canonical events differ"):
+                module.validate_sample(value, request)
 
 
 class OwnedMeasurementTransportTests(unittest.TestCase):

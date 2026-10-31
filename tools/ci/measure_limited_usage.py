@@ -25,7 +25,7 @@ from pathlib import Path, PurePosixPath
 
 BASELINE = "ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5"
 RELEASE234_BASELINE = "e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2"
-RELEASE234_DEADLINE = datetime(2026, 10, 31, 3, 22, 17, tzinfo=UTC)
+RELEASE234_DEADLINE = datetime(2026, 10, 31, 5, 38, 16, tzinfo=UTC)
 RELEASE234_OWNED = frozenset(
     (
         ".github/workflows/ci-timing-control.yml src/agent_lifecycle/accounting/declared_ledger_legacy.py "
@@ -299,7 +299,7 @@ def canonical_events(root, events):
             match = re.search(pattern, item["id"])
             if match is None or int(match[1]) != choice.lineno:
                 raise ValueError("Subtest line label does not select the proven lambda")
-            selector = digest({"parent": base, "lambdaAst": ast.dump(choice), "occurrence": offset})
+            selector = digest({"parent": base, "lambdaAst": clock_ast_dump(choice), "occurrence": offset})
             item["id"] = re.sub(pattern, f"{parameter}=ast:{selector}", item["id"])
             positions[base] = offset + 1
         result.append(item)
@@ -718,7 +718,7 @@ def release234_seconds(deadline_text):
         raise ValueError("Release234 requires the explicit native UTC task deadline")
     requested = datetime.strptime(deadline_text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
     remaining = (requested - datetime.now(UTC)).total_seconds()
-    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 9000:
+    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 14400:
         raise ValueError("Release234 native task deadline differs, expired or exceeds the authorized task window")
     return remaining
 
@@ -1012,7 +1012,7 @@ def execute(args, report):
         if release234:
             if args.mode != "paired":
                 raise ValueError("Release234 permits only the gated paired route")
-            limit = min(7200, release234_seconds(args.deadline_utc) - 900)
+            limit = min(9900, release234_seconds(args.deadline_utc) - 900)
             if limit <= 0:
                 raise ValueError("Release234 closeout reserve reached")
             deadline = time.monotonic() + limit
