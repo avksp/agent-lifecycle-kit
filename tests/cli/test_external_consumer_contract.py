@@ -18,6 +18,7 @@ import unittest
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = json.loads((Path(__file__).parent / "fixtures/external-consumer-cases.json").read_text(encoding="utf-8"))
@@ -40,7 +41,11 @@ class PublicCliConsumer:
     def call(self, args: list[str]) -> tuple[int, dict]:
         if len(args) > 96 or sum(map(len, args)) > 16384:
             raise ConsumerRefusal("argv exceeds consumer limit")
-        env = {key: os.environ[key] for key in ("PATH", "SYSTEMROOT", "TEMP", "TMP") if key in os.environ}
+        env = {
+            key: os.environ[key]
+            for key in ("PATH", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH")
+            if key in os.environ
+        }
         env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONNOUSERSITE="1")
         command = [self.executable, *args]
         started = datetime.now(UTC).isoformat()
@@ -165,6 +170,40 @@ def _inventory(root: Path) -> dict[str, str]:
         for path in root.rglob("*")
         if path.is_file()
     }
+
+
+class ConsumerEnvironmentTests(unittest.TestCase):
+    def test_safe_ambient_windows_home_is_preserved_without_source_or_secret_environment(self) -> None:
+        home_names = ("USERPROFILE", "HOMEDRIVE", "HOMEPATH")
+        forbidden = ("PYTHONPATH", "PYTHONHOME", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "AZURE_OPENAI_API_KEY")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / "unit-only-cli"
+            executable.write_bytes(b"unit-only controlled executable fingerprint")
+            for homes in (
+                {"USERPROFILE": r"C:\Users\unit-only", "HOMEDRIVE": "C:", "HOMEPATH": r"\Users\unit-only"},
+                {},
+            ):
+                captured = {}
+
+                def controlled_run(command, **kwargs):
+                    captured.update(kwargs["env"])
+                    kwargs["stdout"].write(b'{"schemaVersion":"agent-lifecycle-version.v1","version":"2.35.0"}')
+                    return subprocess.CompletedProcess(command, 0)
+
+                ambient = {"PATH": os.defpath, "SYSTEMROOT": r"C:\Windows", "TEMP": directory, "TMP": directory,
+                           **homes, **dict.fromkeys(forbidden, "unit-only-placeholder")}
+                with self.subTest(homePresent=bool(homes)), patch.dict(os.environ, ambient, clear=True), patch(
+                    "tests.cli.test_external_consumer_contract.subprocess.run", side_effect=controlled_run
+                ) as run:
+                    code, payload = PublicCliConsumer(str(executable), root).call(["version"])
+                self.assertEqual(code, 0)
+                self.assertEqual(payload["version"], "2.35.0")
+                run.assert_called_once()
+                self.assertEqual({name: captured[name] for name in home_names if name in captured}, homes)
+                self.assertTrue(set(forbidden).isdisjoint(captured))
+                self.assertEqual(captured["PYTHONDONTWRITEBYTECODE"], "1")
+                self.assertEqual(captured["PYTHONNOUSERSITE"], "1")
 
 
 class ExternalConsumerContractTests(unittest.TestCase):
