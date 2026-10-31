@@ -602,8 +602,8 @@ class Release234MeasurementTests(unittest.TestCase):
                 return module.RELEASE234_DEADLINE - timedelta(hours=2)
 
         with patch.object(module, "datetime", FixedClock):
-            self.assertEqual(module.release234_seconds("2026-10-31T02:35:35Z"), 7200)
-            for value in (None, "bad", "2026-10-31T02:35:36Z", "2026-10-31T02:35:34Z"):
+            self.assertEqual(module.release234_seconds("2026-10-31T03:00:49Z"), 7200)
+            for value in (None, "bad", "2026-10-31T03:00:50Z", "2026-10-31T03:00:48Z"):
                 with self.assertRaises(ValueError):
                     module.release234_seconds(value)
         with patch.object(module.sys, "platform", "linux"):
@@ -739,13 +739,37 @@ class Release234MeasurementTests(unittest.TestCase):
                 finally:
                     os.chdir(previous)
 
-    def test_two_version_barrier_stops_without_full_samples_and_preserves_all_twelve_pairs(self):
+    def test_315_workflow_and_worker_protocol_are_scoped_without_311_performance(self):
+        module = subject()
+        workflow = (ROOT / ".github/workflows/ci-timing-control.yml").read_text()
+        job = workflow.split("  release234-windows:", 1)[1]
+        self.assertNotIn("release234-py311", job)
+        self.assertNotIn("--python 3.11", job)
+        self.assertIn("--python 3.15", job)
+        self.assertIn("timeout-minutes: 150", job)
+        self.assertIn("limited-usage-windows-release234-py315-experiment5", job)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request = root / "request.json"
+            module.write_new(request, {"experiment": 5, "expectedVersion": [3, 11]})
+            argv = module.worker_argv(HELPER, request, root, root, version=[3, 11])
+            self.assertIn("v['version']==[3,15]", argv[-2])
+
+        class OverlongClock(datetime):
+            @classmethod
+            def now(cls, _tz=None):
+                return module.RELEASE234_DEADLINE - timedelta(seconds=9001)
+
+        with patch.object(module, "datetime", OverlongClock), self.assertRaises(ValueError):
+            module.release234_seconds("2026-10-31T03:00:49Z")
+
+    def test_315_barrier_rejects_311_stops_negative_and_keeps_exactly_six_samples(self):
         module = subject()
         candidate = "1" * 40
-        for benefit in (False, True):
-            with self.subTest(benefit=benefit), tempfile.TemporaryDirectory() as directory:
+        for benefit, coordinator in ((False, 15), (True, 15), (True, 11)):
+            with self.subTest(benefit=benefit, coordinator=coordinator), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory)
-                for version in ("311", "315"):
+                for version in ("315",):
                     exe = source / f"work/ci/release234-py{version}/Scripts/python.exe"
                     exe.parent.mkdir(parents=True)
                     exe.touch()
@@ -806,7 +830,7 @@ class Release234MeasurementTests(unittest.TestCase):
                         return
                     self.assertEqual(request["testContract"], contract)
                     self.assertEqual(request["expectedVersion"], options["version"])
-                    seconds = 100 if side == "baseline" else 90 if benefit or version == "11" else 99
+                    seconds = 100 if side == "baseline" else 90 if benefit else 99
                     value = {
                         "status": "PASS",
                         "testsRun": request["expectedTests"],
@@ -836,7 +860,7 @@ class Release234MeasurementTests(unittest.TestCase):
                     candidate=candidate,
                     experiment=5,
                     mode="paired",
-                    deadline_utc="2026-10-31T02:35:35Z",
+                    deadline_utc="2026-10-31T03:00:49Z",
                     out=str(source / "report.json"),
                 )
                 with (
@@ -847,10 +871,10 @@ class Release234MeasurementTests(unittest.TestCase):
                     patch.object(module, "test_contract", return_value={}),
                     patch.object(module, "restore_fixture"),
                     patch.object(module, "release234_contract", return_value={}),
-                    patch.object(module, "release234_seconds", return_value=10000),
+                    patch.object(module, "release234_seconds", return_value=9000),
                     patch.object(module, "validate_sample", return_value={}),
                     patch.object(module.platform, "system", return_value="Windows"),
-                    patch.object(module.sys, "version_info", (3, 11)),
+                    patch.object(module.sys, "version_info", (3, coordinator)),
                     patch.dict(
                         os.environ,
                         {
@@ -866,16 +890,20 @@ class Release234MeasurementTests(unittest.TestCase):
                 value = json.loads(report.getvalue())
                 self.assertEqual(value["controllerSourcesBefore"], value["controllerSourcesAfter"])
                 self.assertEqual(len(value["controllerSourcesBefore"]), 2)
+                self.assertEqual(value["experimentTimeoutSeconds"], 7200)
+                if coordinator == 11:
+                    self.assertEqual(code, 1)
+                    self.assertEqual(value["status"], "STOP_UNRESOLVED")
+                    self.assertEqual(started, [])
+                    continue
                 self.assertEqual(code, 0 if benefit else 1, value.get("failure"))
                 self.assertEqual(
-                    [phase for _, _, phase in started[:8]], ["contract"] * 2 + ["regression"] * 2 + ["profile"] * 4
+                    [phase for _, _, phase in started[:4]], ["contract", "regression", "profile", "profile"]
                 )
-                self.assertEqual(value["validationUnits"]["contractChildrenStarted"], 2)
+                self.assertEqual(value["validationUnits"]["contractChildrenStarted"], 1)
                 full = [(version, side) for version, side, phase in started if phase == "module"]
-                self.assertEqual(
-                    full, [(version, side) for version in ("11", "15") for side in module.ORDER] if benefit else []
-                )
-                self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 12 if benefit else 0)
+                self.assertEqual(full, [("15", side) for side in module.ORDER] if benefit else [])
+                self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 6 if benefit else 0)
                 self.assertEqual(value["status"], "MEASURED_IMPROVEMENT" if benefit else "STOP_NO_PRELIMINARY_BENEFIT")
 
 

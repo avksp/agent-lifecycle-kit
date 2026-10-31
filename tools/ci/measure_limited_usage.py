@@ -25,7 +25,7 @@ from pathlib import Path, PurePosixPath
 
 BASELINE = "ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5"
 RELEASE234_BASELINE = "e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2"
-RELEASE234_DEADLINE = datetime(2026, 10, 31, 2, 35, 35, tzinfo=UTC)
+RELEASE234_DEADLINE = datetime(2026, 10, 31, 3, 0, 49, tzinfo=UTC)
 RELEASE234_OWNED = frozenset(
     (
         ".github/workflows/ci-timing-control.yml src/agent_lifecycle/accounting/declared_ledger_legacy.py "
@@ -605,7 +605,7 @@ def worker_argv(helper, request_path, root, scratch, *, executable=None, version
         "sys.path[:0]=[os.path.join(v['root'],'src'),v['root']];"
         "r=__import__('pathlib').Path(v['request']);"
         "q=json.loads(r.read_bytes());assert q.get('experiment')!=5 or "
-        "(q.get('expectedVersion')==v['version'] and v['version'] in ([3,11],[3,15]));"
+        "(q.get('expectedVersion')==v['version'] and v['version']==[3,15]);"
         "assert q.get('experiment')!=5 or os.environ.get('ALK_ACCOUNTING_GIT_EXECUTABLE')==q.get('accountingGitExecutable');"
         "f='profile_sample' if q.get('profileOnly') else 'sample';"
         "code=runpy.run_path(v['helper'],run_name='alk_measurement_worker')[f](r);"
@@ -718,7 +718,7 @@ def release234_seconds(deadline_text):
         raise ValueError("Release234 requires the explicit native UTC task deadline")
     requested = datetime.strptime(deadline_text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
     remaining = (requested - datetime.now(UTC)).total_seconds()
-    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 21600:
+    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 9000:
         raise ValueError("Release234 native task deadline differs, expired or exceeds the authorized task window")
     return remaining
 
@@ -1012,7 +1012,7 @@ def execute(args, report):
         if release234:
             if args.mode != "paired":
                 raise ValueError("Release234 permits only the gated paired route")
-            limit = min(20700, release234_seconds(args.deadline_utc) - 900)
+            limit = min(7200, release234_seconds(args.deadline_utc) - 900)
             if limit <= 0:
                 raise ValueError("Release234 closeout reserve reached")
             deadline = time.monotonic() + limit
@@ -1024,11 +1024,13 @@ def execute(args, report):
         source_sha(args.baseline)
         if (
             platform.system() != "Windows"
-            or sys.version_info[:2] not in (((3, 11), (3, 15)) if release234 else ((3, 11),))
+            or sys.version_info[:2] != ((3, 15) if release234 else (3, 11))
             or os.environ.get("RUNNER_OS") != "Windows"
             or any(not os.environ.get(name) for name in IDENTITY_KEYS)
         ):
-            raise ValueError("Performance proof requires real Windows Actions/image/Python 3.11 identity")
+            raise ValueError(
+                f"Performance proof requires real Windows Actions/image/Python {'3.15' if release234 else '3.11'} identity"
+            )
         if (
             measure_git(["rev-parse", "HEAD"], source, deadline, records).decode().strip() != args.candidate
             or os.environ["GITHUB_SHA"] != args.candidate
@@ -1097,13 +1099,13 @@ def execute(args, report):
             )
             executions = [(None, side, "profile" if profile_mode else "module") for side in order]
             if release234:
-                versions = ("311", "315")
+                versions = ("315",)
                 executions = [(v, "baseline", "contract") for v in versions]
                 executions += [(v, "candidate", "regression") for v in versions]
                 executions += [(v, side, "profile") for v in versions for side in ("baseline", "candidate")]
                 executions += [(v, side, "module") for v in versions for side in ORDER]
             for number, (version, side, phase) in enumerate(executions, 1):
-                if release234 and number == 9:
+                if release234 and number == 5:
                     screens = {
                         v: [p["commonCaseSeconds"] for p in payload["profiles"] if p["version"] == v] for v in versions
                     }
@@ -1131,11 +1133,9 @@ def execute(args, report):
                 ):
                     break
             if release234:
-                if len(samples) == 12:
+                if len(samples) == 6:
                     for version in versions:
-                        payload["versions"][version].update(
-                            release234_comparison([s for s in samples if s["version"] == version])
-                        )
+                        payload["versions"][version].update(release234_comparison(samples))
                     passed = all(v["status"] == "MEASURED_IMPROVEMENT" for v in payload["versions"].values())
                     payload.update(
                         status="MEASURED_IMPROVEMENT" if passed else "STOP_NO_BENEFIT",
