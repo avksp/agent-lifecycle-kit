@@ -25,7 +25,7 @@ from pathlib import Path, PurePosixPath
 
 BASELINE = "ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5"
 RELEASE234_BASELINE = "e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2"
-RELEASE234_DEADLINE = datetime(2026, 10, 31, 3, 0, 49, tzinfo=UTC)
+RELEASE234_DEADLINE = datetime(2026, 10, 31, 3, 22, 17, tzinfo=UTC)
 RELEASE234_OWNED = frozenset(
     (
         ".github/workflows/ci-timing-control.yml src/agent_lifecycle/accounting/declared_ledger_legacy.py "
@@ -1024,13 +1024,11 @@ def execute(args, report):
         source_sha(args.baseline)
         if (
             platform.system() != "Windows"
-            or sys.version_info[:2] != ((3, 15) if release234 else (3, 11))
+            or sys.version_info[:2] != (3, 11)
             or os.environ.get("RUNNER_OS") != "Windows"
             or any(not os.environ.get(name) for name in IDENTITY_KEYS)
         ):
-            raise ValueError(
-                f"Performance proof requires real Windows Actions/image/Python {'3.15' if release234 else '3.11'} identity"
-            )
+            raise ValueError("Performance proof requires real Windows Actions/image/Python 3.11 identity")
         if (
             measure_git(["rev-parse", "HEAD"], source, deadline, records).decode().strip() != args.candidate
             or os.environ["GITHUB_SHA"] != args.candidate

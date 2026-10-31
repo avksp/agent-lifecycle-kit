@@ -155,7 +155,7 @@ jobs:
 
   release234-windows:
     if: inputs.mode == 'release-2-34'
-    name: windows-git-launch-control / py3.15
+    name: windows-git-launch-control / controller3.11 / worker3.15
     runs-on: windows-latest
     timeout-minutes: 150
     steps:
@@ -168,6 +168,10 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.13.1"
+      - name: Install locked Python 3.11 controller environment
+        env:
+          UV_PROJECT_ENVIRONMENT: work/ci/release234-py311
+        run: uv sync --frozen --group quality --python 3.11
       - name: Install locked Python 3.15 environment
         env:
           UV_PROJECT_ENVIRONMENT: work/ci/release234-py315
@@ -202,7 +206,7 @@ jobs:
               stream.write("executable=" + str(backend) + "\n")
           print(json.dumps(metadata, sort_keys=True))
           '@
-          & work/ci/release234-py315/Scripts/python.exe -c $code
+          & work/ci/release234-py311/Scripts/python.exe -c $code
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Run Windows 3.15 prechecks then exactly three pairs
         env:
@@ -212,7 +216,7 @@ jobs:
           EXPERIMENT_NUMBER: ${{ inputs.experiment }}
           MEASUREMENT_DEADLINE: ${{ inputs.deadline_utc }}
         run: >-
-          & work/ci/release234-py315/Scripts/python.exe tools/ci/measure_limited_usage.py
+          & work/ci/release234-py311/Scripts/python.exe tools/ci/measure_limited_usage.py
           --baseline "$env:BASELINE_SHA" --candidate "$env:CANDIDATE_SHA"
           --experiment "$env:EXPERIMENT_NUMBER" --mode paired
           --deadline-utc "$env:MEASUREMENT_DEADLINE"
@@ -239,13 +243,13 @@ jobs:
               json.dump(value, stream, sort_keys=True)
           assert value["pathUnchanged"] and all(item["unchanged"] for item in observations)
           '@
-          & work/ci/release234-py315/Scripts/python.exe -c $code
+          & work/ci/release234-py311/Scripts/python.exe -c $code
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Retain release234 raw prechecks and paired evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: limited-usage-windows-release234-py315-experiment5
+          name: limited-usage-windows-release234-controller311-worker315-experiment5
           path: |
             work/ci/release234-git-backend.json
             work/ci/release234-git-backend-after.json

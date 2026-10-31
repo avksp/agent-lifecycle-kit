@@ -546,6 +546,8 @@ class Release234MeasurementTests(unittest.TestCase):
         candidate = (ROOT / legacy).read_text()
         tree = ast.parse(candidate)
         method = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_r11_git")
+        actual_prefix_digest = module.digest([ast.dump(node) for node in method.body[:2]])
+        expected_prefix_digest = "c2a95bba6151130d7bb5ae3176ab598d589957bc2e8b163308ddd973aba08221"
         method.body = method.body[2:]
         call = next(n for n in ast.walk(method) if isinstance(n, ast.Call) and ast.unparse(n.func) == "subprocess.run")
         call.args[0].elts[0] = ast.Constant(value="git")
@@ -570,7 +572,11 @@ class Release234MeasurementTests(unittest.TestCase):
                 path = roots[side] / legacy
                 path.parent.mkdir(parents=True)
                 path.write_text(text)
-            module.release234_contract(roots, inputs)
+            if actual_prefix_digest == expected_prefix_digest:
+                module.release234_contract(roots, inputs)
+            else:
+                with self.assertRaisesRegex(ValueError, "selection prefix differs"):
+                    module.release234_contract(roots, inputs)
             path = roots["candidate"] / legacy
             for changed in (
                 candidate.replace("timeout=15", "timeout=14"),
@@ -602,8 +608,8 @@ class Release234MeasurementTests(unittest.TestCase):
                 return module.RELEASE234_DEADLINE - timedelta(hours=2)
 
         with patch.object(module, "datetime", FixedClock):
-            self.assertEqual(module.release234_seconds("2026-10-31T03:00:49Z"), 7200)
-            for value in (None, "bad", "2026-10-31T03:00:50Z", "2026-10-31T03:00:48Z"):
+            self.assertEqual(module.release234_seconds("2026-10-31T03:22:17Z"), 7200)
+            for value in (None, "bad", "2026-10-31T03:22:18Z", "2026-10-31T03:22:16Z"):
                 with self.assertRaises(ValueError):
                     module.release234_seconds(value)
         with patch.object(module.sys, "platform", "linux"):
@@ -739,15 +745,16 @@ class Release234MeasurementTests(unittest.TestCase):
                 finally:
                     os.chdir(previous)
 
-    def test_315_workflow_and_worker_protocol_are_scoped_without_311_performance(self):
+    def test_controller311_workflow_and_strict_worker315_are_separate(self):
         module = subject()
         workflow = (ROOT / ".github/workflows/ci-timing-control.yml").read_text()
         job = workflow.split("  release234-windows:", 1)[1]
-        self.assertNotIn("release234-py311", job)
-        self.assertNotIn("--python 3.11", job)
+        self.assertIn("UV_PROJECT_ENVIRONMENT: work/ci/release234-py311", job)
+        self.assertEqual(job.count("& work/ci/release234-py311/Scripts/python.exe"), 3)
+        self.assertIn("--python 3.11", job)
         self.assertIn("--python 3.15", job)
         self.assertIn("timeout-minutes: 150", job)
-        self.assertIn("limited-usage-windows-release234-py315-experiment5", job)
+        self.assertIn("limited-usage-windows-release234-controller311-worker315-experiment5", job)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             request = root / "request.json"
@@ -761,12 +768,12 @@ class Release234MeasurementTests(unittest.TestCase):
                 return module.RELEASE234_DEADLINE - timedelta(seconds=9001)
 
         with patch.object(module, "datetime", OverlongClock), self.assertRaises(ValueError):
-            module.release234_seconds("2026-10-31T03:00:49Z")
+            module.release234_seconds("2026-10-31T03:22:17Z")
 
-    def test_315_barrier_rejects_311_stops_negative_and_keeps_exactly_six_samples(self):
+    def test_311_controller_rejects_315_and_keeps_strict315_six_sample_protocol(self):
         module = subject()
         candidate = "1" * 40
-        for benefit, coordinator in ((False, 15), (True, 15), (True, 11)):
+        for benefit, coordinator in ((False, 11), (True, 11), (True, 15)):
             with self.subTest(benefit=benefit, coordinator=coordinator), tempfile.TemporaryDirectory() as directory:
                 source = Path(directory)
                 for version in ("315",):
@@ -860,7 +867,7 @@ class Release234MeasurementTests(unittest.TestCase):
                     candidate=candidate,
                     experiment=5,
                     mode="paired",
-                    deadline_utc="2026-10-31T03:00:49Z",
+                    deadline_utc="2026-10-31T03:22:17Z",
                     out=str(source / "report.json"),
                 )
                 with (
@@ -891,7 +898,7 @@ class Release234MeasurementTests(unittest.TestCase):
                 self.assertEqual(value["controllerSourcesBefore"], value["controllerSourcesAfter"])
                 self.assertEqual(len(value["controllerSourcesBefore"]), 2)
                 self.assertEqual(value["experimentTimeoutSeconds"], 7200)
-                if coordinator == 11:
+                if coordinator == 15:
                     self.assertEqual(code, 1)
                     self.assertEqual(value["status"], "STOP_UNRESOLVED")
                     self.assertEqual(started, [])
