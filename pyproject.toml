@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-lifecycle-kit"
-version = "2.34.0"
+version = "2.35.0"
 description = "Provider-neutral lifecycle control layer that helps coding agents plan, execute, validate, and prove software tasks to completion."
 readme = "README.md"
 requires-python = ">=3.11,<3.16"
@@ -104,3 +104,7 @@ check_untyped_defs = true
   "benchmarks/reference-tasks/rt05-s2-evidence-task/task.md",
   "benchmarks/reference-tasks/rt05-s2-evidence-task/oracle.json",
 ]
+
+"share/agent-lifecycle-kit/integration/en" = ["docs/guides/ai-sdlc-integration.md"]
+"share/agent-lifecycle-kit/integration/ru" = ["docs/ru/guides/ai-sdlc-integration.md"]
+"share/agent-lifecycle-kit/integration" = ["tests/cli/fixtures/external-consumer-cases.json"]

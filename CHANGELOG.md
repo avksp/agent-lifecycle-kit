@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.35.0 - 2026-10-31
+
+- Document provider-neutral external AI SDLC integration through the existing CLI.
+- Cover eight bounded public-CLI consumer cases, including installed-wheel execution,
+  native refusal guards and lost-response reconciliation; fixture evidence is UNIT_ONLY.
+- Ship paired integration guides and case JSON in wheel/sdist and the operational
+  contract in the portable plugin CLI references. No new runtime API or host capability.
+- Repair the two Windows baseline failure paths while retaining bounded ownership
+  checks, canonical coordinator replacement, prior attempts and unavailable telemetry.
+
 ## 2.34.0 - 2026-10-31
 
 - Reduce the median time of the original 78 legacy accounting tests by 16.52%

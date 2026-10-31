@@ -23,6 +23,28 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_external_integration_shipment_and_authority_boundaries(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "external-ai-sdlc-cli-integration"
+        ]
+        self.assertEqual(feature["caseCount"], 8)
+        self.assertEqual(feature["fixtureBoundary"], "UNIT_ONLY")
+        self.assertTrue(feature["wheelFullGuidesBundled"])
+        self.assertTrue(feature["existingPublicCliOnly"])
+        for field in (
+            "portablePluginFullGuidesBundled", "unknownContractMutationAllowed",
+            "arbitraryHostExactlyOnceClaimed", "liveHostQualificationClaimed",
+            "newRuntimeApi", "taskManagerRequired", "missingTelemetryIsZero",
+        ):
+            self.assertFalse(feature[field], field)
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        data_files = project["tool"]["setuptools"]["data-files"]
+        resource_root = feature["installedResourceRoot"]
+        self.assertEqual(data_files[f"{resource_root}/en"], [feature["englishPath"]])
+        self.assertEqual(data_files[f"{resource_root}/ru"], [feature["russianPath"]])
+        self.assertEqual(data_files[resource_root], [feature["caseInventoryPath"]])
+
     def test_windows315_accounting_git_backend_keeps_other_ci_routes_default(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}[

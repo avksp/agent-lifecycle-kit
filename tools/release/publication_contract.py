@@ -262,6 +262,26 @@ TIER_PROPORTIONAL_PACKAGES_DOCUMENTATION: dict[str, Any] = {
     "modelSavingsMeasured": False,
 }
 
+AI_SDLC_INTEGRATION_DOCUMENTATION: dict[str, Any] = {
+    "id": "external-ai-sdlc-cli-integration",
+    "englishPath": "docs/guides/ai-sdlc-integration.md",
+    "russianPath": "docs/ru/guides/ai-sdlc-integration.md",
+    "caseInventoryPath": "tests/cli/fixtures/external-consumer-cases.json",
+    "installedResourceRoot": "share/agent-lifecycle-kit/integration",
+    "portablePluginContractPaths": ["docs/reference/cli.md", "docs/ru/reference/cli.md"],
+    "portablePluginFullGuidesBundled": False,
+    "wheelFullGuidesBundled": True,
+    "caseCount": 8,
+    "fixtureBoundary": "UNIT_ONLY",
+    "existingPublicCliOnly": True,
+    "unknownContractMutationAllowed": False,
+    "arbitraryHostExactlyOnceClaimed": False,
+    "liveHostQualificationClaimed": False,
+    "newRuntimeApi": False,
+    "taskManagerRequired": False,
+    "missingTelemetryIsZero": False,
+}
+
 SUCCESSOR_ADOPTION: dict[str, Any] = {
     "packageId": "release-2-7",
     "requiredPredecessor": "release-2-6",
@@ -482,6 +502,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "pluginName": PLUGIN_NAME,
         "entries": entries,
         "documentedFeatures": [
+            AI_SDLC_INTEGRATION_DOCUMENTATION,
             SKILL_INSTRUCTION_DOCUMENTATION,
             PERFORMANCE_BASELINE_DOCUMENTATION,
             WINDOWS_ACCOUNTING_GIT_DOCUMENTATION,

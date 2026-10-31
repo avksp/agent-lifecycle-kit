@@ -63,12 +63,24 @@ def changed_files(cwd: Path, *, base: str | None = None) -> list[str]:
 def resolve_revision(cwd: Path, revision: str, *, label: str = "revision") -> str:
     value = normalize_git_revision(revision, label=label)
     try:
-        completed = run_bounded_command(
-            ["git", "rev-parse", "--verify", "--end-of-options", f"{value}^{{commit}}"],
-            cwd=cwd,
-            timeout_seconds=GIT_TIMEOUT_SECONDS,
-            max_stdout_bytes=128,
-        )
+        # Retry only the observed Windows ownership refusal, once, for this
+        # read-only lookup through the same bounded owner.
+        for attempt in range(2):
+            try:
+                completed = run_bounded_command(
+                    ["git", "rev-parse", "--verify", "--end-of-options", f"{value}^{{commit}}"],
+                    cwd=cwd,
+                    timeout_seconds=GIT_TIMEOUT_SECONDS,
+                    max_stdout_bytes=128,
+                )
+                break
+            except LifecycleError as exc:
+                if (
+                    attempt != 0
+                    or exc.code != "bounded-process-group-unavailable"
+                    or exc.message != "Cannot own the Windows child group"
+                ):
+                    raise
     except (OSError, LifecycleError) as exc:
         raise LifecycleError("invalid-git-revision", f"{label}: revision cannot be resolved") from exc
     resolved = completed.stdout.strip().splitlines()
