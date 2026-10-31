@@ -46,10 +46,20 @@ def _windows_cleanup(process: subprocess.Popen[bytes]) -> Callable[[], None] | N
     kernel.CloseHandle.restype = wintypes.BOOL
     handle = kernel.CreateJobObjectW(None, None)
     if not handle:
-        raise LifecycleError("bounded-process-group-unavailable", "Cannot own the Windows child group")
+        native_error = getattr(ctypes, "get_last_error")()
+        raise LifecycleError(
+            "bounded-process-group-unavailable",
+            "Cannot own the Windows child group",
+            {"nativeStage": "CreateJobObjectW", "winError": native_error},
+        )
     if not kernel.AssignProcessToJobObject(handle, getattr(process, "_handle", None)):
+        native_error = getattr(ctypes, "get_last_error")()
         kernel.CloseHandle(handle)
-        raise LifecycleError("bounded-process-group-unavailable", "Cannot own the Windows child group")
+        raise LifecycleError(
+            "bounded-process-group-unavailable",
+            "Cannot own the Windows child group",
+            {"nativeStage": "AssignProcessToJobObject", "winError": native_error},
+        )
 
     def cleanup() -> None:
         terminated = kernel.TerminateJobObject(handle, 1)
