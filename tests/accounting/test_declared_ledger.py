@@ -248,7 +248,61 @@ class CoordinatorDurabilityTests(unittest.TestCase):
                 else:
                     self.assertEqual(ledger.read_coordinator_cost_head(root)['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
 
+    def test_replacement_failure_retains_pending_prepared_head_and_archive(self):
+        import hashlib
+        for failure in (PermissionError(13, 'unexpected denial'), LifecycleError('authority-output-unavailable', 'refused')):
+            with self.subTest(failure=type(failure).__name__):
+                root, ledger, relative, _value = self.fixture()
+                ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+                head = root / ledger._R11_COORDINATOR_HEAD
+                before = head.read_bytes()
+                with (
+                    patch.object(ledger, 'replace_authority_bytes', side_effect=failure),
+                    self.assertRaises(type(failure)),
+                ):
+                    ledger.advance_coordinator_cost_head(root, source_path=relative)
+                self.assertEqual(head.read_bytes(), before)
+                self.assertTrue(head.with_suffix('.pending.json').exists())
+                self.assertTrue(head.with_suffix('.next.json').exists())
+                archive = head.parent / 'coordinator-cost-head-history' / (hashlib.sha256(before).hexdigest() + '.json')
+                self.assertEqual(archive.read_bytes(), before)
+                with self.assertRaises(LifecycleError) as caught:
+                    ledger.read_coordinator_cost_head(root)
+                self.assertEqual(caught.exception.code, 'r11-opening-pending')
+                with self.assertRaises((LifecycleError, FileExistsError)):
+                    ledger.advance_coordinator_cost_head(root, source_path=relative)
+
+    def test_changed_source_after_claim_refuses_without_head_mutation(self):
+        root, ledger, relative, _value = self.fixture()
+        ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+        head = root / ledger._R11_COORDINATOR_HEAD
+        before = head.read_bytes()
+        original = ledger._sync_directory
+        calls = 0
+        def change_source(path):
+            nonlocal calls
+            calls += 1
+            original(path)
+            if calls == 2:
+                source = root / relative
+                source.write_bytes(source.read_bytes() + b' ')
+        with (
+            patch.object(ledger, '_sync_directory', side_effect=change_source),
+            self.assertRaises(LifecycleError) as caught,
+        ):
+            ledger.advance_coordinator_cost_head(root, source_path=relative)
+        self.assertEqual(caught.exception.code, 'r11-opening-stale')
+        self.assertEqual(head.read_bytes(), before)
+        self.assertFalse(head.with_suffix('.pending.json').exists())
+        self.assertFalse(head.with_suffix('.next.json').exists())
+
     def test_concurrent_coordinator_claim_has_one_winner_and_no_double_charge(self):
+        self._concurrent_coordinator_claim(sharing_violation=False)
+
+    def test_concurrent_coordinator_claim_uses_authority_replace_under_sharing_race(self):
+        self._concurrent_coordinator_claim(sharing_violation=True)
+
+    def _concurrent_coordinator_claim(self, *, sharing_violation):
         import threading
         from concurrent.futures import ThreadPoolExecutor
         root, ledger, relative, value = self.fixture()
@@ -266,10 +320,29 @@ class CoordinatorDurabilityTests(unittest.TestCase):
                 return ledger.advance_coordinator_cost_head(root, source_path=relative)
             except (OSError, LifecycleError) as exc:
                 return exc
-        with patch.object(ledger, '_r11_coordinator_transition', side_effect=synchronized), ThreadPoolExecutor(max_workers=2) as pool:
-            outcomes = list(pool.map(advance, range(2)))
+        from agent_lifecycle.contracts import authority_io
+        direct_replace = Path.replace
+        canonical_replace = authority_io._Directory.replace_child
+        head = root / ledger._R11_COORDINATOR_HEAD
+        def refuse_path_replace(source, target):
+            if source == head.with_suffix('.next.json'):
+                raise PermissionError(13, 'The process cannot access the file because it is being used by another process')
+            return direct_replace(source, target)
+        with ExitStack() as stack:
+            if sharing_violation:
+                stack.enter_context(patch.object(Path, 'replace', autospec=True, side_effect=refuse_path_replace))
+                canonical = stack.enter_context(patch.object(
+                    authority_io._Directory, 'replace_child', autospec=True, side_effect=canonical_replace,
+                ))
+            stack.enter_context(patch.object(ledger, '_r11_coordinator_transition', side_effect=synchronized))
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                outcomes = list(pool.map(advance, range(2)))
+            if sharing_violation and any(isinstance(v, dict) for v in outcomes):
+                self.assertEqual(canonical.call_count, 1)
         self.assertEqual(sum(isinstance(v, dict) for v in outcomes), 1, outcomes)
         self.assertEqual(sum(isinstance(v, Exception) for v in outcomes), 1, outcomes)
+        self.assertFalse(head.with_suffix('.pending.json').exists())
+        self.assertFalse(head.with_suffix('.next.json').exists())
         self.assertEqual(ledger.read_coordinator_cost_head(root)['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
 
 

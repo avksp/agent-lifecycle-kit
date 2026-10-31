@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "external-consumer-cases.v1",
+  "evidenceBoundary": "UNIT_ONLY",
+  "testedVersions": ["2.34.0", "2.35.0"],
+  "versionSchema": "agent-lifecycle-version.v1",
+  "continuationSchema": "agent-workflow-continuation-receipt.v1",
+  "actionSchema": "agent-workflow-continuation-action.v1",
+  "cases": [
+    {"id": "readonly-projection", "outcome": "READY"},
+    {"id": "guarded-action", "outcome": "APPLIED"},
+    {"id": "stale-guards", "codes": ["continuation-projection-state-mismatch", "continuation-projection-action-mismatch"]},
+    {"id": "missing-input", "outcome": "INPUT_REQUIRED"},
+    {"id": "unattested-usage", "code": "model-usage-validation-failed"},
+    {"id": "critical-route", "code": "model-route-unsupported"},
+    {"id": "lost-reply", "outcome": "RECONCILED"},
+    {"id": "incompatible-contract", "outcome": "CONSUMER_REFUSED"}
+  ]
+}

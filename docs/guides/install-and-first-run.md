@@ -1,6 +1,6 @@
 # Install ALK and make the first run
 
-Install version 2.34. Its Windows/Python 3.15 CI accounting route uses a verified Git backend; normal installations keep the default Git route. The measured improvement is limited to the documented workload. The plugin supplies instructions and documents; install the Python package below for CLI behavior. See [scope and measurements](../reference/cli.md#release-234-windows315-accounting-git-backend).
+Install version 2.35 for the [external AI SDLC CLI contract](ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include full EN/RU guides and case JSON; installation places them under `share/agent-lifecycle-kit/integration`. The plugin ships the [paired CLI contract](../reference/cli.md#release-235-external-ai-sdlc-integration). The Python package supplies CLI behavior. Fixture evidence does not qualify a live host.
 
 
 The portable plugin supplies skills and documents. Install the Python package
@@ -9,7 +9,7 @@ shown below to use workflow migration and authorization renewal in 2.30.
 Use the source checkout when you want to inspect or contribute to ALK. Use PyPI
 when you only need the installed command.
 
-These instructions target ALK v2.34.0. Verify frozen plans before execution
+These instructions target ALK v2.35.0. Verify frozen plans before execution
 with `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Upgrading to 2.18
@@ -102,7 +102,7 @@ Use an isolated environment for a package installation as well.
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.34.0
+python -m pip install agent-lifecycle-kit==2.35.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -113,7 +113,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.34.0
+python -m pip install agent-lifecycle-kit==2.35.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -213,7 +213,7 @@ Choose one host and follow its adapter page. The common sequence is:
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.34.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.35.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```

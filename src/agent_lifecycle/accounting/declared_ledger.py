@@ -21,7 +21,11 @@ from agent_lifecycle.accounting.declared_ledger_records import (
     _r11_role_prefix_record,
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
-from agent_lifecycle.contracts.authority_io import normalize_authority_path, read_authority_bytes
+from agent_lifecycle.contracts.authority_io import (
+    normalize_authority_path,
+    read_authority_bytes,
+    replace_authority_bytes,
+)
 from agent_lifecycle.contracts.bounded_json import load_bounded_json as _r11_json
 from agent_lifecycle.contracts.errors import require_condition as _require
 
@@ -615,7 +619,8 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
         _sync_directory(archive)
     exclusive(temporary, canonical_bytes(head))
     _sync_directory(path.parent)
-    temporary.replace(path)
+    replace_authority_bytes(path, canonical_bytes(head), root=primary)
+    temporary.unlink()
     _sync_directory(path.parent)
     pending.unlink()
     _sync_directory(path.parent)

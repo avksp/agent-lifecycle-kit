@@ -1,5 +1,46 @@
 # Справочник команд
 
+## Выпуск 2.35: интеграция внешнего AI SDLC
+
+Внешний клиент использует существующий публичный CLI без зависимости от Задачника.
+До mutation сверяет `agent-lifecycle version`, схему `agent-lifecycle-version.v1`
+и явный список поддерживаемых версий; неизвестный контракт требует отказа.
+Каждый запрос связывается с frozen manifest/lock, run/task, source revision,
+operation identity, ожидаемой revision state и digest проекции действия.
+`workflow continue` строит read-only проекцию; применять можно только её точную
+версию со всеми обязательными входами. Native guards, независимый review,
+attested usage и routing критической модели остаются обязательными. Отсутствие
+входа не означает успех. Локальный UI boolean и fixture attestation не заменяют
+native authority. При потере ответа клиент сверяет native state и факт операции
+до решения о retry; exactly-once произвольной host-команды не гарантируется.
+Предыдущие попытки, расходы, исходные часы и null/UNAVAILABLE telemetry сохраняются.
+
+Восемь ограниченных consumer cases проверяют read-only проекцию, одно guarded
+действие, отказ stale revision/action без записи, отсутствие обязательного входа,
+отказ unattested usage, отказ неподходящей critical model route, сверку после
+потерянного ответа без второй mutation и отказ клиента при неизвестной
+version/schema до mutation. Bootstrap disposable fixture имеет границу `UNIT_ONLY`;
+subprocess установленного CLI не получает source `PYTHONPATH`. Модельные вызовы
+не запускаются; cases не доказывают live host qualification и полноту всех CLI.
+
+Wheel и sdist содержат полные EN/RU integration guides и JSON восьми cases.
+Установка размещает их в `share/agent-lifecycle-kit/integration` относительно
+`sysconfig.get_path("data")`; sdist сохраняет исходные пути `docs/` и `tests/`.
+Portable plugin сохраняет 19 документов и поставляет
+этот парный CLI-контракт. Полные guides и связанные repository references также
+доступны в исходниках предполагаемого immutable release:
+[EN guide](https://github.com/avksp/agent-lifecycle-kit/blob/v2.35.0/docs/guides/ai-sdlc-integration.md),
+[RU guide](https://github.com/avksp/agent-lifecycle-kit/blob/v2.35.0/docs/ru/guides/ai-sdlc-integration.md),
+[инвентарь cases](https://github.com/avksp/agent-lifecycle-kit/blob/v2.35.0/tests/cli/fixtures/external-consumer-cases.json).
+Ссылки тега станут доступны после публикации и не доказывают, что она уже состоялась.
+Python-пакет поставляет CLI, plugin — инструкции и документы. Нового runtime API,
+server или host capability нет.
+
+Windows baseline repairs сохраняют bounded ownership checks и canonical замену
+coordinator. Полный candidate platform CI обязателен до task acceptance. Затем
+идут final independent audit и native completion; protected merge, main CI, tag
+и проверка public artifacts выполняются после них. Документация не заменяет gates.
+
 ## Выпуск 2.34: Git backend для учёта Windows315
 
 Обычный CI репозитория выбирает исполняемый файл Git из проверенного exec-path
@@ -248,7 +289,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.34.0
+python -m pip install agent-lifecycle-kit==2.35.0
 ```
 
 ## Идентичность подтверждений задачи
