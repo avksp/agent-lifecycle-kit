@@ -43,6 +43,42 @@ jobs:
           --ref HEAD
           --require-history
           --evidence work/ci/repository-hygiene.json
+      - name: Select verified accounting Git backend for Windows 3.15
+        id: accounting-git
+        if: matrix.os == 'windows-latest' && matrix.python == '3.15'
+        shell: pwsh
+        run: |
+          $code = @'
+          import hashlib, json, os, shutil, stat, subprocess
+          from pathlib import Path
+          wrapper = Path(shutil.which("git") or "")
+          assert wrapper.is_absolute() and not wrapper.is_symlink() and stat.S_ISREG(wrapper.lstat().st_mode)
+          def git_output(executable, *args):
+              return subprocess.check_output([str(executable), *args], timeout=15).decode("utf-8").strip()
+          exec_path = Path(git_output(wrapper, "--exec-path"))
+          assert exec_path.is_absolute() and exec_path.name == "git-core" and exec_path.parent.name == "libexec"
+          prefix = exec_path.resolve(strict=True).parents[1]
+          backend = prefix / "bin" / "git.exe"
+          assert not backend.is_symlink() and stat.S_ISREG(backend.lstat().st_mode)
+          assert backend.resolve(strict=True).is_relative_to(prefix) and backend.is_absolute()
+          wrapper_version, backend_version = git_output(wrapper, "--version"), git_output(backend, "--version")
+          assert wrapper_version == backend_version
+          metadata = {"schemaVersion": "alk-accounting-git-backend.v1", "sourceHead": os.environ["GITHUB_SHA"],
+                      "execPath": str(exec_path), "wrapperVersion": wrapper_version, "backendVersion": backend_version,
+                      "pathSha256": hashlib.sha256(os.environ["PATH"].encode()).hexdigest(),
+                      "wrapper": {"path": str(wrapper), "sha256": hashlib.sha256(wrapper.read_bytes()).hexdigest()},
+                      "backend": {"path": str(backend), "sha256": hashlib.sha256(backend.read_bytes()).hexdigest()}}
+          Path("work/ci").mkdir(parents=True, exist_ok=True)
+          with Path("work/ci/accounting-git-backend.json").open("x", encoding="utf-8") as stream:
+              json.dump(metadata, stream, sort_keys=True)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as stream:
+              stream.write("executable=" + str(backend) + "\n")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as stream:
+              stream.write("ALK_ACCOUNTING_GIT_EXECUTABLE=" + str(backend) + "\n")
+          print(json.dumps(metadata, sort_keys=True))
+          '@
+          python -c $code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Require Node projection syntax and export smoke
         env:
           ALK_REQUIRE_NODE: "1"
@@ -57,16 +93,6 @@ jobs:
           python tools/ci/run_unittest.py
           --start tests --top .
           --out work/ci/test-timings.json
-      - name: Retain test timing evidence
-        if: always() && steps.stdlib-tests.outcome != 'skipped'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: test-timings-${{ matrix.os }}-py${{ matrix.python }}
-          path: |
-            work/ci/test-timings.json
-            work/ci/test-timings/
-          if-no-files-found: error
-          retention-days: 14
       - name: Run security tests directly
         run: uv run --frozen --group quality --python ${{ matrix.python }} python -m unittest discover -s tests/security -t . -v
       - name: Validate model routing profile
@@ -97,3 +123,33 @@ jobs:
           --package-root src/agent_lifecycle
           --policy policy/architecture-limits.json
           --evidence work/ci/architecture-complexity.json
+      - name: Verify accounting Git backend and PATH after tests
+        if: always() && steps.accounting-git.outcome == 'success'
+        shell: pwsh
+        run: |
+          $code = @'
+          import hashlib, json, os
+          from pathlib import Path
+          metadata = json.loads(Path("work/ci/accounting-git-backend.json").read_bytes())
+          for role in ("wrapper", "backend"):
+              expected = metadata[role]
+              assert hashlib.sha256(Path(expected["path"]).read_bytes()).hexdigest() == expected["sha256"]
+          assert hashlib.sha256(os.environ["PATH"].encode()).hexdigest() == metadata["pathSha256"]
+          with Path("work/ci/accounting-git-backend-after.json").open("x", encoding="utf-8") as stream:
+              json.dump({"schemaVersion": "alk-accounting-git-backend-after.v1",
+                         "sourceHead": os.environ["GITHUB_SHA"], "unchanged": True,
+                         "before": metadata}, stream, sort_keys=True)
+          '@
+          python -c $code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain test timing evidence
+        if: always() && steps.stdlib-tests.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-timings-${{ matrix.os }}-py${{ matrix.python }}
+          path: |
+            work/ci/test-timings.json
+            work/ci/test-timings/
+            work/ci/accounting-git-backend*.json
+          if-no-files-found: error
+          retention-days: 14

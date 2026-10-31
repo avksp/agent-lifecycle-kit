@@ -1,5 +1,7 @@
 # Agent Lifecycle Kit documentation
 
+Release 2.34 reduces the measured median time of 78 legacy accounting tests by 16.52% on one Windows/Python 3.15 worker. Normal CI selects the verified Git backend only for that cell; the other 14 cells keep their default Git route. This result is not a general speed guarantee. See [the measured scope](reference/cli.md#release-234-windows315-accounting-git-backend).
+
 Release 2.33 simplifies selected internal boundaries and checks the release validators themselves. It removes two private-import allowances (83 to 81), reduces one final-evidence flow from 58 to 41 branches, and adds selected Ruff/strict-mypy checks without increasing runtime baselines. Existing architecture debt remains visible. See [the 2.33 scope](reference/cli.md#release-233-selected-architecture-and-tooling-quality).
 
 Release 2.32 adds a shared advisory observation of process costs, paired EN/RU
@@ -67,7 +69,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.33.0` from
+  `python -m pip install agent-lifecycle-kit==2.34.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

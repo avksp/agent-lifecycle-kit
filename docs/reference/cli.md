@@ -1,5 +1,32 @@
 # CLI reference
 
+## Release 2.34: Windows315 accounting Git backend
+
+Normal repository CI selects the Git executable from its own verified exec-path
+only for Windows/Python 3.15. The other 14 OS/Python cells keep the default route.
+Normal package installations also keep the default route. The internal CI
+`ALK_ACCOUNTING_GIT_EXECUTABLE` setting applies only to legacy declared-accounting
+Git reads. It does not change PATH or other Git callers. Absolute-file checks,
+timeouts, output bounds, worktree checks and error behavior remain required.
+CI records wrapper/backend hashes and matching versions before the tests, then
+checks both executable hashes and PATH again afterward.
+
+One Windows Server 2025/Python 3.15.2 experiment used three alternating
+baseline/candidate pairs. Each of its six full samples passed the original
+78 tests with matching case IDs and events. Baseline median: 1238.329 seconds;
+candidate median: 1033.815 seconds; reduction: 16.52%. Baseline median absolute
+deviation: 4.666 seconds. The preliminary short profile improved by 16.67%.
+These values describe that worker and workload. They do not promise a general
+speed increase, a benefit on other Python versions, or whole-process-tree memory
+measurements. The separate local full suite passed 4138 tests with 59 expected
+platform/applicability skips. All 15 correctness cells and existing security,
+architecture, quality and package checks remain required.
+
+[Recorded experiment](https://github.com/avksp/agent-lifecycle-kit/actions/runs/41156920182):
+source `3fb0587c0dd43dfd7a73d0e5bcd9820b4420191c`, baseline
+`e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2`. Release accounting retains failed
+attempts and unavailable telemetry. Missing model token or money data is not zero.
+
 ## Release 2.33: selected architecture and tooling quality
 
 This release changes selected internal code and repository quality checks. The
@@ -211,7 +238,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.33.0
+python -m pip install agent-lifecycle-kit==2.34.0
 ```
 
 ## Task evidence identity
