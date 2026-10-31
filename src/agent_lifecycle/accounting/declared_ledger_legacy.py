@@ -45,9 +45,15 @@ def _read_private(
 
 
 def _r11_git(root: Path, *args: str) -> bytes:
+    executable = os.environ.get("ALK_ACCOUNTING_GIT_EXECUTABLE")
+    _require(
+        executable is None or (bool(executable) and "\0" not in executable and Path(executable).is_absolute()),
+        "r11-source-unavailable",
+        "configured Git executable must be a nonempty absolute path",
+    )
     try:
         result = subprocess.run(
-            ["git", *args],
+            [executable if executable is not None else "git", *args],
             cwd=root,
             capture_output=True,
             timeout=15,

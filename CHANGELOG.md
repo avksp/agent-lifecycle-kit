@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.34.0 - 2026-10-31
+
+- Reduce the median time of the original 78 legacy accounting tests by 16.52%
+  in one six-sample Windows/Python 3.15 experiment; retain all correctness guards.
+- Select and verify the accounting Git backend only in that normal CI cell.
+  Other 14 OS/Python cells and normal installations retain the default route.
+- Keep every failed measurement and unknown cost; document the measured scope
+  in English and Russian. No general performance guarantee or runtime dependency.
+
 ## 2.33.0 - 2026-10-30
 
 - Simplify two selected private interfaces through existing public contracts;

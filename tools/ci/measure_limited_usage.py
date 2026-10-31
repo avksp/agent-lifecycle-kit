@@ -20,9 +20,19 @@ import time
 import traceback
 import unittest
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path, PurePosixPath
 
 BASELINE = "ec5d8e5b118dc8a7f86de3b683ff2ed9a20993e5"
+RELEASE234_BASELINE = "e6cd9a0f3524b55a9197bc543d629b6bc2ed3fd2"
+RELEASE234_DEADLINE = datetime(2026, 10, 31, 5, 38, 16, tzinfo=UTC)
+RELEASE234_OWNED = frozenset(
+    (
+        ".github/workflows/ci-timing-control.yml src/agent_lifecycle/accounting/declared_ledger_legacy.py "
+        "tests/accounting/test_declared_ledger.py tests/release/test_limited_usage_measurement.py "
+        "tools/ci/measure_limited_usage.py tools/ci/limited_usage_transport.py"
+    ).split()
+)
 # AST prefix from this accepted commit's DeclaredFixture.__init__, before seed_path.
 BASELINE_PREFIX_SHA256 = "704b517fcb7e82163e1feb9a41ae29318281da312cd454d2dc35eef4518b9791"
 HOT_MODULE = "tests.workflow.test_limited_usage"
@@ -48,47 +58,21 @@ LINE_SELECTORS = {
 }
 OWNED = frozenset(
     (
-        HOT_PATH,
-        "tests/workflow/limited_usage_fixture_support.py",
-        "tests/release/test_parallel_unittest.py",
-        "tests/release/test_limited_usage_measurement.py",
-        "tools/ci/run_parallel_unittest.py",
-        "tools/ci/measure_limited_usage.py",
-        ".github/workflows/ci-timing-control.yml",
-        "src/agent_lifecycle/contracts/authority_io.py",
-        "tests/contracts/test_windows_authority_bindings.py",
-    )
+        f"{HOT_PATH} tests/workflow/limited_usage_fixture_support.py "
+        "tests/release/test_parallel_unittest.py tests/release/test_limited_usage_measurement.py "
+        "tools/ci/run_parallel_unittest.py tools/ci/measure_limited_usage.py .github/workflows/ci-timing-control.yml "
+        "src/agent_lifecycle/contracts/authority_io.py tests/contracts/test_windows_authority_bindings.py"
+    ).split()
 )
-ENV_KEYS = (
-    "PATH",
-    "SystemRoot",
-    "SYSTEMROOT",
-    "WINDIR",
-    "COMSPEC",
-    "PATHEXT",
-    "HOME",
-    "USERPROFILE",
-    "APPDATA",
-    "LOCALAPPDATA",
-    "PROGRAMFILES",
-    "GITHUB_SHA",
-    "GITHUB_RUN_ID",
-    "GITHUB_RUN_ATTEMPT",
-    "GITHUB_JOB",
-    "RUNNER_OS",
-    "RUNNER_ARCH",
-    "ImageOS",
-    "ImageVersion",
+ENV_KEYS = tuple(
+    (
+        "PATH SystemRoot SYSTEMROOT WINDIR COMSPEC PATHEXT HOME USERPROFILE "
+        "APPDATA LOCALAPPDATA PROGRAMFILES GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT "
+        "GITHUB_JOB RUNNER_OS RUNNER_ARCH ImageOS ImageVersion"
+    ).split()
 )
-IDENTITY_KEYS = (
-    "GITHUB_SHA",
-    "GITHUB_RUN_ID",
-    "GITHUB_RUN_ATTEMPT",
-    "GITHUB_JOB",
-    "RUNNER_OS",
-    "RUNNER_ARCH",
-    "ImageOS",
-    "ImageVersion",
+IDENTITY_KEYS = tuple(
+    ("GITHUB_SHA GITHUB_RUN_ID GITHUB_RUN_ATTEMPT GITHUB_JOB RUNNER_OS RUNNER_ARCH ImageOS ImageVersion").split()
 )
 
 
@@ -99,6 +83,20 @@ def digest(value):
 def reference(path):
     data = path.read_bytes()
     return {"path": str(path), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
+def controller_sources(expected=None):
+    helper = Path(__file__).resolve()
+    paths = (helper, helper.with_name("limited_usage_transport.py"))
+    if any(path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_BYTES for path in paths):
+        raise ValueError("Unsafe controller helper or fixed sibling transport")
+    observed = [reference(path) for path in paths]
+    if expected is not None and observed != expected:
+        raise ValueError("Controller helper or companion source drift")
+    return observed
+
+
+CONTROLLER_SOURCE_BINDING = controller_sources()
 
 
 def write_new(path, value):
@@ -301,7 +299,7 @@ def canonical_events(root, events):
             match = re.search(pattern, item["id"])
             if match is None or int(match[1]) != choice.lineno:
                 raise ValueError("Subtest line label does not select the proven lambda")
-            selector = digest({"parent": base, "lambdaAst": ast.dump(choice), "occurrence": offset})
+            selector = digest({"parent": base, "lambdaAst": clock_ast_dump(choice), "occurrence": offset})
             item["id"] = re.sub(pattern, f"{parameter}=ast:{selector}", item["id"])
             positions[base] = offset + 1
         result.append(item)
@@ -344,82 +342,49 @@ def sanitized_environment(scratch):
     return value
 
 
-def command(argv, root, deadline, records, *, timeout=120, logs=None):
-    from agent_lifecycle.changesets.git_io import BoundedProcess
-
-    started = time.perf_counter()
-    record = {
-        "argv": argv,
-        "cwd": str(root),
-        "exitCode": None,
-        "timeoutSeconds": min(timeout, deadline - time.monotonic()),
-        "processStarted": None,
-    }
-    records.append(record)
-    chunks, process = [], None
+def command(argv, root, deadline, records, *, timeout=120, logs=None, owned_gate=False):
+    binding = controller_sources(CONTROLLER_SOURCE_BINDING)
+    path = Path(binding[1]["path"])
+    source = path.read_bytes()
+    if hashlib.sha256(source).hexdigest() != binding[1]["sha256"]:
+        raise ValueError("Companion changed before compilation")
+    transport = {"__name__": "alk_limited_usage_transport", "__file__": str(path)}
+    exec(compile(source, str(path), "exec"), transport)
     try:
-        process = BoundedProcess(
+        return transport["command"](
             argv,
-            cwd=root,
-            deadline=min(deadline, time.monotonic() + timeout),
-            max_stdout_bytes=MAX_BYTES,
-            max_stderr_bytes=MAX_BYTES,
+            root,
+            deadline,
+            records,
+            timeout=timeout,
+            logs=logs,
+            owned_gate=owned_gate,
+            max_bytes=MAX_BYTES,
+            reference=reference,
         )
-        record["processStarted"] = True
-        while data := process.stdout.read(65536):
-            chunks.append(data)
-        record["exitCode"] = process.wait()
-        if record["exitCode"]:
-            raise ValueError("Measurement child command failed; retained exit and output hashes")
-        return b"".join(chunks)
-    except BaseException as exc:
-        if (
-            getattr(exc, "code", None)
-            in ("bounded-process-timeout", "bounded-process-argv-invalid", "bounded-process-limit-invalid")
-            and process is None
-        ):
-            record["processStarted"] = False
-        record["transportError"] = f"{type(exc).__name__}: {exc}"
-        raise
     finally:
-        cleanup_error = None
-        if process is not None:
-            process.fail("measurement-supervision-finished")
-            try:
-                process.close()
-            except BaseException as exc:
-                cleanup_error = exc
-                record["cleanupError"] = f"{type(exc).__name__}: {exc}"
-        stdout = b"".join(chunks)
-        stderr = bytes(process.stderr) if process is not None else b""
-        record.update(
-            stdoutBytes=len(stdout),
-            stderrBytes=len(stderr),
-            stdoutSha256=hashlib.sha256(stdout).hexdigest(),
-            stderrSha256=hashlib.sha256(stderr).hexdigest(),
-        )
-        if logs is not None:
-            for name, data in (("stdout.log", stdout), ("stderr.log", stderr)):
-                path = logs / name
-                with path.open("xb") as stream:
-                    stream.write(data)
-                record[name] = reference(path)
-        record["elapsedSeconds"] = time.perf_counter() - started
-        if cleanup_error is not None:
-            raise cleanup_error
+        controller_sources(binding)
 
 
-def git(arguments, root, deadline, records):
+def git(arguments, root, deadline, records, *, owned_gate=False):
     argv = ["git", *arguments]
     options = {"argv": argv, "environment": sanitized_environment(Path(tempfile.gettempdir()))}
     bootstrap = (
         "import json,subprocess,sys;v=json.loads(sys.argv[1]);"
         "sys.exit(subprocess.run(v['argv'],env=v['environment'],shell=False).returncode)"
     )
+    offset = len(records)
     try:
-        return command([sys.executable, "-I", "-B", "-c", bootstrap, json.dumps(options)], root, deadline, records)
+        return command(
+            [sys.executable, "-I", "-B", "-c", bootstrap, json.dumps(options)],
+            root,
+            deadline,
+            records,
+            owned_gate=owned_gate,
+        )
     finally:
-        records[-1]["gitArgv"] = argv
+        if len(records) > offset:
+            records[-1]["gitArgv"] = argv
 
 
 def restore_fixture(root):
@@ -451,21 +416,31 @@ def sample(request_path):
     if head.is_symlink() or head.read_text(encoding="ascii").strip() != source_sha(request["sourceHead"]):
         raise ValueError("Sample requires the exact detached source commit")
     before = input_manifest(root, request["trackedInputs"])
-    if before["sha256"] != request["inputSha256"] or test_contract(root) != request["testContract"]:
+    contract = test_contract(root)
+    if before["sha256"] != request["inputSha256"] or (
+        not request.get("contractOnly") and contract != request["testContract"]
+    ):
         raise ValueError("Sample input or assertion contract differs")
+    if request.get("contractOnly"):
+        write_new(output, {"testContract": contract, "version": list(sys.version_info[:2])})
+        return 0
     package = importlib.import_module("agent_lifecycle")
     if not Path(package.__file__).resolve().is_relative_to(root / "src"):
         raise ValueError("Sample imported a different installed runtime")
     serial = runpy.run_path(str(root / "tools/ci/run_unittest.py"))
     loader = unittest.TestLoader()
     started = time.perf_counter()
-    suite = loader.loadTestsFromName(HOT_MODULE)
+    selected = (
+        "tests.accounting.test_declared_ledger.GitLaunchContractTests" if request.get("regressionOnly") else HOT_MODULE
+    )
+    expected_module = selected.rsplit(".", 1)[0] if request.get("regressionOnly") else HOT_MODULE
+    suite = loader.loadTestsFromName(selected)
     roster = list(serial["inventory"](suite))
     if (
         loader.errors
         or not roster
         or len(roster) != request["expectedTests"]
-        or any(item["module"] != HOT_MODULE for item in roster)
+        or any(item["module"] != expected_module for item in roster)
     ):
         raise ValueError("Full hot-module roster differs or failed to load")
     args = argparse.Namespace(start=HOT_MODULE, top=".", pattern="test_limited_usage.py", worker_roster=None)
@@ -490,8 +465,13 @@ def sample(request_path):
             "installedVersion": importlib.metadata.version("agent-lifecycle-kit"),
         },
         immutableGitSeedPreparationSeconds=seed_seconds,
-        comparisonEvents=canonical_events(root, result["events"]),
+        comparisonEvents=result["events"]
+        if request.get("regressionOnly")
+        else canonical_events(root, result["events"]),
     )
+    if request.get("experiment") == 5:
+        result["peakWorkingSet"] = process_peak()
+        result["lockedEnvironment"] = locked_environment()
     if before != after:
         result.update(status="FAIL", inputMutation=True)
         code = 1
@@ -511,12 +491,13 @@ def profile_sample(request_path):
     root = Path(request["root"]).resolve(strict=True)
     expected = source_sha(request["sourceHead"])
     role = request["profileSourceRole"]
+    baseline = RELEASE234_BASELINE if request.get("experiment") == 5 else BASELINE
     if (
         (root / ".git/HEAD").is_symlink()
         or (root / ".git/HEAD").read_text(encoding="ascii").strip() != expected
         or role not in ("baseline", "candidate")
-        or (role == "baseline" and expected != BASELINE)
-        or (role == "candidate" and (expected == BASELINE or expected != os.environ.get("GITHUB_SHA")))
+        or (role == "baseline" and expected != baseline)
+        or (role == "candidate" and (expected == baseline or expected != os.environ.get("GITHUB_SHA")))
     ):
         raise ValueError("Profile requires its exact detached baseline/candidate source role")
     before = input_manifest(root, request["trackedInputs"])
@@ -600,26 +581,38 @@ def profile_sample(request_path):
         "actualTokens": None,
         "actualCost": None,
     }
+    if request.get("experiment") == 5:
+        value["lockedEnvironment"] = locked_environment()
     write_new(Path(request["output"]), value)
     return 0 if value["status"] == "PROFILE_COMPLETE" else 1
 
 
-def worker_argv(helper, request_path, root, scratch):
+def worker_argv(helper, request_path, root, scratch, *, executable=None, version=None):
     options = {
         "environment": sanitized_environment(scratch),
         "root": str(root),
         "helper": str(helper),
         "request": str(request_path),
+        "version": version,
     }
+    treatment = read_object(request_path).get("accountingGitExecutable")
+    if treatment is not None:
+        options["environment"]["ALK_ACCOUNTING_GIT_EXECUTABLE"] = treatment
     bootstrap = (
         "import json,os,runpy,sys;v=json.loads(sys.argv[1]);"
+        "assert v['version'] is None or list(sys.version_info[:2])==v['version'];"
         "os.environ.clear();os.environ.update(v['environment']);os.chdir(v['root']);"
         "sys.path[:0]=[os.path.join(v['root'],'src'),v['root']];"
         "r=__import__('pathlib').Path(v['request']);"
-        "f='profile_sample' if json.loads(r.read_bytes()).get('profileOnly') else 'sample';"
-        "sys.exit(runpy.run_path(v['helper'],run_name='alk_measurement_worker')[f](r))"
+        "q=json.loads(r.read_bytes());assert q.get('experiment')!=5 or "
+        "(q.get('expectedVersion')==v['version'] and v['version']==[3,15]);"
+        "assert q.get('experiment')!=5 or os.environ.get('ALK_ACCOUNTING_GIT_EXECUTABLE')==q.get('accountingGitExecutable');"
+        "f='profile_sample' if q.get('profileOnly') else 'sample';"
+        "code=runpy.run_path(v['helper'],run_name='alk_measurement_worker')[f](r);"
+        "assert q.get('experiment')!=5 or os.environ.get('ALK_ACCOUNTING_GIT_EXECUTABLE')==q.get('accountingGitExecutable');"
+        "sys.exit(code)"
     )
-    return [sys.executable, "-I", "-B", "-c", bootstrap, json.dumps(options)]
+    return [str(executable or sys.executable), "-I", "-B", "-c", bootstrap, json.dumps(options)]
 
 
 def validate_sample(value, request):
@@ -720,8 +713,251 @@ def experiment3_seconds(deadline_text):
     return min(EXPERIMENT_SECONDS, remaining)
 
 
+def release234_seconds(deadline_text):
+    if not isinstance(deadline_text, str) or re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", deadline_text) is None:
+        raise ValueError("Release234 requires the explicit native UTC task deadline")
+    requested = datetime.strptime(deadline_text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    remaining = (requested - datetime.now(UTC)).total_seconds()
+    if requested != RELEASE234_DEADLINE or not 0 < remaining <= 14400:
+        raise ValueError("Release234 native task deadline differs, expired or exceeds the authorized task window")
+    return remaining
+
+
+def release234_contract(roots, inputs):
+    legacy = "src/agent_lifecycle/accounting/declared_ledger_legacy.py"
+    maps = {side: {item["path"]: item["sha256"] for item in value["files"]} for side, value in inputs.items()}
+    names = set(maps["baseline"]) | set(maps["candidate"])
+    fixed = {name for name in names if name.startswith("src/") and name != legacy}
+    fixed.update((HOT_PATH, "tests/workflow/limited_usage_fixture_support.py"))
+    if any(maps["baseline"].get(name) != maps["candidate"].get(name) for name in fixed):
+        raise ValueError("Release234 runtime, original tests or seed bytes changed")
+    trees = {side: ast.parse((root / legacy).read_bytes()) for side, root in roots.items()}
+    method = next(
+        node for node in trees["candidate"].body if isinstance(node, ast.FunctionDef) and node.name == "_r11_git"
+    )
+    calls = [
+        node for node in ast.walk(method) if isinstance(node, ast.Call) and ast.unparse(node.func) == "subprocess.run"
+    ]
+    prefix_digest = digest([ast.dump(node) for node in method.body[:2]])
+    if prefix_digest != "c2a95bba6151130d7bb5ae3176ab598d589957bc2e8b163308ddd973aba08221":
+        raise ValueError("Release234 accounting executable selection prefix differs")
+    method.body = method.body[2:]
+    expected = ast.parse("[executable if executable is not None else 'git', *args]", mode="eval").body
+    if len(calls) != 1 or ast.dump(calls[0].args[0]) != ast.dump(expected):
+        raise ValueError("Release234 requires the exact accounting executable argv")
+    calls[0].args[0].elts[0] = ast.Constant(value="git")
+    if ast.dump(trees["baseline"]) != ast.dump(trees["candidate"]):
+        raise ValueError("Release234 legacy AST changed outside accounting executable selection")
+    return {"unchangedFiles": len(fixed), "normalizedLegacyAstSha256": digest(ast.dump(trees["baseline"]))}
+
+
+def release234_comparison(samples):
+    compare_samples(samples)  # Retain the exact six-sample order and complete outcome join guards.
+    base = [item["wallSeconds"] for item in samples if item["side"] == "baseline"]
+    candidate = statistics.median(item["wallSeconds"] for item in samples if item["side"] == "candidate")
+    median = statistics.median(base)
+    mad = statistics.median(abs(value - median) for value in base)
+    gain, threshold = 1 - candidate / median, max(0.05, mad / median)
+    return {
+        "status": "MEASURED_IMPROVEMENT" if candidate < median * (1 - threshold) else "STOP_NO_BENEFIT",
+        "medianWallSeconds": {"baseline": median, "candidate": candidate},
+        "baselineMadSeconds": mad,
+        "relativeGain": gain,
+        "requiredRelativeGainExclusive": threshold,
+    }
+
+
+def locked_environment():
+    return {
+        "executable": sys.executable,
+        "python": sys.version,
+        "platform": platform.platform(),
+        "logicalCPUs": os.cpu_count(),
+        "processor": platform.processor(),
+        "packages": sorted((d.metadata["Name"], d.version) for d in importlib.metadata.distributions()),
+    }
+
+
+def process_peak():
+    """Observe only this worker's PeakWorkingSetSize; failure is unavailable."""
+    value = {"scope": "worker-process-only", "bytes": None, "status": "UNAVAILABLE"}
+    if sys.platform != "win32":
+        return value
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class Counters(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
+                (name, ctypes.c_size_t)
+                for name in (
+                    "PeakWorkingSetSize WorkingSetSize QuotaPeakPagedPoolUsage QuotaPagedPoolUsage "
+                    "QuotaPeakNonPagedPoolUsage QuotaNonPagedPoolUsage PagefileUsage PeakPagefileUsage"
+                ).split()
+            ]
+
+        counters = Counters()
+        counters.cb = ctypes.sizeof(counters)
+        kernel, psapi = ctypes.WinDLL("kernel32", use_last_error=True), ctypes.WinDLL("psapi", use_last_error=True)
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+        if not psapi.GetProcessMemoryInfo(kernel.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+            raise OSError(ctypes.get_last_error())
+        value.update(bytes=int(counters.PeakWorkingSetSize), status="OBSERVED")
+    except (OSError, AttributeError, ValueError) as exc:
+        value["failure"] = f"{type(exc).__name__}: {exc}"
+    return value
+
+
+def measurement_child(args, payload, sources, output, selection, deadline, limit):
+    roots, inputs, contracts = sources
+    folder, directory = output
+    number, version, side, phase, executable = selection
+    release234, profile_mode = args.experiment == 5, phase == "profile"
+    records, samples = payload["commands"], payload["samples"]
+    root = roots[side]
+    destination = folder / str(number)
+    destination.mkdir()
+    scratch = Path(directory).resolve() / f"scratch-{number}"
+    scratch.mkdir()
+    request = {
+        "root": str(root),
+        "output": str(destination / "test-timings.json"),
+        "sourceHead": args.baseline if side == "baseline" else args.candidate,
+        "trackedInputs": [item["path"] for item in inputs[side]["files"]],
+        "inputSha256": inputs[side]["sha256"],
+        "testContract": contracts[version] if release234 and phase != "contract" else contracts[side],
+        "expectedTests": 11 if phase == "regression" else 78,
+        "profileOnly": profile_mode,
+        "profileSourceRole": side,
+        "profileMode": payload["mode"],
+        "experiment": args.experiment,
+        "regressionOnly": phase == "regression",
+        "contractOnly": phase == "contract",
+        "accountingGitExecutable": os.environ["ALK_ACCOUNTING_GIT_EXECUTABLE"]
+        if release234 and side == "candidate"
+        else None,
+        "expectedVersion": [3, int(version[1:])] if release234 else None,
+    }
+    request_path = destination / "request.json"
+    write_new(request_path, request)
+    argv = worker_argv(
+        Path(__file__).resolve(),
+        request_path,
+        root,
+        scratch,
+        executable=executable,
+        version=request["expectedVersion"],
+    )
+    counter = {
+        "contract": "contractChildrenStarted",
+        "profile": "profileChildrenStarted",
+        "regression": "regressionChildrenStarted",
+        "module": "moduleChildrenStarted",
+    }[phase]
+    payload["validationUnits"].setdefault(counter, 0)
+    offset = len(records)
+    try:
+        command(
+            argv,
+            root,
+            deadline,
+            records,
+            timeout=min(limit if profile_mode else SAMPLE_SECONDS, deadline - time.monotonic()),
+            logs=destination,
+            owned_gate=release234,
+        )
+    finally:
+        record = records[-1] if len(records) > offset else {"processStarted": False}
+        child_started = record.get("logicalProcessStarted", record["processStarted"])
+        if child_started is True:
+            payload["validationUnits"][counter] += 1
+        elif child_started is None:
+            payload["validationUnits"]["unknownChildStartHolds"] += 1
+        payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
+    value = read_object(destination / "test-timings.json")
+    if phase == "contract":
+        if (
+            value["version"] != request["expectedVersion"]
+            or input_manifest(root, request["trackedInputs"])["sha256"] != request["inputSha256"]
+        ):
+            raise ValueError("Wrong-interpreter or mutated-input contract probe")
+        contracts[version] = value["testContract"]
+        payload.setdefault("versionTestContracts", {})[version] = value
+        return False
+    if profile_mode:
+        if (
+            value["status"] != "PROFILE_COMPLETE"
+            or value["sourceHead"] != request["sourceHead"]
+            or value["sourceRole"] != side
+            or value["mode"] != payload["mode"]
+            or value["testContract"] != request["testContract"]
+            or value["testId"] != f"{HOT_MODULE}.{SLOW_CASE}"
+            or (not release234 and value["python"] != sys.version)
+            or value["inputSha256"] != request["inputSha256"]
+            or value["environment"] != environment_identity()
+            or not value["inputHashesUnchanged"]
+            or value["performanceAcceptanceClaimed"]
+            or (release234 and Path(value["runtimeProvenance"]["executable"]).resolve() != executable.resolve())
+        ):
+            raise ValueError("Incomplete or wrong-source feasibility profile")
+        if release234 and value["lockedEnvironment"] != payload["versions"][version]["lockedEnvironment"]:
+            raise ValueError("Release234 profile locked environment differs")
+        profile = {
+            "side": side,
+            "sourceHead": request["sourceHead"],
+            "report": reference(destination / "test-timings.json"),
+            "inputSha256": request["inputSha256"],
+        }
+        if release234:
+            profile.update(
+                version=version,
+                commonCaseSeconds=next(p["elapsedSeconds"] for p in value["phases"] if p["phase"] == "slow-case"),
+            )
+        payload["profiles"].append(profile)
+        return False
+    if release234:
+        provenance = value["runtimeProvenance"]
+        if Path(provenance["executable"]).resolve() != executable.resolve():
+            raise ValueError("Release234 worker executable differs")
+        identity = value["lockedEnvironment"]
+        if version in payload["versions"] and payload["versions"][version]["lockedEnvironment"] != identity:
+            raise ValueError("Release234 locked environment changed between workloads")
+        payload["versions"].setdefault(version, {"lockedEnvironment": identity})
+    if phase == "regression":
+        if value["status"] != "PASS" or value["testsRun"] != 11 or not value["inputHashesUnchanged"]:
+            raise ValueError("Actual Windows Git launch/timeout/own-child safety unresolved")
+        payload.setdefault("regressions", []).append(
+            {"version": version, "report": reference(destination / "test-timings.json")}
+        )
+        return False
+    join = validate_sample(value, request)
+    samples.append(
+        {
+            "side": side,
+            "pair": (len(samples) % 6 + 2) // 2,
+            **({"version": version} if release234 else {}),
+            "sourceHead": request["sourceHead"],
+            "wallSeconds": value["wallSeconds"],
+            "join": join,
+            "immutableGitSeedPreparationSeconds": value["immutableGitSeedPreparationSeconds"],
+            "report": reference(destination / "test-timings.json"),
+        }
+    )
+    if git(["status", "--porcelain", "--untracked-files=all"], root, deadline, records, owned_gate=release234):
+        raise ValueError("Sample mutated its isolated source checkout")
+    if args.experiment in (3, 4) and len(samples) == 2:
+        payload["viabilityPrefix"] = viability_prefix(samples, ratio_stop=args.experiment == 3)
+        if payload["viabilityPrefix"]["status"] == "INCOMPLETE":
+            payload["status"] = "INCOMPLETE"
+            return True
+    return False
+
+
 def execute(args, report):
     started = time.perf_counter()
+    release234 = args.experiment == 5
+    measure_git = partial(git, owned_gate=True) if release234 else git
     profile_mode = args.mode in ("profile", "feasibility")
     limit = (
         FEASIBILITY_SECONDS if args.mode == "feasibility" else PROFILE_SECONDS if profile_mode else EXPERIMENT_SECONDS
@@ -755,8 +991,17 @@ def execute(args, report):
             "unknownChildStartHolds": 0,
         },
     }
+    binding = None
     try:
-        if args.baseline != BASELINE or source_sha(args.candidate) == BASELINE or args.experiment not in (1, 2, 3, 4):
+        if release234:
+            binding = controller_sources(CONTROLLER_SOURCE_BINDING)
+            payload["controllerSourcesBefore"] = binding
+        baseline = RELEASE234_BASELINE if release234 else BASELINE
+        if (
+            args.baseline != baseline
+            or source_sha(args.candidate) == baseline
+            or args.experiment not in (1, 2, 3, 4, 5)
+        ):
             raise ValueError("Exact accepted baseline and a declared candidate experiment required")
         if args.experiment in (3, 4):
             if args.mode != "paired":
@@ -764,6 +1009,18 @@ def execute(args, report):
             limit = experiment3_seconds(args.deadline_utc)
             deadline = min(deadline, time.monotonic() + limit)
             payload.update(absoluteDeadlineUtc=args.deadline_utc, experimentTimeoutSeconds=limit)
+        if release234:
+            if args.mode != "paired":
+                raise ValueError("Release234 permits only the gated paired route")
+            limit = min(9900, release234_seconds(args.deadline_utc) - 900)
+            if limit <= 0:
+                raise ValueError("Release234 closeout reserve reached")
+            deadline = time.monotonic() + limit
+            payload.update(absoluteDeadlineUtc=args.deadline_utc, experimentTimeoutSeconds=limit, versions={})
+            payload["gitVersion"] = measure_git(["--version"], source, deadline, records).decode().strip()
+            payload["gitBackend"] = read_object(source / "work/ci/release234-git-backend.json")
+            assert payload["gitBackend"]["backend"]["path"] == os.environ["ALK_ACCOUNTING_GIT_EXECUTABLE"]
+            assert payload["gitBackend"]["sourceHead"] == args.candidate
         source_sha(args.baseline)
         if (
             platform.system() != "Windows"
@@ -773,22 +1030,21 @@ def execute(args, report):
         ):
             raise ValueError("Performance proof requires real Windows Actions/image/Python 3.11 identity")
         if (
-            git(["rev-parse", "HEAD"], source, deadline, records).decode().strip() != args.candidate
+            measure_git(["rev-parse", "HEAD"], source, deadline, records).decode().strip() != args.candidate
             or os.environ["GITHUB_SHA"] != args.candidate
-            or git(["status", "--porcelain", "--untracked-files=all"], source, deadline, records)
+            or measure_git(["status", "--porcelain", "--untracked-files=all"], source, deadline, records)
         ):
             raise ValueError("Coordinator must be the exact clean dispatched candidate commit")
         changed = (
-            git(["diff", "--name-only", args.baseline, args.candidate, "--"], source, deadline, records)
+            measure_git(["diff", "--name-only", args.baseline, args.candidate, "--"], source, deadline, records)
             .decode()
             .splitlines()
         )
-        if not changed or set(changed) - OWNED:
+        if not changed or set(changed) - (RELEASE234_OWNED if release234 else OWNED):
             raise ValueError("Candidate changes exceed the exact WS-01 ownership boundary")
         folder = Path(args.out).resolve().with_suffix("")
         folder.mkdir()
-        helper = Path(__file__).resolve()
-        payload["helper"] = reference(helper)
+        payload["helper"] = reference(Path(__file__).resolve())
         payload["changedPaths"] = changed
         with tempfile.TemporaryDirectory(prefix="alk-limited-pairs-") as directory:
             roots, inputs, contracts = {}, {}, {}
@@ -797,20 +1053,20 @@ def execute(args, report):
                 sources.append(("candidate", args.candidate))
             for side, sha in sources:
                 root = Path(directory).resolve() / side
-                git(
+                measure_git(
                     ["clone", "--quiet", "--no-hardlinks", "--no-checkout", str(source), str(root)],
                     source,
                     deadline,
                     records,
                 )
-                git(["checkout", "--quiet", "--detach", sha], root, deadline, records)
-                if git(["rev-parse", "HEAD"], root, deadline, records).decode().strip() != sha:
+                measure_git(["checkout", "--quiet", "--detach", sha], root, deadline, records)
+                if measure_git(["rev-parse", "HEAD"], root, deadline, records).decode().strip() != sha:
                     raise ValueError("Isolated checkout source differs")
-                names = git(["ls-files", "-z"], root, deadline, records).decode().strip("\0").split("\0")
+                names = measure_git(["ls-files", "-z"], root, deadline, records).decode().strip("\0").split("\0")
                 inputs[side] = input_manifest(root, names)
                 materialization = []
                 for name in (".gitattributes", HOT_PATH, "src/agent_lifecycle/contracts/authority_io.py"):
-                    raw_blob = git(["show", sha + ":" + name], root, deadline, records)
+                    raw_blob = measure_git(["show", sha + ":" + name], root, deadline, records)
                     raw_file = (root / name).read_bytes()
                     materialization.append(
                         {
@@ -832,93 +1088,58 @@ def execute(args, report):
                 write_new(folder / f"{side}-inputs.json", inputs[side])
             if args.mode != "profile" and contracts["baseline"] != contracts["candidate"]:
                 raise ValueError("Existing tests, assertions or post-initialization fixture behavior changed")
+            if release234:
+                payload["runtimeContract"] = release234_contract(roots, inputs)
             payload["testContract"] = contracts["baseline"]
             payload["setupSeconds"] = time.perf_counter() - started
             order = (
                 ("baseline", "candidate") if args.mode == "feasibility" else ("baseline",) if profile_mode else ORDER
             )
-            for number, side in enumerate(order, 1):
-                root = roots[side]
-                destination = folder / str(number)
-                destination.mkdir()
-                scratch = Path(directory).resolve() / f"scratch-{number}"
-                scratch.mkdir()
-                request = {
-                    "root": str(root),
-                    "output": str(destination / "test-timings.json"),
-                    "sourceHead": args.baseline if side == "baseline" else args.candidate,
-                    "trackedInputs": [item["path"] for item in inputs[side]["files"]],
-                    "inputSha256": inputs[side]["sha256"],
-                    "testContract": contracts[side],
-                    "expectedTests": 78,
-                    "profileOnly": profile_mode,
-                    "profileSourceRole": side,
-                    "profileMode": payload["mode"],
-                }
-                request_path = destination / "request.json"
-                write_new(request_path, request)
-                argv = worker_argv(helper, request_path, root, scratch)
-                counter = "profileChildrenStarted" if profile_mode else "moduleChildrenStarted"
-                try:
-                    command(
-                        argv,
-                        root,
-                        deadline,
-                        records,
-                        timeout=min(limit if profile_mode else SAMPLE_SECONDS, deadline - time.monotonic()),
-                        logs=destination,
-                    )
-                finally:
-                    if records[-1]["processStarted"] is True:
-                        payload["validationUnits"][counter] += 1
-                    elif records[-1]["processStarted"] is None:
-                        payload["validationUnits"]["unknownChildStartHolds"] += 1
-                    payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
-                value = read_object(destination / "test-timings.json")
-                if profile_mode:
-                    if (
-                        value["status"] != "PROFILE_COMPLETE"
-                        or value["sourceHead"] != request["sourceHead"]
-                        or value["sourceRole"] != side
-                        or value["mode"] != payload["mode"]
-                        or value["testContract"] != request["testContract"]
-                        or value["testId"] != f"{HOT_MODULE}.{SLOW_CASE}"
-                        or value["python"] != sys.version
-                        or value["inputSha256"] != request["inputSha256"]
-                        or value["environment"] != environment_identity()
-                        or not value["inputHashesUnchanged"]
-                        or value["performanceAcceptanceClaimed"]
-                    ):
-                        raise ValueError("Incomplete or wrong-source feasibility profile")
-                    payload["profiles"].append(
-                        {
-                            "side": side,
-                            "sourceHead": request["sourceHead"],
-                            "report": reference(destination / "test-timings.json"),
-                            "inputSha256": request["inputSha256"],
-                        }
-                    )
-                    continue
-                join = validate_sample(value, request)
-                samples.append(
-                    {
-                        "side": side,
-                        "pair": (number + 1) // 2,
-                        "sourceHead": request["sourceHead"],
-                        "wallSeconds": value["wallSeconds"],
-                        "join": join,
-                        "immutableGitSeedPreparationSeconds": value["immutableGitSeedPreparationSeconds"],
-                        "report": reference(destination / "test-timings.json"),
+            executions = [(None, side, "profile" if profile_mode else "module") for side in order]
+            if release234:
+                versions = ("315",)
+                executions = [(v, "baseline", "contract") for v in versions]
+                executions += [(v, "candidate", "regression") for v in versions]
+                executions += [(v, side, "profile") for v in versions for side in ("baseline", "candidate")]
+                executions += [(v, side, "module") for v in versions for side in ORDER]
+            for number, (version, side, phase) in enumerate(executions, 1):
+                if release234 and number == 5:
+                    screens = {
+                        v: [p["commonCaseSeconds"] for p in payload["profiles"] if p["version"] == v] for v in versions
                     }
-                )
-                if git(["status", "--porcelain", "--untracked-files=all"], root, deadline, records):
-                    raise ValueError("Sample mutated its isolated source checkout")
-                if args.experiment in (3, 4) and len(samples) == 2:
-                    payload["viabilityPrefix"] = viability_prefix(samples, ratio_stop=args.experiment == 3)
-                    if payload["viabilityPrefix"]["status"] == "INCOMPLETE":
-                        payload["status"] = "INCOMPLETE"
+                    payload["preliminary"] = {
+                        v: {"relativeGain": 1 - t[1] / t[0], "passed": t[1] / t[0] <= 0.95} for v, t in screens.items()
+                    }
+                    if not all(item["passed"] for item in payload["preliminary"].values()):
+                        payload.update(status="STOP_NO_PRELIMINARY_BENEFIT", stopBeforeFullSamples=True)
                         break
-            if args.mode == "paired":
+                executable = (
+                    source / f"work/ci/release234-py{version}/Scripts/python.exe"
+                    if release234
+                    else Path(sys.executable)
+                )
+                if release234 and (not executable.is_file() or executable.is_symlink()):
+                    raise ValueError("Release234 requires both internally located locked Python environments")
+                if measurement_child(
+                    args,
+                    payload,
+                    (roots, inputs, contracts),
+                    (folder, directory),
+                    (number, version, side, phase, executable),
+                    deadline,
+                    limit,
+                ):
+                    break
+            if release234:
+                if len(samples) == 6:
+                    for version in versions:
+                        payload["versions"][version].update(release234_comparison(samples))
+                    passed = all(v["status"] == "MEASURED_IMPROVEMENT" for v in payload["versions"].values())
+                    payload.update(
+                        status="MEASURED_IMPROVEMENT" if passed else "STOP_NO_BENEFIT",
+                        performanceAcceptanceClaimed=passed,
+                    )
+            elif args.mode == "paired":
                 if payload["status"] != "INCOMPLETE":
                     payload.update(compare_samples(samples))
                     payload["performanceAcceptanceClaimed"] = payload["status"] == "MEASURED_IMPROVEMENT"
@@ -926,20 +1147,26 @@ def execute(args, report):
                 payload["status"] = "FEASIBILITY_COMPLETE" if args.mode == "feasibility" else "PROFILE_COMPLETE"
     except BaseException as exc:
         payload.update(
-            status="INCOMPLETE" if args.experiment in (3, 4) else "FAIL", failure=f"{type(exc).__name__}: {exc}"
+            status="STOP_UNRESOLVED" if release234 else "INCOMPLETE" if args.experiment in (3, 4) else "FAIL",
+            failure=f"{type(exc).__name__}: {exc}",
         )
         traceback.print_exc()
+    if binding is not None:
+        payload["controllerSourcesAfter"] = None
+        try:
+            payload["controllerSourcesAfter"] = controller_sources()
+            if payload["controllerSourcesAfter"] != binding:
+                raise ValueError("Controller helper or companion changed during workload")
+        except (OSError, ValueError) as exc:
+            payload.update(status="STOP_UNRESOLVED", failure=f"Controller source guard: {exc}")
     payload["totalSeconds"] = time.perf_counter() - started
     payload["validationUnits"]["setupCommands"] = sum("gitArgv" in item for item in records)
-    payload["validationUnits"]["total"] = (
-        1
-        + payload["validationUnits"]["moduleChildrenStarted"]
-        + payload["validationUnits"]["profileChildrenStarted"]
-        + payload["validationUnits"]["unknownChildStartHolds"]
+    payload["validationUnits"]["total"] = sum(
+        value for key, value in payload["validationUnits"].items() if key not in ("setupCommands", "total")
     )
     if payload["totalSeconds"] > limit:
         payload.update(
-            status="INCOMPLETE" if args.experiment in (3, 4) else "FAIL",
+            status="STOP_UNRESOLVED" if release234 else "INCOMPLETE" if args.experiment in (3, 4) else "FAIL",
             failure="Experiment deadline exceeded; partial evidence retained",
         )
     json.dump(payload, report, sort_keys=True, allow_nan=False)
@@ -951,7 +1178,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline", required=True, type=source_sha)
     parser.add_argument("--candidate", required=True, type=source_sha)
-    parser.add_argument("--experiment", required=True, type=int, choices=(1, 2, 3, 4))
+    parser.add_argument("--experiment", required=True, type=int, choices=(1, 2, 3, 4, 5))
     parser.add_argument("--deadline-utc")
     parser.add_argument("--mode", choices=("paired", "profile", "feasibility"), default="paired")
     parser.add_argument("--out", required=True)

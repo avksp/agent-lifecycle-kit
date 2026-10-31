@@ -29,6 +29,24 @@ SKILL_INSTRUCTION_DOCUMENTATION: dict[str, Any] = {
     "newAuditStage": False,
 }
 
+WINDOWS_ACCOUNTING_GIT_DOCUMENTATION: dict[str, Any] = {
+    "id": "windows315-accounting-git-backend",
+    "englishPath": "docs/reference/cli.md",
+    "russianPath": "docs/ru/reference/cli.md",
+    "timedPythonVersions": ["3.15"],
+    "qualifiedOs": "Windows",
+    "normalCiCellCount": 15,
+    "otherCellsUseDefaultGit": True,
+    "normalInstallationsUseDefaultGit": True,
+    "wholeTreeResourceClaimed": False,
+    "universalSpeedupPromised": False,
+    "runtimeDependenciesAdded": False,
+    "fullSamples": 6,
+    "originalCasesPerSample": 78,
+    "measuredMedianReductionPercent": 16.515346675922205,
+}
+
+
 PERFORMANCE_BASELINE_DOCUMENTATION: dict[str, Any] = {
     "id": "bounded-lifecycle-performance-baseline",
     "status": "ADVISORY",
@@ -466,6 +484,7 @@ def build_publication_manifest(*, target_version: str, target_ref: str) -> dict[
         "documentedFeatures": [
             SKILL_INSTRUCTION_DOCUMENTATION,
             PERFORMANCE_BASELINE_DOCUMENTATION,
+            WINDOWS_ACCOUNTING_GIT_DOCUMENTATION,
             ARCHITECTURE_PY315_DOCUMENTATION,
             LIFECYCLE_CONTROL_DOCUMENTATION,
             DOMAIN_LANGUAGE_DOCUMENTATION,

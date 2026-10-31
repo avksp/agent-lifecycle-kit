@@ -539,5 +539,693 @@ class LimitedUsageMeasurementTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), b"original")
 
 
+class Release234MeasurementTests(unittest.TestCase):
+    def test_exact_runtime_candidate_refuses_every_other_ast_and_source_change(self):
+        module = subject()
+        legacy = "src/agent_lifecycle/accounting/declared_ledger_legacy.py"
+        candidate = (ROOT / legacy).read_text()
+        tree = ast.parse(candidate)
+        method = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_r11_git")
+        actual_prefix_digest = module.digest([ast.dump(node) for node in method.body[:2]])
+        expected_prefix_digest = "c2a95bba6151130d7bb5ae3176ab598d589957bc2e8b163308ddd973aba08221"
+        method.body = method.body[2:]
+        call = next(n for n in ast.walk(method) if isinstance(n, ast.Call) and ast.unparse(n.func) == "subprocess.run")
+        call.args[0].elts[0] = ast.Constant(value="git")
+        baseline = ast.unparse(tree)
+        with tempfile.TemporaryDirectory() as directory:
+            roots = {side: Path(directory) / side for side in ("baseline", "candidate")}
+            inputs = {
+                side: {
+                    "files": [
+                        {"path": name, "sha256": "same"}
+                        for name in (
+                            legacy,
+                            module.HOT_PATH,
+                            "tests/workflow/limited_usage_fixture_support.py",
+                            "src/other.py",
+                        )
+                    ]
+                }
+                for side in roots
+            }
+            for side, text in (("baseline", baseline), ("candidate", candidate)):
+                path = roots[side] / legacy
+                path.parent.mkdir(parents=True)
+                path.write_text(text)
+            if actual_prefix_digest == expected_prefix_digest:
+                module.release234_contract(roots, inputs)
+            else:
+                with self.assertRaisesRegex(ValueError, "selection prefix differs"):
+                    module.release234_contract(roots, inputs)
+            path = roots["candidate"] / legacy
+            for changed in (
+                candidate.replace("timeout=15", "timeout=14"),
+                candidate.replace("Path(executable).is_absolute()", "True"),
+                candidate.replace('executable if executable is not None else "git"', '"git"'),
+            ):
+                path.write_text(changed)
+                with self.assertRaises(ValueError):
+                    module.release234_contract(roots, inputs)
+            path.write_text(candidate)
+            inputs["candidate"]["files"][-1]["sha256"] = "changed"
+            with self.assertRaises(ValueError):
+                module.release234_contract(roots, inputs)
+
+    def test_new_threshold_uses_each_versions_baseline_mad_and_original_deadline(self):
+        module = subject()
+        samples = [
+            {"side": side, "wallSeconds": 100 if side == "baseline" else 94, "join": {}} for side in module.ORDER
+        ]
+        self.assertEqual(module.release234_comparison(samples)["status"], "MEASURED_IMPROVEMENT")
+        samples[1]["wallSeconds"] = samples[2]["wallSeconds"] = samples[5]["wallSeconds"] = 95
+        self.assertEqual(module.release234_comparison(samples)["status"], "STOP_NO_BENEFIT")
+        samples[0]["wallSeconds"], samples[3]["wallSeconds"], samples[4]["wallSeconds"] = 80, 100, 120
+        self.assertEqual(module.release234_comparison(samples)["requiredRelativeGainExclusive"], 0.2)
+
+        class FixedClock(datetime):
+            @classmethod
+            def now(cls, _tz=None):
+                return module.RELEASE234_DEADLINE - timedelta(hours=2)
+
+        with patch.object(module, "datetime", FixedClock):
+            self.assertEqual(module.release234_seconds("2026-10-31T05:38:16Z"), 7200)
+            for value in (None, "bad", "2026-10-31T05:38:17Z", "2026-10-31T05:38:15Z"):
+                with self.assertRaises(ValueError):
+                    module.release234_seconds(value)
+        with patch.object(module.sys, "platform", "linux"):
+            self.assertEqual(
+                module.process_peak(), {"scope": "worker-process-only", "bytes": None, "status": "UNAVAILABLE"}
+            )
+
+    def test_contract_probe_preserves_inputs_and_rejects_a_wrong_locked_interpreter(self):
+        module = subject()
+        with checkout() as (parent, root, head):
+            names = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().strip("\0").split("\0")
+            before = module.input_manifest(root, names)
+            scratch = parent / "scratch"
+            scratch.mkdir()
+            expected = list(__import__("sys").version_info[:2])
+            path = parent / "probe-request.json"
+            request = {
+                "root": str(root),
+                "output": str(parent / "contract.json"),
+                "sourceHead": head,
+                "trackedInputs": names,
+                "inputSha256": before["sha256"],
+                "testContract": {"wrong-schema": True},
+                "contractOnly": True,
+                "expectedVersion": expected,
+            }
+            module.write_new(path, request)
+            records = []
+            module.command(
+                module.worker_argv(HELPER, path, root, scratch, version=expected), root, time.monotonic() + 30, records
+            )
+            value = module.read_object(Path(request["output"]))
+            self.assertEqual(value, {"testContract": module.test_contract(root), "version": expected})
+            self.assertEqual(module.input_manifest(root, names), before)
+            wrong = [3, 11] if expected == [3, 15] else [3, 15]
+            rejected = parent / "wrong-request.json"
+            module.write_new(
+                rejected, {**request, "output": str(parent / "wrong.json"), "experiment": 5, "expectedVersion": wrong}
+            )
+            with self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, rejected, root, scratch, version=wrong),
+                    root,
+                    time.monotonic() + 30,
+                    records,
+                )
+            self.assertFalse((parent / "wrong.json").exists())
+            malformed = parent / "missing-version-request.json"
+            module.write_new(malformed, {**request, "output": str(parent / "missing.json"), "experiment": 5})
+            with self.assertRaises(ValueError):
+                module.command(
+                    module.worker_argv(HELPER, malformed, root, scratch), root, time.monotonic() + 30, records
+                )
+            self.assertFalse((parent / "missing.json").exists())
+
+    def test_candidate_treatment_is_the_only_worker_environment_difference(self):
+        module = subject()
+        key = "ALK_ACCOUNTING_GIT_EXECUTABLE"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            backend = str(root / "selected Git Ω.exe")
+            environments = {}
+            with patch.dict(os.environ, {key: backend, "GIT_TRACE2_EVENT": "must-not-reach-workload"}):
+                for side in ("baseline", "candidate"):
+                    request = root / (side + ".json")
+                    module.write_new(request, {"accountingGitExecutable": backend if side == "candidate" else None})
+                    argv = module.worker_argv(HELPER, request, root, root, version=[3, 11])
+                    options = json.loads(argv[-1])
+                    environments[side] = options["environment"]
+                    self.assertNotIn("GIT_TRACE2_EVENT", options["environment"])
+            self.assertNotIn(key, environments["baseline"])
+            self.assertEqual(environments["candidate"].pop(key), backend)
+            self.assertEqual(environments["baseline"], environments["candidate"])
+
+    def test_workflow_backend_selection_and_postcheck_preserve_path_and_refuse_drift(self):
+        from contextlib import redirect_stdout
+
+        workflow = (ROOT / ".github/workflows/ci-timing-control.yml").read_text()
+        setup, after = [textwrap.dedent(part.split("'@", 1)[0]) for part in workflow.split("$code = @'")[1:]]
+        for scenario in ("positive", "version-mismatch", "binary-drift"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                prefix = root / "Git spaced Ω"
+                core = prefix / "libexec/git-core"
+                core.mkdir(parents=True)
+                wrapper, backend = prefix / "cmd/git.exe", prefix / "bin/git.exe"
+                for path in (wrapper, backend):
+                    path.parent.mkdir(parents=True)
+                    path.write_bytes(b"fixed mocked binary")
+                (root / "work/ci").mkdir(parents=True)
+                previous = Path.cwd()
+                original_path = os.environ["PATH"]
+
+                def git_output(argv, *, scenario=scenario, wrapper=wrapper, backend=backend, core=core, **_kwargs):
+                    self.assertIn(argv[0], (str(wrapper), str(backend)))
+                    if argv[1:] == ["--exec-path"]:
+                        return str(core).encode()
+                    self.assertEqual(argv[1:], ["--version"])
+                    return (
+                        b"different"
+                        if scenario == "version-mismatch" and argv[0] == str(backend)
+                        else b"git version fixture"
+                    )
+
+                try:
+                    os.chdir(root)
+                    with (
+                        patch.dict(os.environ, GITHUB_SHA="f" * 40, GITHUB_OUTPUT=str(root / "outputs")),
+                        patch("shutil.which", return_value=str(wrapper)),
+                        patch("subprocess.check_output", side_effect=git_output),
+                        redirect_stdout(io.StringIO()),
+                    ):
+                        if scenario == "version-mismatch":
+                            with self.assertRaises(AssertionError):
+                                exec(compile(setup, "<workflow-backend-setup>", "exec"), {})
+                            self.assertFalse((root / "work/ci/release234-git-backend.json").exists())
+                            continue
+                        exec(compile(setup, "<workflow-backend-setup>", "exec"), {})
+                        metadata = json.loads((root / "work/ci/release234-git-backend.json").read_bytes())
+                        self.assertEqual(metadata["backend"]["path"], str(backend))
+                        self.assertEqual(os.environ["PATH"], original_path)
+                        if scenario == "binary-drift":
+                            backend.write_bytes(b"changed binary")
+                            with self.assertRaises(AssertionError):
+                                exec(compile(after, "<workflow-backend-after>", "exec"), {})
+                        else:
+                            exec(compile(after, "<workflow-backend-after>", "exec"), {})
+                        result = json.loads((root / "work/ci/release234-git-backend-after.json").read_bytes())
+                        self.assertTrue(result["pathUnchanged"])
+                        self.assertEqual(
+                            all(item["unchanged"] for item in result["executables"]), scenario == "positive"
+                        )
+                finally:
+                    os.chdir(previous)
+
+    def test_controller311_workflow_and_strict_worker315_are_separate(self):
+        module = subject()
+        workflow = (ROOT / ".github/workflows/ci-timing-control.yml").read_text()
+        job = workflow.split("  release234-windows:", 1)[1]
+        self.assertIn("UV_PROJECT_ENVIRONMENT: work/ci/release234-py311", job)
+        self.assertEqual(job.count("& work/ci/release234-py311/Scripts/python.exe"), 3)
+        self.assertIn("--python 3.11", job)
+        self.assertIn("--python 3.15", job)
+        self.assertIn("timeout-minutes: 180", job)
+        self.assertIn("limited-usage-windows-release234-controller311-worker315-experiment5", job)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request = root / "request.json"
+            module.write_new(request, {"experiment": 5, "expectedVersion": [3, 11]})
+            argv = module.worker_argv(HELPER, request, root, root, version=[3, 11])
+            self.assertIn("v['version']==[3,15]", argv[-2])
+
+        class OverlongClock(datetime):
+            @classmethod
+            def now(cls, _tz=None):
+                return module.RELEASE234_DEADLINE - timedelta(seconds=14401)
+
+        with patch.object(module, "datetime", OverlongClock), self.assertRaises(ValueError):
+            module.release234_seconds("2026-10-31T05:38:16Z")
+
+    def test_311_controller_rejects_315_and_keeps_strict315_six_sample_protocol(self):
+        module = subject()
+        candidate = "1" * 40
+        for benefit, coordinator, available in (
+            (False, 11, 10800),
+            (True, 11, 10800),
+            (True, 15, 10800),
+            (False, 11, 7200),
+        ):
+            with self.subTest(benefit=benefit, coordinator=coordinator), tempfile.TemporaryDirectory() as directory:
+                source = Path(directory)
+                for version in ("315",):
+                    exe = source / f"work/ci/release234-py{version}/Scripts/python.exe"
+                    exe.parent.mkdir(parents=True)
+                    exe.touch()
+                backend_record = source / "work/ci/release234-git-backend.json"
+                backend_record.write_text(
+                    json.dumps({"sourceHead": candidate, "backend": {"path": str(source / "selected backend.exe")}})
+                )
+                started = []
+
+                def git(arguments, root, _deadline, _records, **_options):
+                    if arguments[0] == "clone":
+                        root = Path(arguments[-1])
+                        root.mkdir()
+                        for name in (
+                            ".gitattributes",
+                            module.HOT_PATH,
+                            "src/agent_lifecycle/contracts/authority_io.py",
+                        ):
+                            path = root / name
+                            path.parent.mkdir(parents=True, exist_ok=True)
+                            path.write_text("same")
+                    if arguments[0] == "rev-parse":
+                        return (module.RELEASE234_BASELINE if root.name == "baseline" else candidate).encode()
+                    if arguments[0] == "diff":
+                        return "\n".join(sorted(module.RELEASE234_OWNED)).encode()
+                    return b"tracked\0" if arguments[0] == "ls-files" else b""
+
+                def command(argv, _root, _deadline, records, *, started=started, benefit=benefit, **_kwargs):
+                    options = json.loads(argv[-1])
+                    request = module.read_object(Path(options["request"]))
+                    side, version = request["profileSourceRole"], str(options["version"][1])
+                    phase = (
+                        "contract"
+                        if request.get("contractOnly")
+                        else "profile"
+                        if request["profileOnly"]
+                        else "regression"
+                        if request["regressionOnly"]
+                        else "module"
+                    )
+                    started.append((version, side, phase))
+                    contract = {
+                        "testAndFixtureAstSha256": "schema-" + version,
+                        "assertionAstSha256": "same",
+                        "assertionSites": 287,
+                    }
+                    if phase == "contract":
+                        module.write_new(
+                            Path(request["output"]),
+                            {
+                                "testContract": contract,
+                                "version": options["version"],
+                                "sourceHead": request["sourceHead"],
+                                "inputSha256": request["inputSha256"],
+                            },
+                        )
+                        records.append({"processStarted": True, "exitCode": 0})
+                        return
+                    self.assertEqual(request["testContract"], contract)
+                    self.assertEqual(request["expectedVersion"], options["version"])
+                    seconds = 100 if side == "baseline" else 90 if benefit else 99
+                    value = {
+                        "status": "PASS",
+                        "testsRun": request["expectedTests"],
+                        "inputHashesUnchanged": True,
+                        "sourceHead": request["sourceHead"],
+                        "sourceRole": side,
+                        "mode": request["profileMode"],
+                        "testContract": request["testContract"],
+                        "testId": f"{module.HOT_MODULE}.{module.SLOW_CASE}",
+                        "python": version,
+                        "inputSha256": "same",
+                        "environment": module.environment_identity(),
+                        "performanceAcceptanceClaimed": False,
+                        "phases": [{"phase": "slow-case", "elapsedSeconds": seconds}],
+                        "runtimeProvenance": {"executable": argv[0]},
+                        "lockedEnvironment": {"version": version},
+                        "wallSeconds": seconds,
+                        "immutableGitSeedPreparationSeconds": 0,
+                    }
+                    if phase == "profile":
+                        value["status"] = "PROFILE_COMPLETE"
+                    module.write_new(Path(request["output"]), value)
+                    records.append({"processStarted": True, "exitCode": 0})
+
+                args = SimpleNamespace(
+                    baseline=module.RELEASE234_BASELINE,
+                    candidate=candidate,
+                    experiment=5,
+                    mode="paired",
+                    deadline_utc="2026-10-31T05:38:16Z",
+                    out=str(source / "report.json"),
+                )
+                with (
+                    patch.object(module.Path, "cwd", return_value=source),
+                    patch.object(module, "git", side_effect=git),
+                    patch.object(module, "command", side_effect=command),
+                    patch.object(module, "input_manifest", return_value={"sha256": "same", "files": []}),
+                    patch.object(module, "test_contract", return_value={}),
+                    patch.object(module, "restore_fixture"),
+                    patch.object(module, "release234_contract", return_value={}),
+                    patch.object(module, "release234_seconds", return_value=available),
+                    patch.object(module, "validate_sample", return_value={}),
+                    patch.object(module.platform, "system", return_value="Windows"),
+                    patch.object(module.sys, "version_info", (3, coordinator)),
+                    patch.dict(
+                        os.environ,
+                        {
+                            **{key: "bound" for key in module.IDENTITY_KEYS},
+                            "RUNNER_OS": "Windows",
+                            "GITHUB_SHA": candidate,
+                            "ALK_ACCOUNTING_GIT_EXECUTABLE": str(source / "selected backend.exe"),
+                        },
+                    ),
+                ):
+                    report = io.StringIO()
+                    code = module.execute(args, report)
+                value = json.loads(report.getvalue())
+                self.assertEqual(value["controllerSourcesBefore"], value["controllerSourcesAfter"])
+                self.assertEqual(len(value["controllerSourcesBefore"]), 2)
+                self.assertEqual(value["experimentTimeoutSeconds"], min(9900, available - 900))
+                if coordinator == 15:
+                    self.assertEqual(code, 1)
+                    self.assertEqual(value["status"], "STOP_UNRESOLVED")
+                    self.assertEqual(started, [])
+                    continue
+                self.assertEqual(code, 0 if benefit else 1, value.get("failure"))
+                self.assertEqual(
+                    [phase for _, _, phase in started[:4]], ["contract", "regression", "profile", "profile"]
+                )
+                self.assertEqual(value["validationUnits"]["contractChildrenStarted"], 1)
+                full = [(version, side) for version, side, phase in started if phase == "module"]
+                self.assertEqual(full, [("15", side) for side in module.ORDER] if benefit else [])
+                self.assertEqual(value["validationUnits"]["moduleChildrenStarted"], 6 if benefit else 0)
+                self.assertEqual(value["status"], "MEASURED_IMPROVEMENT" if benefit else "STOP_NO_PRELIMINARY_BENEFIT")
+
+
+class LambdaSelectorSchemaTests(unittest.TestCase):
+    SOURCE = textwrap.dedent(
+        """\
+        class SourceConflictRecoveryTests:
+            def test_recovery_unknown_or_edited_disposition_denied(self):
+                for mutation in (
+                    lambda: 1,
+                    lambda: 1,
+                ):
+                    with self.subTest(mutation=mutation.__code__.co_firstlineno):
+                        pass
+        """
+    )
+    PARENT = "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied"
+    EXPECTED_IDS = [
+        "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied (mutation=ast:0adf13b909abd2f6e04480ae36ed5a91d7440eb0ec2774ac93f77ede53d1aece)",
+        "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied (mutation=ast:39a51302b8540574fd7e84c48486fe74220d6bea3bdc4f16da03ad31dc99cd96)",
+        "tests.workflow.test_limited_usage.SourceConflictRecoveryTests.test_recovery_unknown_or_edited_disposition_denied",
+    ]
+
+    @contextmanager
+    def fixture(self):
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / module.HOT_PATH
+            path.parent.mkdir(parents=True)
+            path.write_text(self.SOURCE, encoding="utf-8")
+            events = [
+                {
+                    "id": f"{self.PARENT} (mutation={line})",
+                    "caseIndex": 0,
+                    "outcome": "subtest:success",
+                    "value": "retained",
+                }
+                for line in (4, 5)
+            ] + [{"id": self.PARENT, "caseIndex": 0, "outcome": "success"}]
+            yield module, root, path, events
+
+    def test_legacy_selector_ids_are_stable_and_preserve_raw_fields_and_occurrences(self):
+        with self.fixture() as (module, root, _path, events):
+            before = deepcopy(events)
+            result = module.canonical_events(root, events)
+            self.assertEqual([event["id"] for event in result], self.EXPECTED_IDS)
+            self.assertNotEqual(result[0]["id"], result[1]["id"])
+            self.assertEqual(events, before)
+            self.assertEqual(
+                result,
+                [{**event, "id": identifier} for event, identifier in zip(events, self.EXPECTED_IDS, strict=True)],
+            )
+
+    def test_selector_line_order_occurrence_and_source_channel_refusals(self):
+        with self.fixture() as (module, root, path, events):
+            wrong_line = deepcopy(events)
+            wrong_line[0]["id"] = wrong_line[0]["id"].replace("mutation=4", "mutation=5")
+            for changed in (
+                wrong_line,
+                [events[1], events[0], events[2]],
+                events[1:],
+                events[:2] + [events[1], events[2]],
+            ):
+                with self.subTest(events=changed), self.assertRaises(ValueError):
+                    module.canonical_events(root, changed)
+            path.write_text(self.SOURCE.replace("subTest(mutation=", "subTest(other="), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Unrecognized source-line selector"):
+                module.canonical_events(root, events)
+
+    def test_sample_refuses_source_raw_canonical_and_join_tampering(self):
+        with self.fixture() as (module, root, path, events):
+            request = {
+                "root": str(root),
+                "sourceHead": "controlled-head",
+                "inputSha256": "bound-input",
+                "testContract": {"source": "controlled-selector"},
+                "expectedTests": 1,
+            }
+            value = {
+                "schemaVersion": "alk-ci-test-timings.v1",
+                "status": "PASS",
+                "sourceHead": request["sourceHead"],
+                "inputSha256": request["inputSha256"],
+                "testContract": request["testContract"],
+                "measurementEnvironment": module.environment_identity(),
+                "inputHashesUnchanged": True,
+                "coverage": {"complete": True, "notStarted": []},
+                "testsRun": 1,
+                "inventory": [{"id": self.PARENT}],
+                "cases": [{"id": self.PARENT, "completed": True, "seconds": 1}],
+                "wallSeconds": 1,
+                "events": events,
+                "comparisonEvents": module.canonical_events(root, events),
+                "python": "controlled",
+                "platform": "controlled",
+                "skips": 0,
+                "expectedFailures": 0,
+            }
+            joined = module.validate_sample(value, request)
+            for key in ("sourceHead", "inputSha256"):
+                changed = deepcopy(value)
+                changed[key] = "tampered"
+                with self.subTest(key=key), self.assertRaises(ValueError):
+                    module.validate_sample(changed, request)
+            for field in ("events", "comparisonEvents"):
+                changed = deepcopy(value)
+                changed[field][0]["outcome"] = "subtest:failure"
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, "Canonical events differ"):
+                    module.validate_sample(changed, request)
+            samples = [
+                {"side": side, "wallSeconds": 10 if side == "baseline" else 7, "join": deepcopy(joined)}
+                for side in module.ORDER
+            ]
+            self.assertEqual(module.compare_samples(samples)["status"], "MEASURED_IMPROVEMENT")
+            samples[1]["join"]["events"][0]["id"] += "tampered"
+            with self.assertRaises(ValueError):
+                module.compare_samples(samples)
+            path.write_text(self.SOURCE.replace("lambda: 1", "lambda: 2", 1), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Canonical events differ"):
+                module.validate_sample(value, request)
+
+
+class OwnedMeasurementTransportTests(unittest.TestCase):
+    def transport(self):
+        return __import__("runpy").run_path(str(HELPER.with_name("limited_usage_transport.py")))
+
+    def marker_argv(self, marker):
+        import sys
+
+        return [
+            sys.executable,
+            "-I",
+            "-B",
+            "-c",
+            "import pathlib,sys;pathlib.Path(sys.argv[1]).write_text(str(len(sys.stdin.buffer.read())))",
+            str(marker),
+        ]
+
+    def test_actual_gate_waits_for_go_and_refuses_eof_wrong_token_or_version(self):
+        from agent_lifecycle.changesets.git_io import BoundedProcess
+
+        transport = self.transport()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for token in (b"G", None, b"X", "wrong-version"):
+                with self.subTest(token=token):
+                    marker = root / str(token)
+                    argv = transport["owned_gate_argv"](self.marker_argv(marker), max_bytes=8_388_608)
+                    if token == "wrong-version":
+                        value = json.loads(argv[-1])
+                        value["version"] = [0, 0, 0]
+                        argv[-1] = json.dumps(value)
+                    process = BoundedProcess(
+                        argv, cwd=root, deadline=time.monotonic() + 5, max_stdout_bytes=1024, writable=True
+                    )
+                    try:
+                        time.sleep(0.05)
+                        self.assertFalse(marker.exists())
+                        if token != "wrong-version":
+                            process.write_request(token)
+                            if token is not None:
+                                process.write_request(None)
+                        while process.stdout.read(1024):
+                            pass
+                        self.assertEqual(
+                            process.wait(), 126 if token == "wrong-version" else 0 if token == b"G" else 125
+                        )
+                        self.assertEqual(marker.exists(), token == b"G")
+                        if token == b"G":
+                            self.assertEqual(marker.read_text(), "0")
+                    finally:
+                        process.close()
+
+    def test_gate_keeps_deadline_output_caps_and_original_argv_base_guards(self):
+        from agent_lifecycle.changesets.git_io import BoundedProcess
+        import sys
+
+        transport = self.transport()
+        for argv in ([], "not-a-list", [sys.executable, "bad\0arg"]):
+            with self.subTest(argvType=type(argv).__name__), self.assertRaises(LifecycleError):
+                transport["owned_gate_argv"](argv, max_bytes=8_388_608)
+        with patch.object(sys, "_base_executable", "relative-python"), self.assertRaises(ValueError):
+            transport["owned_gate_argv"]([sys.executable], max_bytes=8_388_608)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for label in ("timeout", "output"):
+                argv = (
+                    self.marker_argv(root / label) if label == "timeout" else [sys.executable, "-c", "print('x'*4096)"]
+                )
+                process = BoundedProcess(
+                    transport["owned_gate_argv"](argv, max_bytes=8_388_608),
+                    cwd=root,
+                    deadline=time.monotonic() + (0.15 if label == "timeout" else 3),
+                    max_stdout_bytes=32,
+                    writable=True,
+                )
+                try:
+                    if label == "output":
+                        process.write_request(b"G")
+                        process.write_request(None)
+                    with self.assertRaises(LifecycleError):
+                        while process.stdout.read(1024):
+                            pass
+                        process.wait()
+                finally:
+                    process.close()
+                self.assertIsNotNone(process.process.poll())
+                if label == "timeout":
+                    self.assertFalse((root / label).exists())
+
+    def test_existing_ownership_refusal_sends_no_go_and_retains_unknown_start(self):
+        from agent_lifecycle.changesets.git_io import BoundedProcess
+
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            marker = root / "marker"
+            records = []
+            with (
+                patch(
+                    "agent_lifecycle.changesets.git_io._windows_cleanup",
+                    side_effect=LifecycleError("bounded-process-group-unavailable", "controlled"),
+                ),
+                patch.object(BoundedProcess, "write_request", side_effect=AssertionError("No Go permitted")) as write,
+            ):
+                with self.assertRaises(LifecycleError):
+                    module.command(self.marker_argv(marker), root, time.monotonic() + 3, records, owned_gate=True)
+                self.assertEqual(write.call_count, 0)
+            self.assertFalse(marker.exists())
+            self.assertIsNone(records[-1]["processStarted"])
+            self.assertIsNone(records[-1]["logicalProcessStarted"])
+            self.assertFalse(records[-1]["goSent"])
+
+    def test_fixed_sibling_loader_refuses_companion_drift_before_and_after_work(self):
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            helper = root / "measure_limited_usage.py"
+            companion = root / "limited_usage_transport.py"
+            helper.write_bytes(HELPER.read_bytes())
+            companion.write_bytes(HELPER.with_name(companion.name).read_bytes())
+            module.__file__ = str(helper)
+            module.CONTROLLER_SOURCE_BINDING = module.controller_sources()
+            self.assertEqual(module.controller_sources()[1]["sha256"], module.reference(companion)["sha256"])
+            original = companion.read_bytes()
+            companion.write_bytes(original + b"\n# changed\n")
+            records = []
+            with self.assertRaises(ValueError):
+                module.command(self.marker_argv(root / "before"), root, time.monotonic() + 3, records, owned_gate=True)
+            self.assertFalse((root / "before").exists())
+            self.assertEqual(records, [])
+            companion.write_bytes(original)
+            import sys
+
+            argv = [
+                sys.executable,
+                "-c",
+                "import pathlib,sys; p=pathlib.Path(sys.argv[1]); p.write_bytes(p.read_bytes()+b'\\n# after\\n')",
+                str(companion),
+            ]
+            with self.assertRaises(ValueError):
+                module.command(argv, root, time.monotonic() + 3, records, owned_gate=True)
+            self.assertTrue(records[-1]["logicalProcessStarted"])
+
+    def test_loader_refusal_does_not_count_a_previous_setup_as_new_workload(self):
+        import sys
+
+        module = subject()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            folder = root / "output"
+            folder.mkdir()
+            records = [{"processStarted": True, "gitArgv": ["previous-setup"]}]
+            payload = {"commands": records, "samples": [], "validationUnits": {}, "mode": "CONTROL"}
+            args = SimpleNamespace(experiment=5, baseline=module.RELEASE234_BASELINE, candidate="f" * 40)
+            sources = ({"candidate": root}, {"candidate": {"files": [], "sha256": "same"}}, {"311": {}})
+            with (
+                patch.dict(os.environ, ALK_ACCOUNTING_GIT_EXECUTABLE=sys.executable),
+                patch.object(module, "command", side_effect=ValueError("controlled source drift")),
+                self.assertRaises(ValueError),
+            ):
+                module.measurement_child(
+                    args,
+                    payload,
+                    sources,
+                    (folder, str(root)),
+                    (1, "311", "candidate", "module", Path(sys.executable)),
+                    time.monotonic() + 3,
+                    3,
+                )
+            self.assertEqual(payload["validationUnits"]["moduleChildrenStarted"], 0)
+            self.assertEqual(len(records), 1)
+
+    def test_candidate_only_module_inventory_does_not_overlay_missing_baseline(self):
+        module = subject()
+        name = "tools/ci/limited_usage_transport.py"
+        self.assertIn(name, module.RELEASE234_OWNED)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "existing").write_bytes(b"same")
+            baseline = module.input_manifest(root, ["existing"])
+            self.assertEqual([item["path"] for item in baseline["files"]], ["existing"])
+            with self.assertRaises(ValueError):
+                module.input_manifest(root, ["existing", name])
+            path = root / name
+            path.parent.mkdir(parents=True)
+            path.write_bytes(HELPER.with_name("limited_usage_transport.py").read_bytes())
+            self.assertEqual(len(module.input_manifest(root, ["existing", name])["files"]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

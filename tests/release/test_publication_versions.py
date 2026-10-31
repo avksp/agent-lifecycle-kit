@@ -23,6 +23,32 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_windows315_accounting_git_backend_keeps_other_ci_routes_default(self) -> None:
+        manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
+            "windows315-accounting-git-backend"
+        ]
+        self.assertEqual(feature["timedPythonVersions"], ["3.15"])
+        self.assertEqual(feature["qualifiedOs"], "Windows")
+        self.assertEqual(feature["normalCiCellCount"], 15)
+        self.assertTrue(feature["otherCellsUseDefaultGit"])
+        self.assertTrue(feature["normalInstallationsUseDefaultGit"])
+        self.assertFalse(feature["wholeTreeResourceClaimed"])
+        self.assertFalse(feature["universalSpeedupPromised"])
+        self.assertFalse(feature["runtimeDependenciesAdded"])
+        self.assertEqual((feature["fullSamples"], feature["originalCasesPerSample"]), (6, 78))
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        start = workflow.index("      - name: Select verified accounting Git backend")
+        end = workflow.index("      - name: Require Node projection", start)
+        selection = workflow[start:end]
+        self.assertIn("if: matrix.os == 'windows-latest' && matrix.python == '3.15'", selection)
+        self.assertIn('stream.write("ALK_ACCOUNTING_GIT_EXECUTABLE="', selection)
+        self.assertEqual(workflow.count('stream.write("ALK_ACCOUNTING_GIT_EXECUTABLE="'), 1)
+        self.assertIn("python: [\"3.11\", \"3.12\", \"3.13\", \"3.14\", \"3.15\"]", workflow)
+        self.assertIn("Verify accounting Git backend and PATH after tests", workflow)
+        for field in ("pathSha256", "wrapperVersion", "backendVersion"):
+            self.assertIn(field, selection)
+
     def test_skill_instruction_publication_preserves_scope_and_honest_claims(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
         feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
