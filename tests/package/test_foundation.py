@@ -59,6 +59,11 @@ class FoundationTests(unittest.TestCase):
             for path in (ROOT / "benchmarks/reference-tasks").rglob("*")
             if path.is_file()
         }
+        expected.update({
+            "docs/guides/ai-sdlc-integration.md",
+            "docs/ru/guides/ai-sdlc-integration.md",
+            "tests/cli/fixtures/external-consumer-cases.json",
+        })
         self.assertEqual(declared, expected)
         package_data = pyproject["tool"]["setuptools"]["package-data"]["agent_lifecycle"]
         self.assertIn("data/profiles/**/*.json", package_data)

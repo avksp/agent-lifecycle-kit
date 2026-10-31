@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import ctypes
+import io
+import json
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
+from agent_lifecycle.changesets import git_io
 from agent_lifecycle.changesets.git_io import BoundedProcess, run_bounded_command
 from agent_lifecycle.contracts import LifecycleError
 
@@ -132,6 +137,129 @@ class BoundedGitIOTests(unittest.TestCase):
             with self.assertRaises(LifecycleError):
                 run_bounded_command(self.command("pass"), cwd=self.root, timeout_seconds=1, max_stdout_bytes=0)
             spawn.assert_not_called()
+
+
+class WindowsGroupDiagnosticTests(unittest.TestCase):
+    def test_create_failure_captures_numeric_error_before_any_other_native_call(self) -> None:
+        events = []
+        kernel = Mock()
+        kernel.CreateJobObjectW.side_effect = lambda *_args: events.append("CreateJobObjectW") or 0
+        process = Mock(_handle=123)
+
+        def last_error():
+            events.append("get_last_error")
+            return 8
+
+        with (
+            patch.object(git_io.os, "name", "nt"),
+            patch.object(ctypes, "WinDLL", return_value=kernel, create=True),
+            patch.object(ctypes, "get_last_error", side_effect=last_error, create=True),
+            self.assertRaises(LifecycleError) as raised,
+        ):
+            git_io._windows_cleanup(process)
+        self.assertEqual(events, ["CreateJobObjectW", "get_last_error"])
+        self.assertEqual(raised.exception.code, "bounded-process-group-unavailable")
+        self.assertEqual(raised.exception.message, "Cannot own the Windows child group")
+        self.assertEqual(raised.exception.details, {"nativeStage": "CreateJobObjectW", "winError": 8})
+        kernel.AssignProcessToJobObject.assert_not_called()
+        kernel.CloseHandle.assert_not_called()
+
+    def test_assign_failure_keeps_original_error_when_close_handle_clobbers_it(self) -> None:
+        events = []
+        state = {"last_error": 87}
+        kernel = Mock()
+        kernel.CreateJobObjectW.side_effect = lambda *_args: events.append("CreateJobObjectW") or 456
+        kernel.AssignProcessToJobObject.side_effect = lambda *_args: events.append("AssignProcessToJobObject") or 0
+
+        def last_error():
+            events.append("get_last_error")
+            return state["last_error"]
+
+        def close(_handle):
+            events.append("CloseHandle")
+            state["last_error"] = 9999
+            return 1
+
+        kernel.CloseHandle.side_effect = close
+        with (
+            patch.object(git_io.os, "name", "nt"),
+            patch.object(ctypes, "WinDLL", return_value=kernel, create=True),
+            patch.object(ctypes, "get_last_error", side_effect=last_error, create=True),
+            self.assertRaises(LifecycleError) as raised,
+        ):
+            git_io._windows_cleanup(Mock(_handle=123))
+        self.assertEqual(events, ["CreateJobObjectW", "AssignProcessToJobObject", "get_last_error", "CloseHandle"])
+        self.assertEqual(state["last_error"], 9999)
+        self.assertEqual(raised.exception.code, "bounded-process-group-unavailable")
+        self.assertEqual(raised.exception.message, "Cannot own the Windows child group")
+        self.assertEqual(raised.exception.details, {"nativeStage": "AssignProcessToJobObject", "winError": 87})
+        kernel.CloseHandle.assert_called_once_with(456)
+
+    def test_successful_ownership_and_cleanup_do_not_read_last_error(self) -> None:
+        kernel = Mock()
+        kernel.CreateJobObjectW.return_value = 456
+        kernel.AssignProcessToJobObject.return_value = 1
+        kernel.TerminateJobObject.return_value = 1
+        kernel.CloseHandle.return_value = 1
+        with (
+            patch.object(git_io.os, "name", "nt"),
+            patch.object(ctypes, "WinDLL", return_value=kernel, create=True),
+            patch.object(ctypes, "get_last_error", create=True) as last_error,
+        ):
+            cleanup = git_io._windows_cleanup(Mock(_handle=123))
+            self.assertIsNotNone(cleanup)
+            cleanup()
+        last_error.assert_not_called()
+        kernel.AssignProcessToJobObject.assert_called_once_with(456, 123)
+        kernel.TerminateJobObject.assert_called_once_with(456, 1)
+        kernel.CloseHandle.assert_called_once_with(456)
+
+    def test_existing_cli_envelope_and_continuation_blocker_keep_bounded_details(self) -> None:
+        from agent_lifecycle.cli.main import main
+        from agent_lifecycle.workflow.continuation import continue_workflow
+
+        details = {"nativeStage": "AssignProcessToJobObject", "winError": 5}
+        error = LifecycleError("bounded-process-group-unavailable", "Cannot own the Windows child group", details)
+        stdout = io.StringIO()
+        with redirect_stdout(stdout), patch("agent_lifecycle.cli.main.dispatch", side_effect=error):
+            self.assertEqual(main(["version"]), 2)
+        envelope = json.loads(stdout.getvalue())
+        self.assertEqual(envelope["schemaVersion"], "agent-lifecycle-error.v1")
+        self.assertEqual(envelope["code"], error.code)
+        self.assertEqual(envelope["details"], details)
+        with patch("agent_lifecycle.workflow.continuation.normalize_continuation_inputs", side_effect=error):
+            receipt = continue_workflow(
+                state_path=Path("missing-state.json"), manifest_path=Path("missing-manifest.json"),
+                operation_id="unit-only-diagnostic", expected_revision=0, source_revision="unit-only", reason="unit-only",
+            )
+        self.assertEqual(receipt["schemaVersion"], "agent-workflow-continuation-receipt.v1")
+        self.assertEqual(receipt["status"], "BLOCKED")
+        self.assertEqual(receipt["blockers"][0]["context"], details)
+        self.assertEqual(set(envelope["details"]), {"nativeStage", "winError"})
+
+    def test_diagnostic_workflow_has_one_bounded_source_bound_job_and_fixed_modules(self) -> None:
+        import textwrap
+
+        workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/ci-timing-control.yml").read_text()
+        job = workflow.split("  release235-diagnostic-windows:", 1)[1].split("  release234-windows:", 1)[0]
+        self.assertIn("if: inputs.mode == 'release-2-35-diagnostic'", job)
+        self.assertIn("timeout-minutes: 20", job)
+        self.assertIn("python-version: \"3.15\"", job)
+        self.assertIn("inputs.mode != 'release-2-34' && inputs.mode != 'release-2-35-diagnostic'", workflow)
+        self.assertEqual(workflow.count("$code = @'"), 2)
+        self.assertIn("re.fullmatch(r\"[0-9a-f]{40}\", candidate)", job)
+        self.assertIn("head == candidate == value[\"githubSha\"]", job)
+        self.assertIn("2026-10-31T23:36:59Z", job)
+        self.assertIn("ALK_EXTERNAL_CONSUMER_RECEIPTS", job)
+        self.assertIn("\"PYTHONPATH\" not in receipt[\"env\"]", job)
+        self.assertIn("\"PYTHONHOME\" not in receipt[\"env\"]", job)
+        self.assertIn("if: always()", job)
+        expected = ["tests.cli.test_external_consumer_contract", "tests.cli.test_plan_delta_commands", "tests.changesets.test_git_io"]
+        self.assertIn("modules = " + json.dumps(expected), job)
+        for variable in ("diagnosticBinding", "diagnosticRun"):
+            source = textwrap.dedent(job.split("$" + variable + " = @'", 1)[1].split("'@", 1)[0])
+            compile(source, variable, "exec")
+        self.assertGreater(source.rfind("remaining ="), source.index("json.loads(subprocess.check_output"))
 
 
 if __name__ == "__main__":

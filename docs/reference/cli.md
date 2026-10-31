@@ -1,5 +1,46 @@
 # CLI reference
 
+## Release 2.35: external AI SDLC integration
+
+External clients use the existing public CLI without a task-manager dependency.
+Negotiate `agent-lifecycle version` and its `agent-lifecycle-version.v1` schema
+against an explicit supported-version list before mutation; unknown contracts
+refuse. Bind each request to the frozen manifest/lock, run/task, source revision,
+operation identity, expected state revision and projected action digest.
+`workflow continue` projects read-only; apply only that exact projection with
+all required inputs. Native guards, independent review, attested usage and
+critical model routing remain required. Missing input is not success. Local UI
+flags and fixture attestations cannot replace native authority. After a lost
+reply, inspect native state and reconcile the operation before deciding whether
+to retry; arbitrary host commands have no exactly-once guarantee. Preserve prior
+attempts, costs, original clocks and null/UNAVAILABLE provider telemetry.
+
+The eight bounded consumer cases cover read-only projection, one guarded action,
+stale revision/action refusal without writes, missing required input, refusal of
+unattested usage, refusal of an unsuitable critical model route, reconciliation
+after a lost reply without a second mutation, and consumer refusal of unknown
+version/schema before mutation. Disposable fixture bootstrap is `UNIT_ONLY`;
+installed CLI subprocesses use no source `PYTHONPATH`. These cases start no model
+calls and establish neither live host qualification nor every CLI operation.
+
+Wheel and sdist include the full EN/RU integration guides and the eight-case JSON.
+Installation places them under `share/agent-lifecycle-kit/integration` below
+`sysconfig.get_path("data")`; sdist retains their `docs/` and `tests/` source paths.
+The portable plugin retains its 19-document layout
+and ships this paired CLI contract. Full guides and their linked repository
+references are also available in the intended immutable release source:
+[English guide](https://github.com/avksp/agent-lifecycle-kit/blob/v2.35.0/docs/guides/ai-sdlc-integration.md),
+[Russian guide](https://github.com/avksp/agent-lifecycle-kit/blob/v2.35.0/docs/ru/guides/ai-sdlc-integration.md),
+and [case inventory](https://github.com/avksp/agent-lifecycle-kit/blob/v2.35.0/tests/cli/fixtures/external-consumer-cases.json).
+These tag links become available after publication; they are not evidence that
+publication has occurred. The Python package supplies the CLI; the plugin supplies
+instructions and documents. No new runtime API, server or host capability is added.
+
+The Windows baseline repairs retain bounded ownership checks and canonical
+coordinator replacement. Full candidate platform CI remains required before task
+acceptance. Final independent audit and native completion precede protected merge,
+main CI, tag and public artifact verification; this documentation grants no gate.
+
 ## Release 2.34: Windows315 accounting Git backend
 
 Normal repository CI selects the Git executable from its own verified exec-path
@@ -238,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.34.0
+python -m pip install agent-lifecycle-kit==2.35.0
 ```
 
 ## Task evidence identity

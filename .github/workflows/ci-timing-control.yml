@@ -7,7 +7,7 @@ on:
         description: Timing route (fixture profile is feasibility only)
         type: choice
         default: suite
-        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility, release-2-34]
+        options: [suite, fixture-comparison, fixture-profile, fixture-profile-feasibility, release-2-34, release-2-35-diagnostic]
       baseline_sha:
         description: Exact baseline (2.27 legacy; published 2.33 for release-2-34)
         type: string
@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   paired-windows311:
-    if: inputs.mode != 'release-2-34'
+    if: inputs.mode != 'release-2-34' && inputs.mode != 'release-2-35-diagnostic'
     name: windows-paired-control / py3.11
     runs-on: windows-latest
     timeout-minutes: 330
@@ -150,6 +150,189 @@ jobs:
             work/ci/limited-usage-feasibility.json
             work/ci/limited-usage-feasibility/
             work/ci/control-environment.json
+          if-no-files-found: error
+          retention-days: 14
+
+  release235-diagnostic-windows:
+    if: inputs.mode == 'release-2-35-diagnostic'
+    name: windows-native-group-diagnostic / py3.15 / UNIT_ONLY
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.candidate_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.15"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.1"
+      - name: Bind one diagnostic source and current attempt deadline
+        shell: pwsh
+        env:
+          DIAGNOSTIC_CANDIDATE: ${{ inputs.candidate_sha }}
+          DIAGNOSTIC_DEADLINE: ${{ inputs.deadline_utc }}
+        run: |
+          $diagnosticBinding = @'
+          import hashlib, json, os, platform, re, subprocess, sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+          output = Path("work/ci/release235-diagnostic")
+          output.mkdir(parents=True, exist_ok=True)
+          candidate = os.environ["DIAGNOSTIC_CANDIDATE"]
+          deadline = os.environ["DIAGNOSTIC_DEADLINE"]
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], timeout=15).decode().strip()
+          paths = ("src/agent_lifecycle/changesets/git_io.py", "tests/changesets/test_git_io.py",
+                   ".github/workflows/ci-timing-control.yml", "tests/cli/test_external_consumer_contract.py")
+          value = {"schemaVersion": "r235-windows-diagnostic-source.v1", "authorityClaimed": False,
+                   "evidenceBoundary": "UNIT_ONLY", "candidate": candidate, "head": head,
+                   "githubSha": os.environ["GITHUB_SHA"], "ref": os.environ["GITHUB_REF_NAME"],
+                   "deadlineUtc": deadline, "observedAt": datetime.now(timezone.utc).isoformat(),
+                   "python": sys.version, "platform": platform.platform(),
+                   "sources": {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths},
+                   "providerTokens": None, "providerUSD": None, "releaseQualificationClaimed": False}
+          (output / "source.json").write_text(json.dumps(value, sort_keys=True, indent=2), encoding="utf-8")
+          (output / "command-results.json").write_text(json.dumps({"status": "NOT_STARTED", "sourceHead": head}), encoding="utf-8")
+          (output / "native-errors.json").write_text("[]", encoding="utf-8")
+          for name in ("stdout.log", "stderr.log", "consumer-receipts.jsonl"):
+              (output / name).touch()
+          assert re.fullmatch(r"[0-9a-f]{40}", candidate), "exact 40-hex candidate required"
+          assert head == candidate == value["githubSha"], "diagnostic source mismatch"
+          assert value["ref"] == "diag/release-2.35-win-group-a1", "diagnostic branch required"
+          assert deadline == "2026-10-31T23:36:59Z", "current native attempt deadline required"
+          assert datetime.now(timezone.utc) < datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+          print(json.dumps({"status": "BOUND", "head": head, "deadlineUtc": deadline}))
+          '@
+          python -c $diagnosticBinding
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Restore canonical disposable CI fixture
+        run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
+      - name: Install frozen Python 3.15 quality environment and source project
+        env:
+          UV_PROJECT_ENVIRONMENT: work/ci/release235-diag-venv
+        run: uv sync --frozen --group quality --python 3.15
+      - name: Capture the three fixed diagnostic modules and public consumer replies
+        shell: pwsh
+        env:
+          DIAGNOSTIC_CANDIDATE: ${{ inputs.candidate_sha }}
+          DIAGNOSTIC_DEADLINE: ${{ inputs.deadline_utc }}
+        run: |
+          $diagnosticRun = @'
+          import hashlib, json, os, re, subprocess, sys, time
+          from datetime import datetime, timezone
+          from pathlib import Path
+          root = Path.cwd()
+          output = root / "work/ci/release235-diagnostic"
+          source = json.loads((output / "source.json").read_text(encoding="utf-8"))
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], timeout=15).decode().strip()
+          assert head == source["head"] == os.environ["DIAGNOSTIC_CANDIDATE"] == os.environ["GITHUB_SHA"]
+          assert os.environ["DIAGNOSTIC_DEADLINE"] == source["deadlineUtc"] == "2026-10-31T23:36:59Z"
+          deadline = datetime.strptime(source["deadlineUtc"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+          remaining = (deadline - datetime.now(timezone.utc)).total_seconds()
+          assert remaining > 0, "diagnostic task deadline expired"
+          python = root / "work/ci/release235-diag-venv/Scripts/python.exe"
+          executable = python.with_name("agent-lifecycle.exe")
+          assert python.is_file() and executable.is_file()
+          probe = "import sys,json,importlib.metadata as m;print(json.dumps({'executable':sys.executable,'python':sys.version,'tools':{n:m.version(n) for n in ('ruff','mypy','coverage','jsonschema')}}))"
+          observed = json.loads(subprocess.check_output([str(python), "-c", probe], timeout=30))
+          assert observed["tools"] == {"ruff": "0.17.3", "mypy": "2.4.0", "coverage": "7.17.0", "jsonschema": "4.26.0"}
+          observed["pythonSha256"] = hashlib.sha256(python.read_bytes()).hexdigest()
+          observed["cliSha256"] = hashlib.sha256(executable.read_bytes()).hexdigest()
+          (output / "environment.json").write_text(json.dumps(observed, sort_keys=True, indent=2), encoding="utf-8")
+          modules = ["tests.cli.test_external_consumer_contract", "tests.cli.test_plan_delta_commands", "tests.changesets.test_git_io"]
+          command = [str(python), "-m", "unittest", *modules, "-v"]
+          env = dict(os.environ)
+          env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(root / "src"), PYTHONNOUSERSITE="1",
+                     ALK_EXTERNAL_CONSUMER_EXECUTABLE=str(executable),
+                     ALK_EXTERNAL_CONSUMER_RECEIPTS=str(output / "consumer-receipts.jsonl"))
+          started = datetime.now(timezone.utc).isoformat()
+          clock = time.monotonic()
+          timed_out = False
+          remaining = (deadline - datetime.now(timezone.utc)).total_seconds()
+          assert remaining > 0, "diagnostic task deadline expired before test launch"
+          with (output / "stdout.log").open("wb") as stdout, (output / "stderr.log").open("wb") as stderr:
+              try:
+                  result = subprocess.run(command, cwd=root, env=env, stdin=subprocess.DEVNULL,
+                                          stdout=stdout, stderr=stderr, timeout=min(900, remaining), check=False)
+                  exit_code = result.returncode
+              except subprocess.TimeoutExpired:
+                  timed_out, exit_code = True, 124
+          retained = {}
+          for name in ("stdout.log", "stderr.log", "consumer-receipts.jsonl"):
+              path = output / name
+              size = path.stat().st_size
+              digest = hashlib.file_digest(path.open("rb"), "sha256").hexdigest()
+              if size > 8 * 1024 * 1024:
+                  with path.open("rb") as stream:
+                      prefix = stream.read(8 * 1024 * 1024)
+                  path.rename(output / (name + ".unuploaded-original"))
+                  path.write_bytes(prefix)
+              retained[name] = {"originalBytes": size, "originalSha256": digest,
+                                "retainedBytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                                "truncated": size > 8 * 1024 * 1024}
+          native = []
+          consumer_env_clean = True
+          def collect(value, origin, depth=0):
+              if depth > 16:
+                  return
+              if isinstance(value, dict):
+                  if "nativeStage" in value:
+                      native.append({"origin": origin, "details": value})
+                  for child in value.values():
+                      collect(child, origin, depth + 1)
+              elif isinstance(value, list):
+                  for child in value[:256]:
+                      collect(child, origin, depth + 1)
+          for line in (output / "consumer-receipts.jsonl").read_text(encoding="utf-8", errors="replace").splitlines()[:256]:
+              try:
+                  receipt = json.loads(line)
+                  consumer_env_clean = consumer_env_clean and "PYTHONPATH" not in receipt["env"] and "PYTHONHOME" not in receipt["env"]
+                  collect(json.loads(receipt["stdout"]), "consumer-public-stdout")
+              except (ValueError, KeyError):
+                  continue
+          decoder = json.JSONDecoder()
+          for name in ("stdout.log", "stderr.log"):
+              text = (output / name).read_text(encoding="utf-8", errors="replace")
+              for match in list(re.finditer(r"\{", text))[:256]:
+                  try:
+                      value, end = decoder.raw_decode(text, match.start())
+                      collect(value, name)
+                  except ValueError:
+                      continue
+          (output / "native-errors.json").write_text(json.dumps(native, sort_keys=True, indent=2), encoding="utf-8")
+          source_after = {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in source["sources"]}
+          summary = {"schemaVersion": "r235-windows-diagnostic-command.v1", "authorityClaimed": False,
+                     "evidenceBoundary": "UNIT_ONLY", "sourceHead": head, "argv": command,
+                     "startedAt": started, "finishedAt": datetime.now(timezone.utc).isoformat(),
+                     "elapsedSeconds": time.monotonic() - clock, "exitCode": exit_code, "timedOut": timed_out,
+                     "retainedFiles": retained, "sourceUnchanged": source_after == source["sources"],
+                     "nativeErrorCount": len(native), "consumerChildEnvironmentClean": consumer_env_clean,
+                     "providerTokens": None, "providerUSD": None,
+                     "releaseQualificationClaimed": False}
+          (output / "command-results.json").write_text(json.dumps(summary, sort_keys=True, indent=2), encoding="utf-8")
+          print(json.dumps({"sourceHead": head, "exitCode": exit_code, "nativeErrorCount": len(native), "timedOut": timed_out}))
+          sys.exit(exit_code if summary["sourceUnchanged"] and consumer_env_clean else 1)
+          '@
+          python -c $diagnosticRun
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain bounded diagnostic evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release235-windows-native-diagnostic-${{ github.run_id }}
+          path: |
+            work/ci/release235-diagnostic/source.json
+            work/ci/release235-diagnostic/environment.json
+            work/ci/release235-diagnostic/stdout.log
+            work/ci/release235-diagnostic/stderr.log
+            work/ci/release235-diagnostic/consumer-receipts.jsonl
+            work/ci/release235-diagnostic/native-errors.json
+            work/ci/release235-diagnostic/command-results.json
           if-no-files-found: error
           retention-days: 14
 

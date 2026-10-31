@@ -5,12 +5,69 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from agent_lifecycle.changesets import changed_files  # noqa: E402
 from agent_lifecycle.contracts import LifecycleError  # noqa: E402
+
+
+class GitRevisionOwnershipTests(unittest.TestCase):
+    def test_readonly_revision_retries_one_native_ownership_refusal(self) -> None:
+        from agent_lifecycle.changesets import git, git_io
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _git(root, "init")
+            _git(root, "config", "user.email", "test@example.com")
+            _git(root, "config", "user.name", "Test User")
+            _git(root, "commit", "--allow-empty", "-m", "baseline")
+            expected = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root).decode().strip()
+            refusal = LifecycleError("bounded-process-group-unavailable", "Cannot own the Windows child group")
+            original_cleanup = git_io._windows_cleanup
+            calls = 0
+            def transient(process):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    raise refusal
+                return original_cleanup(process)
+            with (
+                patch.object(git_io, "_windows_cleanup", side_effect=transient) as ownership,
+                patch.object(git, "run_bounded_command", wraps=git.run_bounded_command) as bounded,
+            ):
+                self.assertEqual(git.resolve_revision(root, "HEAD"), expected)
+            self.assertEqual(ownership.call_count, 2)
+            self.assertEqual(bounded.call_count, 2)
+            for call in bounded.call_args_list:
+                self.assertEqual(call.args[0], ["git", "rev-parse", "--verify", "--end-of-options", "HEAD^{commit}"])
+                self.assertEqual(call.kwargs, {"cwd": root, "timeout_seconds": git.GIT_TIMEOUT_SECONDS, "max_stdout_bytes": 128})
+
+    def test_revision_retry_exhaustion_and_other_failures_refuse(self) -> None:
+        from agent_lifecycle.changesets import git
+        cases = (
+            (LifecycleError("bounded-process-group-unavailable", "Cannot own the Windows child group"), 2),
+            (LifecycleError("bounded-process-group-unavailable", "Windows group API is unavailable"), 1),
+            (LifecycleError("bounded-process-timeout", "timeout"), 1),
+            (LifecycleError("bounded-process-output-limit", "overflow"), 1),
+            (LifecycleError("bounded-process-cleanup-failed", "cleanup"), 1),
+            (OSError("unavailable"), 1),
+        )
+        for failure, count in cases:
+            with self.subTest(failure=str(failure)), patch.object(git, "run_bounded_command", side_effect=failure) as bounded:
+                with self.assertRaises(LifecycleError) as caught:
+                    git.resolve_revision(Path("root"), "HEAD")
+                self.assertEqual(caught.exception.code, "invalid-git-revision")
+                self.assertIs(caught.exception.__cause__, failure)
+                self.assertEqual(bounded.call_count, count)
+        ownership = LifecycleError("bounded-process-group-unavailable", "Cannot own the Windows child group")
+        timeout = LifecycleError("bounded-process-timeout", "timeout on retry")
+        with patch.object(git, "run_bounded_command", side_effect=[ownership, timeout]) as bounded:
+            with self.assertRaises(LifecycleError) as caught:
+                git.resolve_revision(Path("root"), "HEAD")
+            self.assertIs(caught.exception.__cause__, timeout)
+            self.assertEqual(bounded.call_count, 2)
 
 
 class GitChangedFilesTests(unittest.TestCase):
