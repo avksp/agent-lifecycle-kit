@@ -1,8 +1,8 @@
 # Agent Lifecycle Kit documentation
 
-Release 2.36 closes bounded secret and file-read import defects. Existing host authority limits remain documented.
+Imports refuse unsafe file reads and incomplete critical requirements. Existing host authority limits remain documented.
 
-Release 2.35 documents the [external AI SDLC CLI contract](guides/ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include full EN/RU guides and case JSON; the plugin ships the paired CLI contract. Fixtures do not qualify a live host.
+ALK documents the [external AI SDLC CLI contract](guides/ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include full EN/RU guides and case JSON; the plugin ships the paired CLI contract. Fixtures do not qualify a live host.
 
 Release 2.34 reduces the measured median time of 78 legacy accounting tests by 16.52% on one Windows/Python 3.15 worker. Normal CI selects the verified Git backend only for that cell; the other 14 cells keep their default Git route. This result is not a general speed guarantee. See [the measured scope](reference/cli.md#release-234-windows315-accounting-git-backend).
 
@@ -71,7 +71,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.36.0` from
+  `python -m pip install agent-lifecycle-kit==2.37.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

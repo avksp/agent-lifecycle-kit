@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.37.0 - 2026-11-01
+
+- Refuse imports that exceed existing requirement or validation limits before losing critical text.
+- Bound reference CLI output during execution, direct-child cleanup and state/event reconciliation; retain UNKNOWN without blind redispatch.
+- Synchronize six fixture-only usage normalizers in EN/RU manuals and add the missing Russian Review Mesh and issue-to-spec guides.
+
 ## 2.36.0 - 2026-11-01
 
 - Redact fine-grained GitHub tokens and complete Cookie/Set-Cookie values.
