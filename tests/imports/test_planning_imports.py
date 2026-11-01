@@ -30,6 +30,7 @@ class PlanningImportTests(unittest.TestCase):
                 source.write_text('{"steps": ["small"]}', encoding="utf-8")
                 replacement = json.dumps({"steps": ["replacement"], "padding": "X" * 65536}).encode()
                 read_lengths = []
+                denied_writes = []
                 original_read = Path.read_bytes
 
                 def old_read(
@@ -43,12 +44,18 @@ class PlanningImportTests(unittest.TestCase):
                     return data
 
                 @contextmanager
-                def observed_open(path, source=source, replacement=replacement, read_lengths=read_lengths):
+                def observed_open(
+                    path, source=source, replacement=replacement, read_lengths=read_lengths, denied_writes=denied_writes
+                ):
                     with open_authority_read(path) as stream:
 
                         class Reader:
                             def read(self, size, source=source, replacement=replacement, read_lengths=read_lengths):
-                                source.write_bytes(replacement)
+                                try:
+                                    source.write_bytes(replacement)
+                                except PermissionError:
+                                    denied_writes.append(True)
+                                    raise
                                 data = stream.read(size)
                                 read_lengths.append(len(data))
                                 return data
@@ -67,12 +74,18 @@ class PlanningImportTests(unittest.TestCase):
                             else import_external_dialect(source, family="workflow", max_input_bytes=64)
                         )
                     except LifecycleError as exc:
-                        self.assertEqual(exc.code, "authority-input-changed")
+                        self.assertEqual(
+                            exc.code, "authority-input-unavailable" if denied_writes else "authority-input-changed"
+                        )
                     else:
+                        self.assertFalse(denied_writes)
                         self.assertEqual(result["status"], "FAIL")
                         self.assertIsNone(result["candidatePlan"])
-                self.assertTrue(read_lengths)
-                self.assertLessEqual(max(read_lengths), 65)
+                if denied_writes:
+                    self.assertFalse(read_lengths)
+                else:
+                    self.assertTrue(read_lengths)
+                    self.assertLessEqual(max(read_lengths), 65)
 
     def test_source_path_policy_and_exact_byte_caps(self) -> None:
         import os
