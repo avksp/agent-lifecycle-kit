@@ -79,14 +79,17 @@ opaque-id policy.
 
 ## Reference adapters
 
-| Adapter | Artifact | Normalizer status |
-| --- | --- | --- |
-| Gemini CLI | `stream-json` | `FIXTURE_ONLY` |
-| Kimi Code | `stream-json` | `FIXTURE_ONLY` |
-| Qwen Code | `stream-json` | `FIXTURE_ONLY` |
-| Other bundled adapters | Not declared by this contract | `UNSUPPORTED` |
+| Adapter ID | Artifact | Normalizer status | Accepted for S1/S2 |
+| --- | --- | --- | --- |
+| `claude` | `stream-jsonl` | `FIXTURE_ONLY` | No |
+| `codex` | `stream-jsonl` | `FIXTURE_ONLY` | No |
+| `gemini-cli` | `stream-jsonl` | `FIXTURE_ONLY` | No |
+| `kimi-code` | `stream-jsonl` | `FIXTURE_ONLY` | No |
+| `opencode` | `stream-jsonl` | `FIXTURE_ONLY` | No |
+| `qwen-code` | `stream-jsonl` | `FIXTURE_ONLY` | No |
+| Other bundled adapters | Not declared by this contract | `UNSUPPORTED` | No |
 
-All three reference parsers are loaded from
+All six reference parsers are loaded from
 `adapters/<adapter>/usage_normalizer.py`. The adapter runner and live harness
 use that same file through a contained loader. The loader rejects traversal,
 symlinks and descriptor/path mismatches.

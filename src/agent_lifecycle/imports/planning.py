@@ -23,6 +23,12 @@ DEFAULT_TARGET_TOKENS = 4096
 MAX_REQUIREMENTS = 8
 MAX_REQUIREMENT_CHARS = 180
 
+_IMPORT_OVERFLOW_CAPS = {
+    f"{prefix}-{kind}-cap-exceeded": cap
+    for prefix in ("planning-import", "external-dialect")
+    for kind, cap in (("item", MAX_REQUIREMENTS), ("text", MAX_REQUIREMENT_CHARS))
+}
+
 LOCAL_PATH_PATTERNS = (
     re.compile(r"/" + r"Users/[^\s`'\"<>]+"),
     re.compile(r"/" + r"Volumes/[^\s`'\"<>]+"),
@@ -122,6 +128,7 @@ def _build_import_result(
             source_label=source_label,
             native_dialect_profile_digest=native_dialect_profile_digest,
             dialect_profile=dialect_profile,
+            blockers=blockers,
         )
         if text and not blockers
         else None
@@ -192,22 +199,21 @@ def validate_import_result(result: dict[str, Any]) -> dict[str, Any]:
     """Verify that an import result cannot bypass draft, audit or freeze gates."""
 
     blockers: list[dict[str, Any]] = []
-    if result.get("schemaVersion") != PLANNING_IMPORT_RESULT_SCHEMA:
-        blockers.append({"code": "planning-import-schema-invalid"})
-    if result.get("enabledByDefault") is not False:
-        blockers.append({"code": "planning-import-default-enabled"})
-    if result.get("activationMode") != "explicit-command":
-        blockers.append({"code": "planning-import-activation-mode"})
-    if result.get("sourceTrusted") is not False:
-        blockers.append({"code": "planning-import-source-trust"})
-    if result.get("requiresReview") is not True:
-        blockers.append({"code": "planning-import-review-not-required"})
-    if result.get("auditRequired") is not True:
-        blockers.append({"code": "planning-import-audit-not-required"})
-    if result.get("freezeBlocked") is not True:
-        blockers.append({"code": "planning-import-freeze-not-blocked"})
+    gates = (
+        (result.get("schemaVersion") != PLANNING_IMPORT_RESULT_SCHEMA, "planning-import-schema-invalid"),
+        (result.get("enabledByDefault") is not False, "planning-import-default-enabled"),
+        (result.get("activationMode") != "explicit-command", "planning-import-activation-mode"),
+        (result.get("sourceTrusted") is not False, "planning-import-source-trust"),
+        (result.get("requiresReview") is not True, "planning-import-review-not-required"),
+        (result.get("auditRequired") is not True, "planning-import-audit-not-required"),
+        (result.get("freezeBlocked") is not True, "planning-import-freeze-not-blocked"),
+    )
+    for failed, code in gates:
+        if failed:
+            blockers.append({"code": code})
     if result.get("status") != "PASS":
         blockers.append({"code": "planning-import-result-not-pass"})
+        blockers.extend(_import_overflow_blockers(result.get("blockers")))
     candidate = result.get("candidatePlan")
     candidate_digest = None
     _validate_markdown_collection(result.get("markdownCollection"), blockers)
@@ -313,12 +319,17 @@ def _candidate_plan(
     source_label: str,
     native_dialect_profile_digest: str | None,
     dialect_profile: dict[str, Any] | None,
+    blockers: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
     parsed = _parse_structured_input(data)
     title = _extract_title(text, parsed)
-    requirements = _extract_requirements(text, parsed)
-    if not requirements:
+    descriptions = _extract_requirements(text, parsed)
+    blockers.extend(import_content_blockers(descriptions, prefix="planning-import", field="requirements"))
+    if not descriptions or blockers:
         return None
+    requirements = [
+        {"id": f"R-IMPORT-{index + 1}", "description": description} for index, description in enumerate(descriptions)
+    ]
     source_digest = sha256_hex(data)
     criteria = [
         {
@@ -413,7 +424,49 @@ def _extract_title(text: str, parsed: dict[str, Any] | None) -> str:
     return "Imported draft plan"
 
 
-def _extract_requirements(text: str, parsed: dict[str, Any] | None) -> list[dict[str, str]]:
+def _import_overflow_blockers(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [safe for item in value[:2] if (safe := _safe_import_overflow(item)) is not None]
+
+
+def _safe_import_overflow(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    code, field, cap = value.get("code"), value.get("field"), value.get("cap")
+    if not isinstance(code, str) or not isinstance(field, str) or type(cap) is not int:
+        return None
+    if code not in _IMPORT_OVERFLOW_CAPS or field not in {"requirements", "validationHints"}:
+        return None
+    if cap != _IMPORT_OVERFLOW_CAPS[code]:
+        return None
+    safe: dict[str, Any] = {"code": code, "field": field}
+    for key in ("count", "cap", "chars", "index"):
+        number = value.get(key)
+        if type(number) is int and 0 <= number <= 2**63 - 1:
+            safe[key] = number
+    return safe
+
+
+def import_content_blockers(values: list[str], *, prefix: str, field: str) -> list[dict[str, Any]]:
+    """Refuse discarded content with bounded metadata instead of a partial draft."""
+    if len(values) > MAX_REQUIREMENTS:
+        return [{"code": f"{prefix}-item-cap-exceeded", "field": field, "count": len(values), "cap": MAX_REQUIREMENTS}]
+    for index, value in enumerate(values):
+        if len(value) > MAX_REQUIREMENT_CHARS:
+            return [
+                {
+                    "code": f"{prefix}-text-cap-exceeded",
+                    "field": field,
+                    "index": index + 1,
+                    "chars": len(value),
+                    "cap": MAX_REQUIREMENT_CHARS,
+                }
+            ]
+    return []
+
+
+def _extract_requirements(text: str, parsed: dict[str, Any] | None) -> list[str]:
     extracted: list[str] = []
     if parsed is not None:
         raw_requirements = parsed.get("requirements")
@@ -440,10 +493,7 @@ def _extract_requirements(text: str, parsed: dict[str, Any] | None) -> list[dict
         )
         if fallback:
             extracted.append(fallback)
-    cleaned = [_clean_line(item, limit=MAX_REQUIREMENT_CHARS) for item in extracted if item.strip()]
-    return [
-        {"id": f"R-IMPORT-{index + 1}", "description": item} for index, item in enumerate(cleaned[:MAX_REQUIREMENTS])
-    ]
+    return [_clean_line(item, limit=None) for item in extracted if item.strip()]
 
 
 def _decode_text(data: bytes, blockers: list[dict[str, Any]]) -> str:
@@ -536,11 +586,11 @@ def _safe_identifier(value: str) -> str:
     return re.sub(r"[^a-z0-9_.-]+", "-", lowered).strip("-")[:80]
 
 
-def _clean_line(value: str, *, limit: int) -> str:
+def _clean_line(value: str, *, limit: int | None) -> str:
     cleaned = re.sub(r"\s+", " ", value).strip()
     for pattern in LOCAL_PATH_PATTERNS:
         cleaned = pattern.sub("[redacted-path]", cleaned)
-    return cleaned[:limit]
+    return cleaned if limit is None else cleaned[:limit]
 
 
 def _check_positive_cap(value: int, field: str) -> None:

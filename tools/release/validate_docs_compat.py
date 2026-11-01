@@ -30,6 +30,8 @@ MANUAL_PAIRS = (
     ("docs/reference/lifecycle-cost.md", ("docs/ru/reference/lifecycle-cost.md",)),
     ("docs/reference/review-efficiency.md", ("docs/ru/reference/review-efficiency.md",)),
     ("docs/reference/validation-ladder.md", ("docs/ru/reference/validation-ladder.md",)),
+    ("docs/guides/review-mesh-workflow.md", ("docs/ru/guides/review-mesh-workflow.md",)),
+    ("docs/guides/issue-to-spec.md", ("docs/ru/guides/issue-to-spec.md",)),
 )
 
 # Finite known contradictions, including the exact QR09 single-document regression.

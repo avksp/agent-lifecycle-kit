@@ -30,6 +30,15 @@ Each profile uses `agent-import-dialect-profile.v1` and records:
 
 ## Import behavior
 
+Recognized requirements and validation hints are limited to eight items and
+180 characters per complete normalized/rendered description, including its
+prefix. An agent role plus eight policies is nine requirements. Overflow returns
+`FAIL`, `candidatePlan: null` and bounded field/count/limit metadata; it does not
+silently keep the first eight items or shorten a condition. Split or edit the
+input explicitly, then import it again. Display-only titles can still be shortened.
+Only supported mapped fields are covered; this is not arbitrary lossless translation.
+
+
 Dialect imports call the same untrusted planning import path as generic imports.
 The resulting `agent-planning-import-result.v1` includes
 `nativeDialectProfileDigest`, and the candidate plan records the same digest in

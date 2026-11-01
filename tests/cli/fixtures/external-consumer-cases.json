@@ -4,7 +4,8 @@
   "testedVersions": [
     "2.34.0",
     "2.35.0",
-    "2.36.0"
+    "2.36.0",
+    "2.37.0"
   ],
   "versionSchema": "agent-lifecycle-version.v1",
   "continuationSchema": "agent-workflow-continuation-receipt.v1",

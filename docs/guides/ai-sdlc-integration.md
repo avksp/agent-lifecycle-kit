@@ -7,7 +7,7 @@ required. ALK owns workflow authority. The client owns process execution,
 presentation and reconciliation. The host owns model execution and genuine usage
 attestation; an independent reviewer owns review conclusions.
 
-This guide defines a provider-neutral CLI consumer contract for release 2.35.0.
+This guide defines a provider-neutral CLI consumer contract.
 It adds no server, daemon, provider broker, runtime API or second state machine.
 The supported surface below is deliberately bounded. Other operations retain
 their [CLI contracts](../reference/cli.md).
@@ -16,7 +16,7 @@ their [CLI contracts](../reference/cli.md).
 
 The client MUST run `agent-lifecycle version` and require
 `agent-lifecycle-version.v1`. It MUST compare `version` with its explicitly tested
-version mapping. The 2.35.0 contract does not qualify an earlier or later release
+version mapping. A tested contract does not qualify another release
 merely because its version looks similar. The client MUST refuse mutations for
 an unknown version, unknown `schemaVersion`, unsupported action or incompatible
 required field. Read-only diagnostics can remain available, clearly labelled as
@@ -145,6 +145,34 @@ UNKNOWN and stop for the existing recovery/operator route. Do not repair history
 by writing a success event or replaying a host command. Native operation guards
 do not guarantee exactly-once execution of arbitrary host/model/external side
 effects; those require their own host-owned reconciliation evidence.
+
+## Reference caller resource boundaries
+
+The stdlib-only reference in `tests/cli/test_external_consumer_contract.py`
+drains two unbuffered pipes concurrently. Each stream reads at most 1 MiB plus
+one overflow-detection byte; it creates no output capture files. The runtime
+deadline is 20 seconds after process creation returns. A separate cleanup window
+is at most two seconds, covering direct-child stop/reaping and reader joins.
+OS process creation itself is not interruptible by this deadline.
+
+Timeout, overflow, invalid UTF-8/JSON, unknown output or unconfirmed cleanup
+records `UNKNOWN`, clears qualification and blocks all further calls. A unique
+bounded state/event match can resolve effect uncertainty; renegotiation is still
+required before mutation. It cannot clear unconfirmed resource cleanup: dispose
+that caller. Never retry a mutation to discover whether it succeeded.
+
+Executable hashing streams at most 32 MiB plus one detection byte before launch.
+This is an observed file identity, not attestation of every loaded runtime file.
+Reconciliation admits only regular non-symlink relative artifacts inside its
+working directory: state at most 1 MiB, event log at most 4 MiB, at most 1024 lines,
+and each line at most 65536 bytes including its newline. State is compared again
+after reading events; missing, changed, ambiguous, oversized or malformed input
+stays `UNKNOWN`. These checks are not an atomic filesystem snapshot or a sandbox
+for arbitrary executables, descendants or hostile concurrent filesystem changes.
+
+The eight disposable public cases also exercise a legacy v3 state fixture;
+they do not migrate native authority. Source/editable checks are intermediate
+proof. A final installed wheel needs its own exact-version qualification.
 
 ## Keep usage and evidence honest
 

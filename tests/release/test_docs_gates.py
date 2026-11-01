@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -23,9 +23,47 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
         # including its six later additions. Reordering affects finding order.
         raw = json.dumps(DOC_RULES, ensure_ascii=False, separators=(",", ":")).encode()
         self.assertEqual(len(DOC_RULES), 130)
-        self.assertEqual(hashlib.sha256(raw).hexdigest(),
-                         "cf000617dff9260270141d08ba9941504bc579c1e11fa6b59090978e11955437")
-        self.assertEqual(len(MANUAL_PAIRS), 15)
+        self.assertEqual(
+            hashlib.sha256(raw).hexdigest(), "cf000617dff9260270141d08ba9941504bc579c1e11fa6b59090978e11955437"
+        )
+        self.assertEqual(len(MANUAL_PAIRS), 17)
+
+    def test_new_manual_pairs_retain_the_previous_ordered_registry(self) -> None:
+        from validate_docs_compat import MANUAL_PAIRS
+
+        prefix = json.dumps(MANUAL_PAIRS[:15], ensure_ascii=False, separators=(",", ":")).encode()
+        self.assertEqual(
+            hashlib.sha256(prefix).hexdigest(), "6108e4f4fd83d0d1ae43a7a13058dd05650552976d340dc1c8e3dc7aa2a777f7"
+        )
+        self.assertEqual(
+            MANUAL_PAIRS[15:],
+            (
+                ("docs/guides/review-mesh-workflow.md", ("docs/ru/guides/review-mesh-workflow.md",)),
+                ("docs/guides/issue-to-spec.md", ("docs/ru/guides/issue-to-spec.md",)),
+            ),
+        )
+
+    def test_usage_normalizer_manual_tables_match_descriptor_facts(self) -> None:
+        facts = {}
+        for path in sorted((ROOT / "adapters").glob("*/adapter.descriptor.json")):
+            descriptor = json.loads(path.read_text(encoding="utf-8"))
+            if normalizer := descriptor.get("usageNormalization"):
+                facts[path.parent.name] = normalizer
+        self.assertEqual(set(facts), {"claude", "codex", "gemini-cli", "kimi-code", "opencode", "qwen-code"})
+        for relative, no in (
+            ("docs/reference/host-local-token-accounting.md", "No"),
+            ("docs/ru/reference/host-local-token-accounting.md", "Нет"),
+        ):
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            rows = re.findall(r"^\| `([^`]+)` \| `([^`]+)` \| `([^`]+)` \| ([^|]+) \|$", text, re.MULTILINE)
+            self.assertEqual(len(rows), len(facts))
+            self.assertEqual({row[0] for row in rows}, set(facts))
+            for adapter, artifact, status, accepted in rows:
+                self.assertEqual(
+                    (artifact, status, accepted.strip()),
+                    (facts[adapter]["artifactFormat"], facts[adapter]["status"], no),
+                )
+                self.assertIs(facts[adapter]["acceptedForS1S2"], False)
 
     def test_compact_documented_json_examples_compile_as_drafts_without_authority(self) -> None:
         from agent_lifecycle.contracts.compact_plan_schemas import load_compact_plan_input
@@ -926,7 +964,7 @@ class ReleaseDocumentationGateTests(unittest.TestCase):
     def test_required_manual_pairs_use_explicit_locations_and_refuse_missing_translation(self) -> None:
         from validate_docs_compat import MANUAL_PAIRS, validate_manual_pairs
 
-        self.assertEqual(len(MANUAL_PAIRS), 15)
+        self.assertEqual(len(MANUAL_PAIRS), 17)
         self.assertEqual(validate_manual_pairs(ROOT), [])
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

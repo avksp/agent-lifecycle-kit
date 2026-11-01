@@ -12,17 +12,29 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
+import sys
 import tempfile
+import threading
+import time
 import unittest
 import uuid
 from datetime import UTC, datetime
+from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = json.loads((Path(__file__).parent / "fixtures/external-consumer-cases.json").read_text(encoding="utf-8"))
 MAX_OUTPUT_BYTES = 1024 * 1024
+MAX_EXECUTABLE_BYTES = 32 * 1024 * 1024
+MAX_STATE_BYTES = 1024 * 1024
+MAX_EVENT_BYTES = 4 * 1024 * 1024
+MAX_EVENT_LINE_BYTES = 65536
+MAX_EVENT_COUNT = 1024
+RUNTIME_SECONDS = 20
+CLEANUP_SECONDS = 2
 
 
 class ConsumerRefusal(ValueError):
@@ -34,13 +46,138 @@ class PublicCliConsumer:
 
     def __init__(self, executable: str, cwd: Path) -> None:
         self.executable = str(Path(executable).absolute())
-        self.cwd = cwd
+        self.cwd = cwd.resolve()
         self.calls: list[dict] = []
         self.qualified = False
+        self._unknown_effect = False
+        self._cleanup_confirmed = True
+
+    def _unknown(self, message: str) -> ConsumerRefusal:
+        self.qualified = False
+        self._unknown_effect = True
+        return ConsumerRefusal("UNKNOWN: " + message)
+
+    def _fingerprint(self) -> str:
+        digest = hashlib.sha256()
+        total = 0
+        try:
+            with Path(self.executable).open("rb") as stream:
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_EXECUTABLE_BYTES:
+                    raise ConsumerRefusal("executable fingerprint exceeds consumer limit")
+                while chunk := stream.read(min(65536, MAX_EXECUTABLE_BYTES + 1 - total)):
+                    total += len(chunk)
+                    if total > MAX_EXECUTABLE_BYTES:
+                        raise ConsumerRefusal("executable fingerprint exceeds consumer limit")
+                    digest.update(chunk)
+                after = os.fstat(stream.fileno())
+            if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+            ):
+                raise ConsumerRefusal("executable changed during fingerprinting")
+        except OSError as exc:
+            raise ConsumerRefusal("executable fingerprint unavailable") from exc
+        return digest.hexdigest()
+
+    def _capture(self, command: list[str], env: dict[str, str]) -> tuple:
+        try:
+            child = subprocess.Popen(
+                command,
+                cwd=self.cwd,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0,
+                shell=False,
+            )
+        except OSError:
+            return None, b"", b"", False, "process creation failed"
+        deadline = time.monotonic() + RUNTIME_SECONDS
+        cap = MAX_OUTPUT_BYTES
+        buffers = [bytearray(), bytearray()]
+        closed = [False, False]
+        faults: list[str] = []
+        fault = threading.Event()
+
+        def drain(index, pipe):
+            try:
+                while len(buffers[index]) <= cap:
+                    chunk = pipe.read(min(8192, cap + 1 - len(buffers[index])))
+                    if not chunk:
+                        return
+                    buffers[index].extend(chunk)
+                    if len(buffers[index]) > cap:
+                        faults.append("output exceeds consumer limit")
+                        fault.set()
+                        return
+            except (OSError, ValueError):
+                faults.append("pipe reader failed")
+                fault.set()
+            finally:
+                try:
+                    pipe.close()
+                    closed[index] = True
+                except OSError:
+                    faults.append("pipe close unconfirmed")
+                    fault.set()
+
+        threads = [
+            threading.Thread(target=drain, args=(i, pipe), daemon=True, name=f"alk-consumer-{uuid.uuid4()}")
+            for i, pipe in enumerate((child.stdout, child.stderr))
+        ]
+        reason = ""
+        try:
+            for thread in threads:
+                thread.start()
+            while True:
+                if fault.is_set():
+                    reason = faults[0]
+                    break
+                if child.poll() is not None and not any(t.is_alive() for t in threads):
+                    break
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    reason = "runtime deadline exceeded"
+                    break
+                fault.wait(min(0.01, remaining))
+        except (OSError, RuntimeError):
+            reason = "process supervision failed"
+        cleanup_deadline = time.monotonic() + CLEANUP_SECONDS
+        if child.poll() is None:
+            try:
+                child.kill()
+            except OSError:
+                reason = reason or "child stop unconfirmed"
+        try:
+            child.wait(timeout=max(0, cleanup_deadline - time.monotonic()))
+        except (OSError, subprocess.TimeoutExpired):
+            reason = reason or "child exit unconfirmed"
+        for index, thread in enumerate(threads):
+            if thread.ident is not None:
+                thread.join(max(0, cleanup_deadline - time.monotonic()))
+            else:
+                try:
+                    (child.stdout, child.stderr)[index].close()
+                    closed[index] = True
+                except OSError:
+                    pass
+        clean = child.returncode is not None and all(closed) and not any(t.is_alive() for t in threads)
+        if faults:
+            reason = reason or faults[0]
+        if not clean:
+            reason = reason or "reader cleanup unconfirmed"
+        return child.returncode, bytes(buffers[0]), bytes(buffers[1]), clean, reason
 
     def call(self, args: list[str]) -> tuple[int, dict]:
+        if self._unknown_effect or not self._cleanup_confirmed:
+            raise ConsumerRefusal("UNKNOWN: reconcile/dispose before another call")
         if len(args) > 96 or sum(map(len, args)) > 16384:
             raise ConsumerRefusal("argv exceeds consumer limit")
+        fingerprint = self._fingerprint()
         env = {
             key: os.environ[key]
             for key in ("PATH", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE", "HOMEDRIVE", "HOMEPATH")
@@ -49,49 +186,52 @@ class PublicCliConsumer:
         env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONNOUSERSITE="1")
         command = [self.executable, *args]
         started = datetime.now(UTC).isoformat()
-        with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
-            result = subprocess.run(
-                command,
-                cwd=self.cwd,
-                env=env,
-                stdin=subprocess.DEVNULL,
-                stdout=stdout,
-                stderr=stderr,
-                timeout=20,
-                shell=False,
-                check=False,
-            )
-            stdout.seek(0)
-            stderr.seek(0)
-            out = stdout.read(MAX_OUTPUT_BYTES + 1)
-            err = stderr.read(MAX_OUTPUT_BYTES + 1)
+        code, out, err, clean, reason = self._capture(command, env)
+        self._cleanup_confirmed = clean
+        payload = None
+        if not reason:
+            try:
+                payload = json.loads(out.decode("utf-8"))
+                err.decode("utf-8")
+                if not isinstance(payload, dict):
+                    reason = "expected a JSON object"
+            except (ValueError, RecursionError):
+                reason = "invalid UTF-8/JSON output"
         record = {
             "commandId": str(uuid.uuid4()),
             "argv": command,
             "cwd": str(self.cwd),
             "env": env,
-            "executableSha256": hashlib.sha256(Path(self.executable).read_bytes()).hexdigest(),
+            "executableSha256": fingerprint,
             "startedAt": started,
             "finishedAt": datetime.now(UTC).isoformat(),
-            "exitCode": result.returncode,
-            "stdout": out.decode("utf-8"),
-            "stderr": err.decode("utf-8"),
+            "exitCode": code,
+            "stdout": out.decode("utf-8", errors="replace"),
+            "stderr": err.decode("utf-8", errors="replace"),
             "stdoutSha256": hashlib.sha256(out).hexdigest(),
             "stderrSha256": hashlib.sha256(err).hexdigest(),
+            "stdoutBytesRead": len(out),
+            "stderrBytesRead": len(err),
+            "cleanupConfirmed": clean,
+            "outcome": "UNKNOWN" if reason else "RECEIVED",
+            "unknownReason": reason or None,
             "evidenceBoundary": "UNIT_ONLY",
             "providerTokens": None,
             "providerUSD": None,
         }
         self.calls.append(record)
+        if reason:
+            self._unknown(reason)
         if receipt_path := os.environ.get("ALK_EXTERNAL_CONSUMER_RECEIPTS"):
-            with Path(receipt_path).open("a", encoding="utf-8") as stream:
-                stream.write(json.dumps(record, sort_keys=True) + "\n")
-        if len(out) > MAX_OUTPUT_BYTES or len(err) > MAX_OUTPUT_BYTES:
-            raise ConsumerRefusal("result is unknown: output exceeds consumer limit")
-        payload = json.loads(out)
-        if not isinstance(payload, dict):
-            raise ConsumerRefusal("result is unknown: expected a JSON object")
-        return result.returncode, payload
+            try:
+                with Path(receipt_path).open("a", encoding="utf-8") as stream:
+                    stream.write(json.dumps(record, sort_keys=True) + "\n")
+            except OSError as exc:
+                record["outcome"] = "UNKNOWN"
+                raise self._unknown("receipt persistence failed") from exc
+        if reason:
+            raise self._unknown(reason)
+        return code, payload
 
     def negotiate(self, *, versions: tuple[str, ...], schema: str) -> dict:
         self.qualified = False
@@ -140,28 +280,102 @@ class PublicCliConsumer:
             ]
         )
 
-    def reconcile_run_start(self, operation: str, projection: dict) -> dict:
-        """Read native authority after a lost reply; never dispatch a second mutation."""
-        state = json.loads((self.cwd / "run.state.json").read_text(encoding="utf-8"))
-        events = [json.loads(line) for line in (self.cwd / state["eventLog"]).read_text(encoding="utf-8").splitlines()]
-        matches = [event for event in events if event.get("operationId") == operation]
-        if len(matches) != 1:
-            raise ConsumerRefusal("UNKNOWN: operation has no unique committed event")
-        event = matches[0]
-        expected = projection["action"]["stateRevision"] + 1
-        if (
-            event.get("schemaVersion") != "agent-workflow-event.v1"
-            or event.get("runId") != state["runId"]
-            or event.get("packageId") != state["packageId"]
-            or event.get("stateRevision") != expected
-            or state["stateRevision"] != expected
-            or event.get("eventType") != "execution-started"
-            or state["phase"] != "RUNNING"
-            or state["planDigest"] != projection["action"]["planDigest"]
-            or state["sourceRevision"] != projection["action"]["sourceRevision"]
+    def _read_artifact(self, name: str, cap: int) -> bytes:
+        relative = Path(name)
+        if not name or relative.is_absolute() or relative.drive or ".." in relative.parts or "\\" in name:
+            raise ConsumerRefusal("artifact must be a contained relative path")
+        path = self.cwd
+        identities = []
+        for part in relative.parts:
+            path = path / part
+            info = path.lstat()
+            if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+                raise ConsumerRefusal("artifact path contains a symlink/reparse point")
+            identities.append((path, info.st_dev, info.st_ino, info.st_mode))
+        if not identities or not stat.S_ISREG(info.st_mode):
+            raise ConsumerRefusal("artifact is not regular")
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+        with os.fdopen(os.open(path, flags), "rb") as stream:
+            before = os.fstat(stream.fileno())
+            if not stat.S_ISREG(before.st_mode) or before.st_size > cap:
+                raise ConsumerRefusal("artifact exceeds consumer limit or is not regular")
+            data = stream.read(cap + 1)
+            after = os.fstat(stream.fileno())
+        if len(data) > cap or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
         ):
-            raise ConsumerRefusal("UNKNOWN: state/event/request bindings disagree")
-        return event
+            raise ConsumerRefusal("artifact changed or exceeded consumer limit")
+        for item, device, inode, mode in identities:
+            now = item.lstat()
+            if (now.st_dev, now.st_ino, now.st_mode) != (device, inode, mode):
+                raise ConsumerRefusal("artifact path changed")
+        if identities[-1][1:3] != (before.st_dev, before.st_ino):
+            raise ConsumerRefusal("artifact identity changed")
+        return data
+
+    def reconcile_run_start(self, operation: str, projection: dict) -> dict:
+        """Read bounded native authority; never dispatch a second mutation."""
+        try:
+            state_bytes = self._read_artifact("run.state.json", MAX_STATE_BYTES)
+            state = json.loads(state_bytes)
+            if not isinstance(state, dict) or state.get("schemaVersion") not in (
+                "agent-workflow-state.v3",
+                "agent-workflow-state.v4",
+                "agent-workflow-state.v5",
+            ):
+                raise ConsumerRefusal("unsupported state shape/schema")
+            events = self._read_artifact(state["eventLog"], MAX_EVENT_BYTES)
+            if self._read_artifact("run.state.json", MAX_STATE_BYTES) != state_bytes:
+                raise ConsumerRefusal("state changed during reconciliation")
+            action = projection["action"]
+            if type(action["stateRevision"]) is not int or type(state["stateRevision"]) is not int:
+                raise ConsumerRefusal("invalid revision shape")
+            expected = action["stateRevision"] + 1
+            match = None
+            stream = BytesIO(events)
+            for _index in range(MAX_EVENT_COUNT):
+                line = stream.readline(MAX_EVENT_LINE_BYTES + 1)
+                if not line:
+                    break
+                if len(line) > MAX_EVENT_LINE_BYTES:
+                    raise ConsumerRefusal("event line exceeds consumer limit")
+                event = json.loads(line)
+                if not isinstance(event, dict):
+                    raise ConsumerRefusal("invalid event shape")
+                if event.get("operationId") == operation:
+                    if match is not None:
+                        raise ConsumerRefusal("operation has no unique committed event")
+                    match = event
+            if stream.read(1):
+                raise ConsumerRefusal("event count exceeds consumer limit")
+            if match is None:
+                raise ConsumerRefusal("operation has no unique committed event")
+            if (
+                match.get("schemaVersion") != "agent-workflow-event.v1"
+                or match.get("runId") != state["runId"]
+                or match.get("packageId") != state["packageId"]
+                or type(match.get("stateRevision")) is not int
+                or match["stateRevision"] != expected
+                or state["stateRevision"] != expected
+                or match.get("eventType") != "execution-started"
+                or state["phase"] != "RUNNING"
+                or state["planDigest"] != action["planDigest"]
+                or state["sourceRevision"] != action["sourceRevision"]
+            ):
+                raise ConsumerRefusal("state/event/request bindings disagree")
+            if not self._cleanup_confirmed:
+                raise ConsumerRefusal("effect matched but resource cleanup remains unconfirmed; dispose caller")
+        except (OSError, ValueError, TypeError, KeyError, RecursionError) as exc:
+            raise self._unknown(
+                "reconciliation unavailable: "
+                + (str(exc) if isinstance(exc, ConsumerRefusal) else "invalid/missing bounded artifact")
+            ) from exc
+        self._unknown_effect = False
+        self.qualified = False
+        return match
 
 
 def _inventory(root: Path) -> dict[str, str]:
@@ -178,25 +392,39 @@ class ConsumerEnvironmentTests(unittest.TestCase):
         forbidden = ("PYTHONPATH", "PYTHONHOME", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "AZURE_OPENAI_API_KEY")
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            executable = root / "unit-only-cli"
-            executable.write_bytes(b"unit-only controlled executable fingerprint")
             for homes in (
                 {"USERPROFILE": r"C:\Users\unit-only", "HOMEDRIVE": "C:", "HOMEPATH": r"\Users\unit-only"},
                 {},
             ):
                 captured = {}
 
-                def controlled_run(command, **kwargs):
-                    captured.update(kwargs["env"])
-                    kwargs["stdout"].write(b'{"schemaVersion":"agent-lifecycle-version.v1","version":"2.35.0"}')
-                    return subprocess.CompletedProcess(command, 0)
+                actual_popen = subprocess.Popen
 
-                ambient = {"PATH": os.defpath, "SYSTEMROOT": r"C:\Windows", "TEMP": directory, "TMP": directory,
-                           **homes, **dict.fromkeys(forbidden, "unit-only-placeholder")}
-                with self.subTest(homePresent=bool(homes)), patch.dict(os.environ, ambient, clear=True), patch(
-                    "tests.cli.test_external_consumer_contract.subprocess.run", side_effect=controlled_run
-                ) as run:
-                    code, payload = PublicCliConsumer(str(executable), root).call(["version"])
+                def observed_popen(command, captured=captured, actual_popen=actual_popen, **kwargs):
+                    captured.update(kwargs["env"])
+                    return actual_popen(command, **kwargs)
+
+                ambient = {
+                    "PATH": os.defpath,
+                    "SYSTEMROOT": r"C:\Windows",
+                    "TEMP": directory,
+                    "TMP": directory,
+                    **homes,
+                    **dict.fromkeys(forbidden, "unit-only-placeholder"),
+                }
+                with (
+                    self.subTest(homePresent=bool(homes)),
+                    patch.dict(os.environ, ambient, clear=True),
+                    patch(
+                        "tests.cli.test_external_consumer_contract.subprocess.Popen", side_effect=observed_popen
+                    ) as run,
+                ):
+                    code, payload = PublicCliConsumer(sys.executable, root).call(
+                        [
+                            "-c",
+                            "import json; print(json.dumps({'schemaVersion':'agent-lifecycle-version.v1','version':'2.35.0'}))",
+                        ]
+                    )
                 self.assertEqual(code, 0)
                 self.assertEqual(payload["version"], "2.35.0")
                 run.assert_called_once()
@@ -204,6 +432,272 @@ class ConsumerEnvironmentTests(unittest.TestCase):
                 self.assertTrue(set(forbidden).isdisjoint(captured))
                 self.assertEqual(captured["PYTHONDONTWRITEBYTECODE"], "1")
                 self.assertEqual(captured["PYTHONNOUSERSITE"], "1")
+
+
+class ConsumerBoundedIoTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp()).resolve()
+        self.children = []
+        self.addCleanup(self._cleanup_workspace)
+        self.consumer = PublicCliConsumer(sys.executable, self.root)
+        self.reads = {"stdout": [], "stderr": []}
+        self.capture_fds = []
+        original = subprocess.Popen
+        reads = self.reads
+
+        class ObservedPipe:
+            def __init__(self, raw, name):
+                self.raw, self.name = raw, name
+
+            def read(self, size):
+                data = self.raw.read(size)
+                reads[self.name].append((size, len(data)))
+                return data
+
+            def close(self):
+                self.raw.close()
+
+        def observed(command, **kwargs):
+            child = original(command, **kwargs)
+            self.children.append(child)
+            for name in ("stdout", "stderr"):
+                raw = getattr(child, name)
+                if raw is not None:
+                    setattr(child, name, ObservedPipe(raw, name))
+                target = kwargs.get(name)
+                if hasattr(target, "fileno"):
+                    descriptor = os.dup(target.fileno())
+                    self.capture_fds.append(descriptor)
+                    self.addCleanup(os.close, descriptor)
+            return child
+
+        self.enterContext(patch("tests.cli.test_external_consumer_contract.subprocess.Popen", side_effect=observed))
+
+    def _cleanup_workspace(self) -> None:
+        # Observers own extra Popen references; release them before deleting the cwd.
+        self.children.clear()
+        deadline = time.monotonic() + 2
+        while True:
+            try:
+                shutil.rmtree(self.root)
+                return
+            except PermissionError as exc:
+                remaining = deadline - time.monotonic()
+                if os.name != "nt" or getattr(exc, "winerror", None) not in {5, 32} or remaining <= 0:
+                    raise
+                time.sleep(min(0.02, remaining))
+
+    def assert_clean(self) -> None:
+        self.assertTrue(self.children)
+        self.assertTrue(all(child.returncode is not None for child in self.children))
+        self.assertFalse(any(t.name.startswith("alk-consumer-") for t in threading.enumerate()))
+
+    def test_floods_stop_during_execution_with_bounded_reads_and_no_capture_files(self) -> None:
+        for streams in ((1,), (2,), (1, 2)):
+            with (
+                self.subTest(streams=streams),
+                patch("tests.cli.test_external_consumer_contract.MAX_OUTPUT_BYTES", 1024),
+            ):
+                marker = self.root / "natural-completion"
+                marker.unlink(missing_ok=True)
+                self.reads["stdout"].clear()
+                self.reads["stderr"].clear()
+                script = (
+                    "import os,time,threading,pathlib; "
+                    f"threads=[threading.Thread(target=os.write,args=(fd,b'x'*8192)) for fd in {streams!r}]; "
+                    "[t.start() for t in threads]; [t.join() for t in threads]; "
+                    "time.sleep(2); pathlib.Path('natural-completion').write_text('done')"
+                )
+                with self.assertRaises(ConsumerRefusal):
+                    self.consumer.call(["-c", script])
+                self.assertFalse(marker.exists(), "overflow must stop the child before natural completion")
+                self.assertEqual(sum(os.fstat(fd).st_size for fd in self.capture_fds), 0)
+                for name in ("stdout", "stderr"):
+                    self.assertLessEqual(sum(size for _request, size in self.reads[name]), 1025)
+                    self.assertLessEqual(len(self.consumer.calls[-1][name].encode()), 1025)
+                self.assertTrue(any(self.reads.values()))
+                self.assertEqual(self.consumer.calls[-1]["outcome"], "UNKNOWN")
+                self.assert_clean()
+                self.consumer = PublicCliConsumer(sys.executable, self.root)
+
+    def test_both_pipes_drain_concurrently_without_deadlock(self) -> None:
+        script = (
+            "import os,threading; "
+            "a=threading.Thread(target=os.write,args=(1,b'{\"data\":\"'+b'x'*100000+b'\"}')); "
+            "b=threading.Thread(target=os.write,args=(2,b'e'*100000)); "
+            "a.start(); b.start(); a.join(); b.join()"
+        )
+        code, payload = self.consumer.call(["-c", script])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(payload["data"]), 100000)
+        self.assertEqual(sum(n for _size, n in self.reads["stderr"]), 100000)
+        self.assert_clean()
+
+    def test_timeout_reaps_child_and_blocks_redispatch(self) -> None:
+        with (
+            patch("tests.cli.test_external_consumer_contract.RUNTIME_SECONDS", 0.1, create=True),
+            self.assertRaises(ConsumerRefusal),
+        ):
+            self.consumer.call(["-c", "import time; time.sleep(2); print('{}')"])
+        self.assertEqual(self.consumer.calls[-1]["outcome"], "UNKNOWN")
+        self.assertTrue(self.consumer.calls[-1]["cleanupConfirmed"])
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.call(["-c", "print('{}')"])
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.negotiate(versions=("2.37.0",), schema=CASES["versionSchema"])
+        self.assertEqual(len(self.children), 1)
+        self.assert_clean()
+
+    def test_invalid_output_is_recorded_unknown_without_blind_retry(self) -> None:
+        for raw in (b"\xff", b"not-json", b"[]"):
+            with self.subTest(raw=raw):
+                self.consumer = PublicCliConsumer(sys.executable, self.root)
+                with self.assertRaises(ConsumerRefusal):
+                    self.consumer.call(["-c", f"import os; os.write(1,{raw!r})"])
+                self.assertEqual(self.consumer.calls[-1]["outcome"], "UNKNOWN")
+                self.assertTrue(self.consumer.calls[-1]["cleanupConfirmed"])
+                with self.assertRaises(ConsumerRefusal):
+                    self.consumer.call(["-c", "print('{}')"])
+                self.assertEqual(len(self.consumer.calls), 1)
+                self.assert_clean()
+
+    def test_executable_fingerprint_is_bounded_before_spawn(self) -> None:
+        with (
+            patch("tests.cli.test_external_consumer_contract.MAX_EXECUTABLE_BYTES", 8, create=True),
+            self.assertRaises(ConsumerRefusal),
+        ):
+            self.consumer.call(["-c", "print('{}')"])
+        self.assertEqual(self.children, [])
+        self.assertEqual(self.consumer.calls, [])
+
+
+class ConsumerReconciliationBoundaryTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.workspace = tempfile.TemporaryDirectory()
+        self.addCleanup(self.workspace.cleanup)
+        self.root = Path(self.workspace.name).resolve()
+        self.consumer = PublicCliConsumer(sys.executable, self.root)
+        self.state = {
+            "schemaVersion": "agent-workflow-state.v4",
+            "runId": "unit-run",
+            "packageId": "unit-package",
+            "phase": "RUNNING",
+            "stateRevision": 2,
+            "sourceRevision": "unit-source",
+            "planDigest": "d" * 64,
+            "eventLog": "events.jsonl",
+        }
+        self.event = {
+            "schemaVersion": "agent-workflow-event.v1",
+            "runId": "unit-run",
+            "packageId": "unit-package",
+            "operationId": "unit-op",
+            "stateRevision": 2,
+            "eventType": "execution-started",
+        }
+        self.projection = {"action": {"stateRevision": 1, "planDigest": "d" * 64, "sourceRevision": "unit-source"}}
+        self.write_authority()
+
+    def write_authority(self) -> None:
+        (self.root / "run.state.json").write_text(json.dumps(self.state), encoding="utf-8")
+        (self.root / "events.jsonl").write_text(json.dumps(self.event) + "\n", encoding="utf-8")
+
+    def test_oversized_state_event_line_and_count_remain_unknown(self) -> None:
+        cases = (
+            ("MAX_STATE_BYTES", 32, json.dumps(self.state), json.dumps(self.event) + "\n"),
+            ("MAX_EVENT_BYTES", 32, json.dumps(self.state), json.dumps(self.event) + "\n"),
+            ("MAX_EVENT_LINE_BYTES", 32, json.dumps(self.state), json.dumps(self.event) + "\n"),
+            ("MAX_EVENT_COUNT", 1, json.dumps(self.state), json.dumps(self.event) + "\n{}\n"),
+        )
+        for limit, cap, state, events in cases:
+            with (
+                self.subTest(limit=limit),
+                patch("tests.cli.test_external_consumer_contract." + limit, cap, create=True),
+            ):
+                (self.root / "run.state.json").write_text(state, encoding="utf-8")
+                (self.root / "events.jsonl").write_text(events, encoding="utf-8")
+                with self.assertRaises(ConsumerRefusal):
+                    self.consumer.reconcile_run_start("unit-op", self.projection)
+                with self.assertRaises(ConsumerRefusal):
+                    self.consumer.call(["-c", "print('{}')"])
+                self.assertFalse(self.consumer.calls)
+                self.consumer = PublicCliConsumer(sys.executable, self.root)
+
+    def test_traversal_and_malformed_artifacts_remain_unknown(self) -> None:
+        with tempfile.TemporaryDirectory(dir=self.root.parent) as outside:
+            target = Path(outside) / "events.jsonl"
+            target.write_text(json.dumps(self.event) + "\n", encoding="utf-8")
+            for path in (str(target), "../" + Path(outside).name + "/events.jsonl"):
+                with self.subTest(path=path):
+                    self.state["eventLog"] = path
+                    self.write_authority()
+                    with self.assertRaises(ConsumerRefusal):
+                        self.consumer.reconcile_run_start("unit-op", self.projection)
+        self.state["eventLog"] = "events.jsonl"
+        self.write_authority()
+        for invalid in (b"\xff", b"[]", b"null", b"{broken"):
+            with self.subTest(invalid=invalid):
+                (self.root / "events.jsonl").write_bytes(invalid)
+                with self.assertRaises(ConsumerRefusal):
+                    self.consumer.reconcile_run_start("unit-op", self.projection)
+        self.assertFalse(self.consumer.calls)
+
+    def test_symlink_artifact_is_refused(self) -> None:
+        target = self.root / "real-events.jsonl"
+        target.write_text(json.dumps(self.event) + "\n", encoding="utf-8")
+        link = self.root / "events.jsonl"
+        link.unlink()
+        try:
+            link.symlink_to(target)
+        except OSError as exc:
+            self.skipTest(f"OS does not permit creating the test symlink: {exc}")
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.reconcile_run_start("unit-op", self.projection)
+        self.assertFalse(self.consumer.calls)
+
+    def test_effect_reconciliation_requires_renegotiation(self) -> None:
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.call(["-c", "print('bad-json')"])
+        self.assertEqual(self.consumer.reconcile_run_start("unit-op", self.projection), self.event)
+        self.assertEqual(self.consumer.call(["-c", "print('{}')"]), (0, {}))
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.apply([], self.projection)
+        self.assertEqual(len(self.consumer.calls), 2)
+
+    def test_effect_match_does_not_clear_unconfirmed_reader_cleanup(self) -> None:
+        # The real pipe closes; an injected OS close-report failure prevents certification.
+        actual_popen = subprocess.Popen
+
+        class UnconfirmedClose:
+            def __init__(self, raw):
+                self.raw = raw
+
+            def read(self, size):
+                return self.raw.read(size)
+
+            def close(self):
+                self.raw.close()
+                raise OSError("controlled close-report failure")
+
+        def observed(command, **kwargs):
+            child = actual_popen(command, **kwargs)
+            child.stdout = UnconfirmedClose(child.stdout)
+            return child
+
+        with (
+            patch("tests.cli.test_external_consumer_contract.subprocess.Popen", side_effect=observed),
+            self.assertRaises(ConsumerRefusal),
+        ):
+            self.consumer.call(["-c", "print('{}')"])
+        self.assertFalse(self.consumer.calls[-1]["cleanupConfirmed"])
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.reconcile_run_start("unit-op", self.projection)
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.call(["-c", "print('{}')"])
+        with self.assertRaises(ConsumerRefusal):
+            self.consumer.negotiate(versions=("2.37.0",), schema=CASES["versionSchema"])
+        self.assertEqual(len(self.consumer.calls), 1)
+        self.assertFalse(any(t.name.startswith("alk-consumer-") for t in threading.enumerate()))
 
 
 class ExternalConsumerContractTests(unittest.TestCase):

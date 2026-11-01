@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.authority_io import open_authority_read
 from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.imports import (
@@ -129,6 +129,99 @@ class PlanningImportTests(unittest.TestCase):
                 self.assertIsNone(missing["candidatePlan"])
                 with self.assertRaises(LifecycleError):
                     invoke(root)
+
+    def test_ninth_requirement_refuses_json_and_markdown_without_candidate(self) -> None:
+        items = [f"Requirement {i}" for i in range(9)]
+        texts = [
+            json.dumps({"requirements": items}),
+            json.dumps({"specification": {"requirements": [{"description": x} for x in items]}}),
+            "\n".join("- " + x for x in items),
+            "\n".join(f"{i + 1}. {x}" for i, x in enumerate(items)),
+        ]
+        for text in texts:
+            with self.subTest(text=text):
+                result = import_planning_text(text, target_tokens=100000)
+                self.assertEqual(result["status"], "FAIL")
+                self.assertIsNone(result["candidatePlan"])
+                self.assertEqual(result["candidateLifecycleStatus"], "BLOCKED")
+                blocker = next(b for b in result["blockers"] if b.get("field") == "requirements")
+                self.assertEqual((blocker["count"], blocker["cap"]), (9, 8))
+                self.assertTrue(result["freezeBlocked"])
+
+    def test_exact_eight_requirements_stay_complete_and_untrusted(self) -> None:
+        items = [f"Requirement {i}" for i in range(8)]
+        for text in (json.dumps({"requirements": items}), "\n".join("- " + x for x in items)):
+            with self.subTest(text=text):
+                result = import_planning_text(text, target_tokens=100000)
+                self.assertEqual(result["status"], "PASS")
+                descriptions = [r["description"] for r in result["candidatePlan"]["specification"]["requirements"]]
+                self.assertEqual(descriptions, items)
+                self.assertFalse(result["sourceTrusted"])
+                self.assertTrue(result["freezeBlocked"])
+
+    def test_failure_validation_forwards_only_bounded_overflow_metadata(self) -> None:
+        result = import_planning_text("- " + "A" * 181, target_tokens=100000)
+        original = result["blockers"][0]
+        canary = "UNTRUSTED_DIAGNOSTIC_CANARY"
+        malformed = [[], {"code": []}, {**original, "field": []}, {**original, "cap": 180.0}]
+        for extra in malformed:
+            with self.subTest(extra=extra):
+                forged = json.loads(json.dumps(result))
+                forged["blockers"] = [{**original, "message": canary, "extra": {"raw": canary}}, extra]
+                validation = validate_import_result(forged)
+                self.assertEqual(validation["status"], "FAIL")
+                reason = next(b for b in validation["blockers"] if b["code"] == original["code"])
+                self.assertEqual(reason, original)
+                self.assertNotIn(canary, json.dumps(validation))
+
+    def test_import_gates_require_boolean_identity(self) -> None:
+        result = import_planning_text("- Keep review before execution", target_tokens=100000)
+        self.assertEqual(validate_import_result(result)["status"], "PASS")
+        gates = (
+            ("enabledByDefault", False, "planning-import-default-enabled"),
+            ("sourceTrusted", False, "planning-import-source-trust"),
+            ("requiresReview", True, "planning-import-review-not-required"),
+            ("auditRequired", True, "planning-import-audit-not-required"),
+            ("freezeBlocked", True, "planning-import-freeze-not-blocked"),
+        )
+        for field, expected, code in gates:
+            for invalid in (int(expected), not expected, None, str(expected)):
+                with self.subTest(field=field, invalid=invalid):
+                    forged = json.loads(json.dumps(result))
+                    forged[field] = invalid
+                    forged["importDigest"] = canonical_digest(
+                        {key: value for key, value in forged.items() if key != "importDigest"}
+                    )
+                    validation = validate_import_result(forged)
+                    self.assertEqual(validation["status"], "FAIL")
+                    self.assertEqual(validation["blockers"], [{"code": code}])
+
+    def test_complete_normalized_requirement_character_boundary(self) -> None:
+        for size in (179, 180, 181):
+            for style in ("json", "bullet", "fallback"):
+                with self.subTest(size=size, style=style):
+                    raw = "界" * size
+                    text = (
+                        json.dumps({"requirements": [raw]}, ensure_ascii=False)
+                        if style == "json"
+                        else ("- " + raw if style == "bullet" else raw)
+                    )
+                    result = import_planning_text(text, target_tokens=100000)
+                    self.assertEqual(result["status"], "FAIL" if size > 180 else "PASS")
+                    if size <= 180:
+                        self.assertEqual(
+                            result["candidatePlan"]["specification"]["requirements"][0]["description"], raw
+                        )
+                    else:
+                        self.assertIsNone(result["candidatePlan"])
+        text = "- " + "A" * 190 + " DO_NOT_DEPLOY_WITHOUT_APPROVAL"
+        result = import_planning_text(text, target_tokens=100000)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertIsNone(result["candidatePlan"])
+        self.assertNotIn("DO_NOT_DEPLOY_WITHOUT_APPROVAL", json.dumps(result))
+        result = import_planning_text("- Keep" + " " * 200 + "status", target_tokens=100000)
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["candidatePlan"]["specification"]["requirements"][0]["description"], "Keep status")
 
     def test_markdown_import_produces_draft_that_requires_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
