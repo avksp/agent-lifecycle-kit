@@ -79,8 +79,7 @@ class PlanningImportTests(unittest.TestCase):
                         )
                     else:
                         self.assertFalse(denied_writes)
-                        self.assertEqual(result["status"], "FAIL")
-                        self.assertIsNone(result["candidatePlan"])
+                        self.fail(f"Import returned {result['status']} instead of a changed-input refusal")
                 if denied_writes:
                     self.assertFalse(read_lengths)
                 else:
