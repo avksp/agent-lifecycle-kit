@@ -1,8 +1,6 @@
 <p align="center">
   <img src="docs/assets/agent-lifecycle-kit-banner.svg?v=2026-08-02-1" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
 </p>
-Release 2.36 closes bounded secret and file-read import defects. Existing host authority limits remain documented.
-
 
 # Agent Lifecycle Kit
 
@@ -12,7 +10,7 @@ Release 2.36 closes bounded secret and file-read import defects. Existing host a
 
 **Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and acceptance decisions connected while the external agent changes the project.
 
-Release 2.35 documents the [external AI SDLC CLI contract](docs/guides/ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include both guides and case JSON; the plugin ships the paired CLI contract. Native authority and release gates remain required.
+Release 2.36 secures imports. Release 2.35 documents the [external AI SDLC CLI contract](docs/guides/ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include both guides and case JSON; the plugin ships the paired CLI contract. Native authority and release gates remain required.
 
 The provider-neutral workflow works with Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build, or another CLI. Provider commands, model choice and secret handling stay in adapters or host-local profiles.
 

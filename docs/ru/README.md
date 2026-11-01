@@ -2,12 +2,10 @@
 
   <img src="assets/agent-lifecycle-kit-banner.svg?v=2026-08-02-1" alt="Agent Lifecycle Kit - SDD, SDLC и проверяемое завершение работы агента" width="100%">
 </p>
-Выпуск 2.36 исправляет фильтрацию секретов и ограниченное чтение при импорте. Границы полномочий хостов описаны отдельно.
-
 
 # Agent Lifecycle Kit
 
-Выпуск 2.35 описывает [CLI-контракт внешнего AI SDLC](guides/ai-sdlc-integration.md) и восемь ограниченных consumer cases. Wheel/sdist содержат полные EN/RU guides и JSON cases; plugin поставляет парный CLI-контракт. Fixture не квалифицирует live host.
+Выпуск 2.36 защищает импорт. Выпуск 2.35 описывает [CLI-контракт внешнего AI SDLC](guides/ai-sdlc-integration.md) и восемь ограниченных consumer cases. Wheel/sdist содержат полные EN/RU guides и JSON cases; plugin поставляет парный CLI-контракт. Fixture не квалифицирует live host.
 
 Agent Lifecycle Kit (ALK) координирует работу кодового агента до проверяемого завершения. Он связывает ожидаемый результат, проверенный план, границы выполнения, подтверждения и решение о приёмке, пока внешний агент меняет проект.
 
