@@ -291,7 +291,8 @@ def _map_agent(parsed: dict[str, Any], text: str) -> dict[str, Any]:
     role = _first_string(parsed, "role", "description", "purpose")
     if role:
         requirements.append(
-            f"Review imported agent role hint before converting it into ALK task scope: {_safe_summary(role, limit=None)}."
+            "Review imported agent role hint before converting it into ALK task scope: "
+            f"{_safe_summary(role, limit=None)}."
         )
     requirements.extend(
         f"Review imported agent policy hint {index + 1}: {_safe_summary(item, limit=None)}."
