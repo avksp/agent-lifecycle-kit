@@ -20,15 +20,15 @@ from agent_lifecycle.imports.dialect_profiles import (
 from agent_lifecycle.imports.planning import (
     DEFAULT_MAX_INPUT_BYTES,
     DEFAULT_TARGET_TOKENS,
+    MAX_REQUIREMENT_CHARS,
     PLANNING_IMPORT_RESULT_SCHEMA,
+    import_content_blockers,
     require_no_import_secrets,
     validate_import_result,
 )
 from agent_lifecycle.planning import validate_plan_manifest
 
 EXTERNAL_IMPORT_VALIDATION_SCHEMA = "agent-external-dialect-import-validation.v1"
-MAX_REQUIREMENTS = 8
-MAX_REQUIREMENT_CHARS = 180
 
 _POSIX_USER_PREFIX = "/" + "Users/"
 _POSIX_VOLUME_PREFIX = "/" + "Volumes/"
@@ -254,19 +254,23 @@ def _parse_scalar(value: str) -> Any:
 
 def _map_family(family: str, parsed: dict[str, Any], text: str, blockers: list[dict[str, Any]]) -> dict[str, Any]:
     if family == "workflow":
-        return _map_workflow(parsed, text)
-    if family == "agent":
-        return _map_agent(parsed, text)
-    blockers.append({"code": "external-dialect-family-invalid", "family": family})
-    return {}
+        mapping = _map_workflow(parsed, text)
+    elif family == "agent":
+        mapping = _map_agent(parsed, text)
+    else:
+        blockers.append({"code": "external-dialect-family-invalid", "family": family})
+        return {}
+    for field in ("requirements", "validationHints"):
+        blockers.extend(import_content_blockers(mapping[field], prefix="external-dialect", field=field))
+    return mapping
 
 
 def _map_workflow(parsed: dict[str, Any], text: str) -> dict[str, Any]:
     steps = _list_from(parsed, "steps", "jobs", "tasks")
     validations = _list_from(parsed, "validation", "validations", "checks")
     requirements = [
-        f"Review imported workflow step {index + 1}: {_safe_summary(step)}."
-        for index, step in enumerate(steps[:MAX_REQUIREMENTS])
+        f"Review imported workflow step {index + 1}: {_safe_summary(step, limit=None)}."
+        for index, step in enumerate(steps)
     ]
     if not requirements:
         requirements = _requirements_from_lines(text, prefix="Review imported workflow instruction")
@@ -274,8 +278,8 @@ def _map_workflow(parsed: dict[str, Any], text: str) -> dict[str, Any]:
         "family": "workflow",
         "title": _title(parsed, "Imported workflow draft"),
         "requirements": requirements,
-        "workHints": [{"kind": "workflow-step", "summary": _safe_summary(step)} for step in steps[:MAX_REQUIREMENTS]],
-        "validationHints": [_safe_summary(item) for item in validations[:MAX_REQUIREMENTS]],
+        "workHints": [{"kind": "workflow-step", "summary": _safe_summary(step, limit=None)} for step in steps],
+        "validationHints": [_safe_summary(item, limit=None) for item in validations],
         "hostLocalHints": {},
         "redactions": _redaction_summary(parsed),
     }
@@ -287,18 +291,18 @@ def _map_agent(parsed: dict[str, Any], text: str) -> dict[str, Any]:
     role = _first_string(parsed, "role", "description", "purpose")
     if role:
         requirements.append(
-            f"Review imported agent role hint before converting it into ALK task scope: {_safe_summary(role)}."
+            f"Review imported agent role hint before converting it into ALK task scope: {_safe_summary(role, limit=None)}."
         )
     requirements.extend(
-        f"Review imported agent policy hint {index + 1}: {_safe_summary(item)}."
-        for index, item in enumerate(policies[:MAX_REQUIREMENTS])
+        f"Review imported agent policy hint {index + 1}: {_safe_summary(item, limit=None)}."
+        for index, item in enumerate(policies)
     )
     if not requirements:
         requirements = _requirements_from_lines(text, prefix="Review imported agent instruction")
     return {
         "family": "agent",
         "title": _title(parsed, "Imported agent draft"),
-        "requirements": requirements[:MAX_REQUIREMENTS],
+        "requirements": requirements,
         "workHints": [],
         "validationHints": [],
         "hostLocalHints": _host_local_hints(parsed),
@@ -315,8 +319,8 @@ def _candidate_plan(
     profile: dict[str, Any],
 ) -> dict[str, Any] | None:
     requirements = [
-        {"id": f"R-EXT-{index + 1}", "description": _truncate(item, MAX_REQUIREMENT_CHARS)}
-        for index, item in enumerate(mapping.get("requirements", [])[:MAX_REQUIREMENTS])
+        {"id": f"R-EXT-{index + 1}", "description": item}
+        for index, item in enumerate(mapping.get("requirements", []))
         if isinstance(item, str) and item.strip()
     ]
     if not requirements:
@@ -462,11 +466,11 @@ def _requirements_from_lines(text: str, *, prefix: str) -> list[str]:
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith(("- ", "* ")):
-            requirements.append(f"{prefix}: {_safe_summary(stripped[2:])}.")
+            requirements.append(f"{prefix}: {_safe_summary(stripped[2:], limit=None)}.")
         elif re.match(r"^\d+\.\s+", stripped):
             numbered_text = re.sub(r"^\d+\.\s+", "", stripped)
-            requirements.append(f"{prefix}: {_safe_summary(numbered_text)}.")
-    return requirements[:MAX_REQUIREMENTS]
+            requirements.append(f"{prefix}: {_safe_summary(numbered_text, limit=None)}.")
+    return requirements
 
 
 def _list_from(parsed: dict[str, Any], *keys: str) -> list[Any]:
@@ -494,15 +498,17 @@ def _title(parsed: dict[str, Any], fallback: str) -> str:
     return _safe_summary(value) if value else fallback
 
 
-def _safe_summary(value: Any) -> str:
+def _safe_summary(value: Any, *, limit: int | None = MAX_REQUIREMENT_CHARS) -> str:
     if isinstance(value, dict):
-        text = " ".join(f"{_clean_key(str(key))} {_safe_summary(item)}" for key, item in sorted(value.items()))
+        text = " ".join(
+            f"{_clean_key(str(key))} {_safe_summary(item, limit=limit)}" for key, item in sorted(value.items())
+        )
     else:
         text = str(value)
     text = _LOCAL_PATH_RE.sub("[redacted-path]", text)
     text = _SECRET_ASSIGNMENT_RE.sub(r"\1=[redacted]", text)
     text = re.sub(r"\s+", " ", text).strip()
-    return _truncate(text, MAX_REQUIREMENT_CHARS)
+    return text if limit is None else _truncate(text, limit)
 
 
 def _safe_identifier(value: str) -> str:
