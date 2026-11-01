@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, sha256_hex
+from agent_lifecycle.contracts.authority_io import open_authority_read
 from agent_lifecycle.imports.dialect_profiles import (
     DEFAULT_PROFILE_ID,
     external_dialect_profile,
@@ -175,14 +177,18 @@ def require_external_import_pass(validation: dict[str, Any]) -> dict[str, Any]:
 
 
 def _read_source(source_path: Path, *, max_input_bytes: int, blockers: list[dict[str, Any]]) -> bytes:
-    if not source_path.is_file():
+    try:
+        with open_authority_read(Path(os.path.normpath(source_path.absolute()))) as stream:
+            data = stream.read(max_input_bytes + 1)
+    except FileNotFoundError:
         blockers.append({"code": "external-dialect-source-missing", "sourceLabel": source_path.name})
         return b""
-    size = source_path.stat().st_size
-    if size > max_input_bytes:
-        blockers.append({"code": "external-dialect-input-cap-exceeded", "inputBytes": size, "cap": max_input_bytes})
+    if len(data) > max_input_bytes:
+        blockers.append(
+            {"code": "external-dialect-input-cap-exceeded", "inputBytes": len(data), "cap": max_input_bytes}
+        )
         return b""
-    return source_path.read_bytes()
+    return data
 
 
 def _decode_source(data: bytes, blockers: list[dict[str, Any]]) -> str:

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.context.rendering import estimate_tokens
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
+from agent_lifecycle.contracts.authority_io import open_authority_read
 from agent_lifecycle.contracts.redaction import is_sensitive_key, redact_text_with_stats
 from agent_lifecycle.planning import validate_plan_manifest
 
@@ -47,16 +49,15 @@ def import_planning_input(
     _check_positive_cap(max_input_bytes, "maxInputBytes")
     _check_positive_cap(target_tokens, "targetTokens")
     blockers: list[dict[str, Any]] = []
-    if not source_path.is_file():
+    try:
+        with open_authority_read(Path(os.path.normpath(source_path.absolute()))) as stream:
+            data = stream.read(max_input_bytes + 1)
+    except FileNotFoundError:
         blockers.append({"code": "planning-import-source-missing", "sourceLabel": source_path.name})
         data = b""
-    else:
-        size = source_path.stat().st_size
-        if size > max_input_bytes:
-            blockers.append({"code": "planning-import-input-cap-exceeded", "inputBytes": size, "cap": max_input_bytes})
-            data = b""
-        else:
-            data = source_path.read_bytes()
+    if len(data) > max_input_bytes:
+        blockers.append({"code": "planning-import-input-cap-exceeded", "inputBytes": len(data), "cap": max_input_bytes})
+        data = b""
     return _build_import_result(
         data,
         source_label=source_path.name,
