@@ -436,11 +436,10 @@ class ConsumerEnvironmentTests(unittest.TestCase):
 
 class ConsumerBoundedIoTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.workspace = tempfile.TemporaryDirectory()
-        self.addCleanup(self.workspace.cleanup)
-        self.root = Path(self.workspace.name).resolve()
-        self.consumer = PublicCliConsumer(sys.executable, self.root)
+        self.root = Path(tempfile.mkdtemp()).resolve()
         self.children = []
+        self.addCleanup(self._cleanup_workspace)
+        self.consumer = PublicCliConsumer(sys.executable, self.root)
         self.reads = {"stdout": [], "stderr": []}
         self.capture_fds = []
         original = subprocess.Popen
@@ -473,6 +472,20 @@ class ConsumerBoundedIoTests(unittest.TestCase):
             return child
 
         self.enterContext(patch("tests.cli.test_external_consumer_contract.subprocess.Popen", side_effect=observed))
+
+    def _cleanup_workspace(self) -> None:
+        # Observers own extra Popen references; release them before deleting the cwd.
+        self.children.clear()
+        deadline = time.monotonic() + 2
+        while True:
+            try:
+                shutil.rmtree(self.root)
+                return
+            except PermissionError as exc:
+                remaining = deadline - time.monotonic()
+                if os.name != "nt" or getattr(exc, "winerror", None) not in {5, 32} or remaining <= 0:
+                    raise
+                time.sleep(min(0.02, remaining))
 
     def assert_clean(self) -> None:
         self.assertTrue(self.children)
