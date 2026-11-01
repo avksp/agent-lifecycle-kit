@@ -386,6 +386,23 @@ class ProcessCleanupTests(unittest.TestCase):
         entered_at: list[float] = []
         real_start = Thread.start
 
+        clock_base_ns = time.monotonic_ns()
+        clock_resumed_ns: list[int] = []
+
+        class FixtureTime:
+            @staticmethod
+            def monotonic_ns() -> int:
+                if not clock_resumed_ns:
+                    return clock_base_ns
+                return clock_base_ns + 100_000_000 + time.monotonic_ns() - clock_resumed_ns[0]
+
+            @staticmethod
+            def monotonic() -> float:
+                return FixtureTime.monotonic_ns() / 1_000_000_000
+
+            def __getattr__(self, name: str):
+                return getattr(time, name)
+
         def delayed_start(thread: threading.Thread) -> None:
             if thread.name == "alk-process-observer":
                 entered_at.append(time.monotonic())
@@ -397,12 +414,13 @@ class ProcessCleanupTests(unittest.TestCase):
             if entered.wait(2):
                 while time.monotonic() < entered_at[0] + 0.1:
                     time.sleep(0.001)
+                clock_resumed_ns.append(time.monotonic_ns())
             release.set()
 
         driver = Thread(target=release_after_deadline)
         driver.start()
         try:
-            with patch.object(Thread, "start", delayed_start):
+            with patch.object(process_module, "time", FixtureTime()), patch.object(Thread, "start", delayed_start):
                 result = run_process(
                     [sys.executable, "-c", "import time; time.sleep(30)"],
                     env=dict(os.environ), timeout_seconds=0.05,
@@ -417,6 +435,7 @@ class ProcessCleanupTests(unittest.TestCase):
         self.assertTrue(result["processStarted"])
         self.assertTrue(result["startedFailure"])
         self.assertTrue(result["timedOut"])
+        self.assertEqual(result["deadlineMonotonicNs"], clock_base_ns + 50_000_000)
         self.assertEqual(result["cleanup"]["status"], "PASS")
         self.assertEqual(result["blockers"][-1]["code"],
                          "adapter-process-start-observation-timeout")

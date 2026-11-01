@@ -268,7 +268,11 @@ class JournalTests(unittest.TestCase):
         ready = [ctx.Event() for _ in range(3)]
         starts = [ctx.Event() for _ in range(3)]
         children = [
-            ctx.Process(target=admission_worker, args=(str(self.path), ready[i], starts[i], output, str(i), i == 2))
+            ctx.Process(
+                target=admission_worker,
+                args=(str(self.path), ready[i], starts[i], output, str(i), i == 2),
+                kwargs={"fixture_queue_seconds": 10.0} if i in (0, 1) else {},
+            )
             for i in range(3)
         ]
         try:
@@ -286,6 +290,9 @@ class JournalTests(unittest.TestCase):
             by_id = {row[0]: row for row in results}
             self.assertEqual(set(by_id), {"0", "1"})
             self.assertTrue(all(row[1] == "RESERVED" and row[2]["status"] == "ADMITTED" for row in results))
+            for row in results:
+                self.assertEqual(row[2]["product_requested_seconds"], 1.0)
+                self.assertEqual(row[2]["fixture_queue_seconds"], 10.0)
             self.assertLess(by_id["0"][2]["ticket"], by_id["1"][2]["ticket"])
             committed = [
                 json.loads(row["payload"])["operation"]["operation_id"]
