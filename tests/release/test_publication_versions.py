@@ -23,19 +23,38 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_current_consumer_version_is_required_by_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_publication_fixture(root, version=TARGET_VERSION, ref=TARGET_REF)
+            path = root / "tests/cli/fixtures/external-consumer-cases.json"
+            self.assertEqual(
+                validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)["status"],
+                "PASS",
+            )
+            for versions in ([], ["0.0.1"], TARGET_VERSION, [TARGET_VERSION, None]):
+                with self.subTest(versions=versions):
+                    _write_json(path, {"testedVersions": versions})
+                    report = validate_publication_tree(root=root, target_version=TARGET_VERSION, target_ref=TARGET_REF)
+                    row = next(c for c in report["checks"] if c["id"] == "external-consumer-tested-version")
+                    self.assertEqual(report["status"], "FAIL")
+                    self.assertEqual(row["status"], "FAIL")
+
     def test_external_integration_shipment_and_authority_boundaries(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
-        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
-            "external-ai-sdlc-cli-integration"
-        ]
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["external-ai-sdlc-cli-integration"]
         self.assertEqual(feature["caseCount"], 8)
         self.assertEqual(feature["fixtureBoundary"], "UNIT_ONLY")
         self.assertTrue(feature["wheelFullGuidesBundled"])
         self.assertTrue(feature["existingPublicCliOnly"])
         for field in (
-            "portablePluginFullGuidesBundled", "unknownContractMutationAllowed",
-            "arbitraryHostExactlyOnceClaimed", "liveHostQualificationClaimed",
-            "newRuntimeApi", "taskManagerRequired", "missingTelemetryIsZero",
+            "portablePluginFullGuidesBundled",
+            "unknownContractMutationAllowed",
+            "arbitraryHostExactlyOnceClaimed",
+            "liveHostQualificationClaimed",
+            "newRuntimeApi",
+            "taskManagerRequired",
+            "missingTelemetryIsZero",
         ):
             self.assertFalse(feature[field], field)
         project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
@@ -47,9 +66,7 @@ class PublicationVersionTests(unittest.TestCase):
 
     def test_windows315_accounting_git_backend_keeps_other_ci_routes_default(self) -> None:
         manifest = build_publication_manifest(target_version=TARGET_VERSION, target_ref=TARGET_REF)
-        feature = {item["id"]: item for item in manifest["documentedFeatures"]}[
-            "windows315-accounting-git-backend"
-        ]
+        feature = {item["id"]: item for item in manifest["documentedFeatures"]}["windows315-accounting-git-backend"]
         self.assertEqual(feature["timedPythonVersions"], ["3.15"])
         self.assertEqual(feature["qualifiedOs"], "Windows")
         self.assertEqual(feature["normalCiCellCount"], 15)
@@ -66,7 +83,7 @@ class PublicationVersionTests(unittest.TestCase):
         self.assertIn("if: matrix.os == 'windows-latest' && matrix.python == '3.15'", selection)
         self.assertIn('stream.write("ALK_ACCOUNTING_GIT_EXECUTABLE="', selection)
         self.assertEqual(workflow.count('stream.write("ALK_ACCOUNTING_GIT_EXECUTABLE="'), 1)
-        self.assertIn("python: [\"3.11\", \"3.12\", \"3.13\", \"3.14\", \"3.15\"]", workflow)
+        self.assertIn('python: ["3.11", "3.12", "3.13", "3.14", "3.15"]', workflow)
         self.assertIn("Verify accounting Git backend and PATH after tests", workflow)
         for field in ("pathSha256", "wrapperVersion", "backendVersion"):
             self.assertIn(field, selection)
@@ -593,6 +610,7 @@ def _write_publication_fixture(root: Path, *, version: str, ref: str) -> None:
         root / accounting_fixture_path(version),
         {"releaseId": version},
     )
+    _write_json(root / "tests/cli/fixtures/external-consumer-cases.json", {"testedVersions": [version]})
     for path in (
         ".codex-plugin/plugin.json",
         ".claude-plugin/plugin.json",

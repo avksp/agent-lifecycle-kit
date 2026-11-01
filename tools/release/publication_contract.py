@@ -322,6 +322,12 @@ PUBLICATION_ENTRIES: tuple[dict[str, Any], ...] = (
         "fieldForm": "accounting.release",
     },
     {
+        "id": "external-consumer-tested-version",
+        "path": "tests/cli/fixtures/external-consumer-cases.json",
+        "kind": "json-version-list",
+        "fieldForm": "version",
+    },
+    {
         "id": "codex-root-plugin",
         "path": ".codex-plugin/plugin.json",
         "kind": "json-field",
@@ -584,6 +590,12 @@ def _read_entry_value(*, path: Path, entry: dict[str, Any]) -> str | None:
     kind = entry["kind"]
     if kind == "json-field":
         return _json_path(load_json(path), entry["jsonPath"])
+    if kind == "json-version-list":
+        payload = load_json(path)
+        versions = payload.get("testedVersions") if isinstance(payload, dict) else None
+        if not isinstance(versions, list) or not all(isinstance(value, str) for value in versions):
+            return None
+        return entry["expectedValue"] if entry["expectedValue"] in versions else None
     if kind == "toml-project-version":
         payload = tomllib.loads(path.read_text(encoding="utf-8"))
         return _string((payload.get("project") or {}).get("version"))

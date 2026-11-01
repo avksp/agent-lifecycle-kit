@@ -15,6 +15,26 @@ from agent_lifecycle.contracts.redaction import (
 
 
 class ReceiptRedactionTests(unittest.TestCase):
+    def test_fine_grained_token_and_complete_cookie_headers_are_private(self) -> None:
+        token = "github" + "_pat_" + "A" * 22 + "_" + "B" * 59
+        self.assertTrue(contains_bare_secret_token(token))
+        cases = [
+            token,
+            "Cookie: sid=opaque-one; csrf=opaque-two",
+            "Set-Cookie: sid=opaque-one; Path=/; HttpOnly",
+            'prefix {"Cookie": "sid=opaque-one; csrf=opaque-two", "status": "ok"}',
+            "Cookie: sid=opaque-one;\r\n csrf=opaque-two\r\nStatus: ok",
+        ]
+        for value in cases:
+            with self.subTest(value=value):
+                result, changed = redact_text(value)
+                self.assertTrue(changed)
+                for secret in (token, "opaque-one", "opaque-two"):
+                    self.assertNotIn(secret, result)
+        structured, changed = redact_value({"Cookie": "sid=opaque-one", "Set-Cookie": "sid=opaque-two"})
+        self.assertTrue(changed)
+        self.assertEqual(set(structured.values()), {REDACTED_VALUE})
+
     def test_bare_token_classifier_and_redactor_recognize_the_same_finite_families(self) -> None:
         cases = [
             ("api", "sk-" + "A" * 20),

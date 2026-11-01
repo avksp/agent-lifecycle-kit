@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.contracts import LifecycleError
+from agent_lifecycle.contracts.authority_io import open_authority_read
 from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.imports import (
     import_planning_input,
@@ -14,11 +17,119 @@ from agent_lifecycle.imports import (
     validate_import_result,
     validate_skill_improvement_proposal,
 )
+from agent_lifecycle.imports.external_dialects import import_external_dialect
 from agent_lifecycle.imports.planning import import_planning_text
 from agent_lifecycle.planning import validate_plan_manifest
 
 
 class PlanningImportTests(unittest.TestCase):
+    def test_import_growth_uses_bounded_real_io_and_never_returns_pass(self) -> None:
+        for route in ("planning", "external"):
+            with self.subTest(route=route), tempfile.TemporaryDirectory() as tmp:
+                source = Path(tmp) / "source.json"
+                source.write_text('{"steps": ["small"]}', encoding="utf-8")
+                replacement = json.dumps({"steps": ["replacement"], "padding": "X" * 65536}).encode()
+                read_lengths = []
+                denied_writes = []
+                original_read = Path.read_bytes
+
+                def old_read(
+                    path, source=source, replacement=replacement, original_read=original_read, read_lengths=read_lengths
+                ):
+                    if path == source:
+                        source.write_bytes(replacement)
+                    data = original_read(path)
+                    if path == source:
+                        read_lengths.append(len(data))
+                    return data
+
+                @contextmanager
+                def observed_open(
+                    path, source=source, replacement=replacement, read_lengths=read_lengths, denied_writes=denied_writes
+                ):
+                    with open_authority_read(path) as stream:
+
+                        class Reader:
+                            def read(self, size, source=source, replacement=replacement, read_lengths=read_lengths):
+                                try:
+                                    source.write_bytes(replacement)
+                                except PermissionError:
+                                    denied_writes.append(True)
+                                    raise
+                                data = stream.read(size)
+                                read_lengths.append(len(data))
+                                return data
+
+                        yield Reader()
+
+                with (
+                    patch.object(Path, "read_bytes", old_read),
+                    patch("agent_lifecycle.imports.planning.open_authority_read", observed_open, create=True),
+                    patch("agent_lifecycle.imports.external_dialects.open_authority_read", observed_open, create=True),
+                ):
+                    try:
+                        result = (
+                            import_planning_input(source, max_input_bytes=64)
+                            if route == "planning"
+                            else import_external_dialect(source, family="workflow", max_input_bytes=64)
+                        )
+                    except LifecycleError as exc:
+                        self.assertEqual(
+                            exc.code, "authority-input-unavailable" if denied_writes else "authority-input-changed"
+                        )
+                    else:
+                        self.assertFalse(denied_writes)
+                        self.fail(f"Import returned {result['status']} instead of a changed-input refusal")
+                if denied_writes:
+                    self.assertFalse(read_lengths)
+                else:
+                    self.assertTrue(read_lengths)
+                    self.assertLessEqual(max(read_lengths), 65)
+
+    def test_source_path_policy_and_exact_byte_caps(self) -> None:
+        import os
+
+        for route in ("planning", "external"):
+            with self.subTest(route=route), tempfile.TemporaryDirectory(dir=Path.cwd()) as tmp:
+                root = Path(tmp)
+                source = root / "данные.json"
+                raw = b'{"steps": ["small"]}'
+                source.write_bytes(raw)
+                child = root / "child"
+                child.mkdir()
+                invoke = (
+                    (lambda path, cap: import_planning_input(path, max_input_bytes=cap))
+                    if route == "planning"
+                    else (lambda path, cap: import_external_dialect(path, family="workflow", max_input_bytes=cap))
+                )
+                parent_relative = Path(os.path.relpath(child)) / ".." / source.name
+                self.assertIn("..", parent_relative.parts)
+                for path in (source, child / ".." / source.name, parent_relative):
+                    for cap in (len(raw), len(raw) + 1):
+                        result = invoke(path, cap)
+                        self.assertEqual(result["status"], "PASS")
+                        self.assertEqual(result["source"]["inputBytes"], len(raw))
+                    self.assertEqual(invoke(path, len(raw) - 1)["status"], "FAIL")
+                unsafe = root / "CON.json"
+                with self.assertRaises(LifecycleError) as caught:
+                    invoke(unsafe, 64)
+                self.assertEqual(caught.exception.code, "invalid-repo-path")
+
+    def test_nonregular_source_and_missing_file_cannot_make_candidate(self) -> None:
+        for route in ("planning", "external"):
+            with self.subTest(route=route), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                invoke = (
+                    import_planning_input
+                    if route == "planning"
+                    else (lambda path: import_external_dialect(path, family="workflow"))
+                )
+                missing = invoke(root / "missing.json")
+                self.assertEqual(missing["status"], "FAIL")
+                self.assertIsNone(missing["candidatePlan"])
+                with self.assertRaises(LifecycleError):
+                    invoke(root)
+
     def test_markdown_import_produces_draft_that_requires_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "incoming.md"

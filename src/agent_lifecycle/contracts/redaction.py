@@ -19,6 +19,7 @@ _SENSITIVE_EXACT_KEYS = {
     "api_key",
     "apikey",
     "authorization",
+    "cookie",
     "credential",
     "credentials",
     "id_token",
@@ -30,6 +31,7 @@ _SENSITIVE_EXACT_KEYS = {
     "refresh_token",
     "refreshtoken",
     "secret",
+    "set_cookie",
     "session_token",
     "sessiontoken",
     "token",
@@ -66,6 +68,8 @@ _BARE_TOKEN = re.compile(
     r"sk-(?:proj-)?[A-Za-z0-9_-]{20,}|"
     r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|"
     r"gh[pousr]_[A-Za-z0-9_]{20,}|"
+    r"github"
+    r"_pat_[A-Za-z0-9_]{20,}|"
     r"glpat-[A-Za-z0-9_-]{20,}|"
     r"npm_[A-Za-z0-9]{20,}|"
     r"(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}|"
@@ -100,6 +104,13 @@ _AUTHORIZATION_HEADER = re.compile(
     r"(?P<separator>\s*[:=]\s*)"
     r"[A-Za-z][A-Za-z0-9_.-]*\s+"
     r"(?:" + _AUTH_PARAMETER + r"(?:\s*,\s*" + _AUTH_PARAMETER + r")*|[^\s,;}\]]+)",
+    re.IGNORECASE,
+)
+_COOKIE_HEADER = re.compile(
+    r"(?<![A-Za-z0-9_.-])(?P<key>(?:\\*[\"'])?(?:set[-_])?cookie(?:\\*[\"'])?)"
+    r"(?P<separator>\s*[:=]\s*)"
+    r"(?P<value>(?P<escaped_quote>\\+[\"'])(?:\\.|[^\\])*?(?P=escaped_quote)|"
+    r"\"(?:\\.|[^\"])*\"|'(?:\\.|[^'])*'|[^\r\n]*(?:\r?\n[ \t]+[^\r\n]*)*)",
     re.IGNORECASE,
 )
 _HTTP_URL = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
@@ -210,10 +221,11 @@ def _replace_matches(pattern: re.Pattern[str], value: str, replacement: str) -> 
 
 
 def _redact_common_secret_markers(value: str) -> tuple[str, int]:
+    value, cookie_count = _COOKIE_HEADER.subn(_replace_sensitive_assignment, value)
     value, private_key_count = _replace_matches(_PRIVATE_KEY, value, REDACTED_VALUE)
     value, bearer_count = _replace_matches(_BEARER, value, f"Bearer {REDACTED_VALUE}")
     value, token_count = _replace_matches(_BARE_TOKEN, value, REDACTED_VALUE)
-    return value, private_key_count + bearer_count + token_count
+    return value, cookie_count + private_key_count + bearer_count + token_count
 
 
 def _has_secret_outside_urls(value: str, url_spans: list[tuple[int, int]]) -> bool:

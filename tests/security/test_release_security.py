@@ -74,6 +74,9 @@ _EXACT_NON_SECRET_LITERALS = {
     "tests/benchmarks/test_evaluator.py": {
         "@marker": ("6df6862599a9393c9372b253e47c3b909a95f201859383b9bc099f08b9b44bf5",),
     },
+    "tests/cli/test_import_security_boundaries.py": {
+        "Cookie": ("6420fecfd1ef703e3e675cd820edef648a67742bc35c90bf05d675fbb17cb37a",),
+    },
     "tests/cli/test_external_job_commands.py": {
         "api_key": ("a4a25ded08d6b7a0b3d0ed416af77edb1e49f1e04018827c7814279e4c2b5351",),
     },
@@ -110,6 +113,15 @@ _EXACT_NON_SECRET_LITERALS = {
         ),
     },
     "tests/contracts/test_redaction.py": {
+        "Cookie": (
+            "6420fecfd1ef703e3e675cd820edef648a67742bc35c90bf05d675fbb17cb37a",
+            "77d7f39b36df946b63da988f2921db83f6c125dd979e972fb168b76ec3e95615",
+            "de83ee494e2551b15e86942bdd86cf79a318cdaa07e18442d75b28d5da0eeb0b",
+        ),
+        "Set-Cookie": (
+            "3bac9674666f6eb0ff8c0afbfd19bca27223b55e30fadb83fd4c5e2ea7684d97",
+            "f03791f81cef43a9a37adf49ff2e594fea34dc3e491b940320ed28441b56ef9e",
+        ),
         "@marker": (
             "146c34ba19c7d49437339ea800879379800b28d5e8d5f255bc08813c6fd0d64e",
             "195943887e1026f5b3ca2a271fdba314d793c3db7fd634e9f3c889221c2c042d",

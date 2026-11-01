@@ -65,3 +65,5 @@ contract references. Historical 1.74/1.75 publication evidence is not proof for
 a current distribution. Production promotion requires external signing and
 verification authorities and current evidence; those authorities are not
 stored in this repository.
+
+Single-file planning/external imports use stable no-follow reads bounded to the input cap plus one detection byte. Cookie/Set-Cookie values and fine-grained GitHub tokens are sensitive. Lexical normalization preserves ordinary parent-relative paths for those single-file APIs and the external CLI route. Portable path segments are required: symlinks, reparse points, nonregular files and unsafe/nonportable names refuse explicitly. The Markdown collection CLI retains its separate path policy. Overflow inputBytes records detection bytes read, not the total file size.

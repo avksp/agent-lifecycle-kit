@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.36.0 - 2026-11-01
+
+- Redact fine-grained GitHub tokens and complete Cookie/Set-Cookie values.
+- Bound single-file planning and external imports through stable no-follow reads.
+- Preserve portable parent-relative source paths through lexical normalization; refuse unsafe or nonportable paths explicitly.
+
 ## 2.35.0 - 2026-10-31
 
 - Document provider-neutral external AI SDLC integration through the existing CLI.
