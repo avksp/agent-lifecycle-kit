@@ -10,6 +10,7 @@
 - Document bounded research profiles, genuine review reuse and unavailable usage without claiming global optimality or host-wide budget enforcement.
 
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
+- Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
 
 ## 2.37.0 - 2026-11-01
 
