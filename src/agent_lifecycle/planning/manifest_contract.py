@@ -19,6 +19,7 @@ from agent_lifecycle.contracts.plan_manifest_schemas import (
     MANIFEST_VALIDATION_SCHEMA,
 )
 from agent_lifecycle.planning.prerequisites import prerequisite_dependencies
+from agent_lifecycle.research.preflight import decision_research_blockers
 
 _TOP_LEVEL = {
     "schemaVersion",
@@ -117,6 +118,7 @@ _WORKSTREAM = {
     "taskShape",
     "qualityFloor",
     "immutableInput",
+    "decisionResearch",
 }
 _ACCEPTANCE = {"criteria", "evidence", "releaseGate", "qualityFloor"}
 _CRITERION = {
@@ -221,6 +223,7 @@ def validate_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
     _validate_nested(manifest, blockers)
     blockers.extend(_artifact_path_blockers(manifest))
     _validate_immutable_input_policy(manifest, blockers)
+    blockers.extend(decision_research_blockers(manifest))
     _validate_extensions(manifest.get("extensions"), blockers)
     return _result(manifest, blockers)
 

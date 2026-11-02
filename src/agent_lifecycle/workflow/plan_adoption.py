@@ -347,6 +347,8 @@ def _build_tasks(
         if "immutableInput" in manifest:
             validate_a5_plan_policy(manifest["immutableInput"])
             task["immutableInput"] = copy.deepcopy(validate_a5_policy(workstream.get("immutableInput")))
+        if "decisionResearch" in workstream:
+            task["decisionResearch"] = copy.deepcopy(workstream["decisionResearch"])
         for field in ("readOnly", "forbiddenWrites", "leadOwned"):
             if field in workstream:
                 task[field] = copy.deepcopy(workstream[field])

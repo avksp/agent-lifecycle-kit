@@ -18,6 +18,8 @@ from agent_lifecycle.policy.execution_strategy import (
     resolve_execution_strategy,
     validate_execution_strategy,
 )
+from agent_lifecycle.research.preflight import check_decision_preflight
+from agent_lifecycle.review.validation import validate_independent_review
 from agent_lifecycle.workflow.artifacts import (
     artifact_identity,
     next_available_attempt,
@@ -69,6 +71,7 @@ def start_task(
     attempt = next_available_attempt(state_path, state, task)
     root = package_root(state_path, state)
     a5_decision = None
+    manifest = None
     if not is_unadopted_ordinary_context(state, task, immutable_input_request):
         manifest, lock, verification = _current_plan_envelope(root, state)
         if verification.get("manifestHash") != state["planDigest"] or lock.get("manifestHash") != state["planDigest"]:
@@ -95,6 +98,13 @@ def start_task(
             immutable_input_request,
             registry=registry,
         )
+
+    research_fact, research_review = check_decision_preflight(root, manifest, state, task)
+    if research_review is not None:
+        try:
+            validate_independent_review(research_review)
+        except LifecycleError:
+            raise LifecycleError("decision-research-review-invalid", "Decision research review is invalid") from None
 
     clear_task_risk_profile(task)
     _clear_task_execution_strategy(task)
@@ -139,20 +149,23 @@ def start_task(
     if a5_decision is not None:
         task["immutableInputAdmission"] = a5_decision
     record_gate_receipts(task, gate_receipts)
+    payload = {
+        "taskId": task_id,
+        "attempt": attempt,
+        "planDigest": state["planDigest"],
+        "sourceRevision": source_revision,
+        "immutableInputAdmission": a5_decision,
+        "executionStrategy": strategy_identity,
+        "reason": reason,
+    }
+    if research_fact is not None:
+        payload["decisionResearch"] = research_fact
     commit_state(
         state_path,
         state,
         operation_id=operation_id,
         event_type="task-started",
-        payload={
-            "taskId": task_id,
-            "attempt": attempt,
-            "planDigest": state["planDigest"],
-            "sourceRevision": source_revision,
-            "immutableInputAdmission": a5_decision,
-            "executionStrategy": strategy_identity,
-            "reason": reason,
-        },
+        payload=payload,
     )
     return status(state_path)
 

@@ -43,10 +43,13 @@ ACCEPTED_ARTIFACT_KEYS = (
 def canonical_task_contract(task: dict[str, Any]) -> dict[str, Any]:
     """Return the exact task fields whose equality permits preservation."""
 
-    return {
+    contract = {
         key: deepcopy(task.get(key, []) if key in EMPTY_LIST_CONTRACT_KEYS else task.get(key))
         for key in TASK_CONTRACT_KEYS
     }
+    if "decisionResearch" in task:
+        contract["decisionResearch"] = deepcopy(task["decisionResearch"])
+    return contract
 
 
 def task_contract_digest(task: dict[str, Any]) -> str:
