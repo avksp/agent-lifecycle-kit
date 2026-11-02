@@ -206,9 +206,7 @@ def _validate_prior_report(
         or not source.strip()
         or (source != previous_plan.get("sourceRevision") and not preserved_origin)
     ):
-        blockers.append(
-            {"code": "task-plan-compatibility-report-lineage", "field": "sourceRevision"}
-        )
+        blockers.append({"code": "task-plan-compatibility-report-lineage", "field": "sourceRevision"})
     if not plan_compatible:
         for key in ("planRevision", "planDigest"):
             blockers.append({"code": "task-plan-compatibility-report-lineage", "field": key})
