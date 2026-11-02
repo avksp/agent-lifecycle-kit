@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import copy
+import json
 import subprocess
 import tempfile
 import unittest
@@ -466,17 +466,231 @@ def _write_two_author_final_bundle(root: Path) -> tuple[dict, list[str]]:
     state["tasks"][1]["review"] = {**artifact_identity(root, second_review_path, second_review), "verdict": "ACCEPTED"}
     bundle["statePath"].write_bytes(canonical_bytes(state) + b"\n")
     paths = []
-    for task_id, result_path, review_path in (("WS-01", result_path, review_path),
-                                             ("WS-02", second_result_path, second_review_path)):
+    for task_id, current_result_path, current_review_path in (
+        ("WS-01", result_path, review_path),
+        ("WS-02", second_result_path, second_review_path),
+    ):
         report = build_implementation_audit_report(
             manifest_path=bundle["manifestPath"], state_path=bundle["statePath"], task_id=task_id,
-            result_path=result_path, review_path=review_path)
+            result_path=current_result_path, review_path=current_review_path)
         if report["status"] != "PASS":
             raise AssertionError(report["blockers"])
         path = f"work/{task_id}/attempt-1/implementation-audit.json"
         write_json_create(root / path, report)
         paths.append(path)
     return bundle, paths
+
+
+class PreservedReportSourceTests(unittest.TestCase):
+    def test_final_accepts_original_report_after_repeated_source_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, report_path, report, state = _preserved_source_bundle(root)
+            before = (root / report_path).read_bytes()
+            final = build_final_implementation_audit(
+                manifest_path=bundle["manifestPath"],
+                state_path=bundle["statePath"],
+                report_paths=[report_path],
+            )
+            self.assertEqual(final["status"], "PASS", final["blockers"])
+            self.assertEqual(report["sourceRevision"], "source")
+            self.assertEqual(state["sourceRevision"], "source-4")
+            self.assertEqual((root / report_path).read_bytes(), before)
+            self.assertEqual(
+                canonical_digest(report),
+                state["tasks"][0]["implementationAuditReport"]["sha256"],
+            )
+
+    def test_rejects_changed_source_or_body_with_original_accepted_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, report, state = _preserved_source_bundle(Path(tmp))
+            for field, value in (
+                ("sourceRevision", "forged-source"),
+                ("sourceRevision", None),
+                ("summary", "modified accepted report"),
+            ):
+                changed = copy.deepcopy(report)
+                changed[field] = value
+                _reseal_report(changed)
+                before = copy.deepcopy(changed)
+                with self.subTest(field=field, value=value):
+                    validation = _validate_preserved(changed, state)
+                    self.assertEqual(validation["status"], "FAIL")
+                    self.assertEqual(changed, before)
+
+    def test_same_revision_wrong_source_still_refuses_exact_sealed_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, report, state = _preserved_source_bundle(
+                Path(tmp), sources=("source-2",)
+            )
+            task = state["tasks"][0]
+            receipt = task["planCompatibilityReceipt"]
+            receipt["previousPlan"]["sourceRevision"] = "wrong-source"
+            _reseal_receipt(receipt)
+            validation = _validate_preserved(report, state)
+            self.assertEqual(validation["status"], "FAIL")
+            compatibility = validation["planCompatibility"]
+            self.assertIn(
+                {"code": "task-plan-compatibility-report-lineage",
+                 "field": "sourceRevision"},
+                compatibility["blockers"],
+            )
+
+    def test_missing_origin_refuses_even_if_artifact_identity_is_resealed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, report, state = _preserved_source_bundle(Path(tmp))
+            for source in (None, "", False):
+                changed = copy.deepcopy(report)
+                changed["sourceRevision"] = source
+                _reseal_report(changed)
+                current = copy.deepcopy(state)
+                _replace_accepted_identity(current, changed)
+                with self.subTest(source=source):
+                    self.assertEqual(
+                        _validate_preserved(changed, current)["status"], "FAIL"
+                    )
+
+    def test_wrong_run_package_task_or_attempt_still_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, report, state = _preserved_source_bundle(Path(tmp))
+            for field, value in (
+                ("runId", "other-run"),
+                ("packageId", "other-package"),
+                ("taskId", "WS-OTHER"),
+                ("attempt", 2),
+            ):
+                changed = copy.deepcopy(report)
+                changed[field] = value
+                _reseal_report(changed)
+                current = copy.deepcopy(state)
+                _replace_accepted_identity(current, changed)
+                with self.subTest(field=field):
+                    self.assertEqual(
+                        _validate_preserved(changed, current)["status"], "FAIL"
+                    )
+
+    def test_receipt_contract_and_supplied_identity_tampering_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, _, report, state = _preserved_source_bundle(Path(tmp))
+            for field, value in (
+                ("path", "work/other.json"),
+                ("sha256", "0" * 64),
+                ("bytes", 1),
+            ):
+                identity = copy.deepcopy(
+                    state["tasks"][0]["implementationAuditReport"]
+                )
+                identity[field] = value
+                with self.subTest(identity=field):
+                    self.assertEqual(
+                        _validate_preserved(report, state, identity)["status"],
+                        "FAIL",
+                    )
+            for mutation in ("missing", "digest", "current", "contract"):
+                current = copy.deepcopy(state)
+                task = current["tasks"][0]
+                receipt = task["planCompatibilityReceipt"]
+                if mutation == "missing":
+                    task.pop("planCompatibilityReceipt")
+                elif mutation == "digest":
+                    receipt["receiptDigest"] = "0" * 64
+                elif mutation == "current":
+                    receipt["currentPlan"]["sourceRevision"] = "other-source"
+                    _reseal_receipt(receipt)
+                else:
+                    task["writes"].append("src/other.py")
+                with self.subTest(receipt=mutation):
+                    self.assertEqual(
+                        _validate_preserved(report, current)["status"], "FAIL"
+                    )
+
+
+def _preserved_source_bundle(
+    root: Path, *, sources=("source-2", "source-3", "source-4")
+):
+    bundle = _write_bundle(root, phase="FINAL_AUDIT", task_status="ACCEPTED")
+    result_path, review_path = _write_result_review(root, bundle)
+    report = build_implementation_audit_report(
+        manifest_path=bundle["manifestPath"],
+        state_path=bundle["statePath"],
+        task_id="WS-01",
+        result_path=result_path,
+        review_path=review_path,
+    )
+    if report["status"] != "PASS":
+        raise AssertionError(report["blockers"])
+    report_path = "work/WS-01/attempt-1/implementation-audit.json"
+    write_json_create(root / report_path, report)
+    state_path = Path(bundle["statePath"])
+    manifest_path = Path(bundle["manifestPath"])
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["tasks"][0]["implementationAuditReport"] = {
+        "path": report_path,
+        "sha256": canonical_digest(report),
+        "bytes": (root / report_path).stat().st_size,
+        "taskId": "WS-01",
+        "attempt": 1,
+        "verdict": "ACCEPTED",
+        "reportDigest": report["reportDigest"],
+    }
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for revision, source in enumerate(sources, start=2):
+        previous = copy.deepcopy(state)
+        manifest["planRevision"] = revision
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        state.update(
+            planRevision=revision,
+            planDigest=canonical_digest(manifest),
+            sourceRevision=source,
+        )
+        identity = {key: state[key] for key in (
+            "runId", "packageId", "planRevision", "planDigest", "sourceRevision"
+        )}
+        state["tasks"][0]["planCompatibilityReceipt"] = (
+            build_task_plan_compatibility_receipt(
+                previous_state=previous,
+                current_plan=identity,
+                previous_task=previous["tasks"][0],
+                current_task=state["tasks"][0],
+            )
+        )
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    return bundle, report_path, report, state
+
+
+def _validate_preserved(report, state, identity=None):
+    task = state["tasks"][0]
+    return validate_implementation_audit_report(
+        report,
+        state=state,
+        task=task,
+        report_identity=(task["implementationAuditReport"]
+                         if identity is None else identity),
+    )
+
+
+def _reseal_report(report):
+    report["reportDigest"] = canonical_digest(
+        {key: value for key, value in report.items() if key != "reportDigest"}
+    )
+
+
+def _reseal_receipt(receipt):
+    receipt["receiptDigest"] = canonical_digest(
+        {key: value for key, value in receipt.items() if key != "receiptDigest"}
+    )
+
+
+def _replace_accepted_identity(state, report):
+    task = state["tasks"][0]
+    task["implementationAuditReport"].update(
+        sha256=canonical_digest(report), reportDigest=report["reportDigest"]
+    )
+    receipt = task["planCompatibilityReceipt"]
+    receipt["acceptedArtifacts"]["implementationAuditReport"] = (
+        copy.deepcopy(task["implementationAuditReport"])
+    )
+    _reseal_receipt(receipt)
 
 
 def _write_bundle(root: Path, *, phase: str = "STEP_REVIEW", task_status: str = "VERIFYING") -> dict[str, Path | str]:
