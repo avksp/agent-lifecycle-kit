@@ -6,6 +6,7 @@
 - Refuse missing, stale, unsafe or unsupported research before native task start; direct start and continue share the check.
 - Keep legacy task digests and behavior unchanged when the new field is absent.
 - Preserve enabled context references through canonical candidate preparation and test prepare, reviewed lock, v4 adoption and start together.
+- Preserve sealed accepted audit reports through repeated compatible plan and source changes; reject modified evidence.
 - Document bounded research profiles, genuine review reuse and unavailable usage without claiming global optimality or host-wide budget enforcement.
 
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
