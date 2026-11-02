@@ -1,0 +1,94 @@
+{
+  "name": "ALK 2.38 bounded Node observation",
+  "on": {
+    "push": {
+      "branches": [
+        "diag/release-2.38-node-observation-a1"
+      ]
+    }
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "observe": {
+      "name": "Node observation / py${{ matrix.python }}",
+      "runs-on": "windows-latest",
+      "timeout-minutes": 5,
+      "strategy": {
+        "fail-fast": false,
+        "matrix": {
+          "python": [
+            "3.14.10",
+            "3.15.2"
+          ]
+        }
+      },
+      "env": {
+        "PYTHONPATH": "src",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "ALK_REQUIRE_NODE": "1"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "fetch-depth": 0,
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Require exact diagnostic source",
+          "shell": "pwsh",
+          "run": "$changed = @(git diff --name-only 9385a3118de607f838b1115c774dfd48cc2637ac HEAD)\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\nif ($changed.Count -ne 1 -or $changed[0] -ne '.github/workflows/alk-2-38-node-observation.yml') { throw 'Unexpected diagnostic source delta' }\ngit rev-parse HEAD\n"
+        },
+        {
+          "name": "Set up exact failed Python",
+          "id": "python",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+          "with": {
+            "python-version": "${{ matrix.python }}"
+          }
+        },
+        {
+          "name": "Install same locked quality environment",
+          "shell": "pwsh",
+          "env": {
+            "ALK_OBS_PYTHON": "${{ steps.python.outputs.python-path }}"
+          },
+          "run": "python -m pip install --disable-pip-version-check uv==0.12.5\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }\nuv sync --locked --group quality --python \"$env:ALK_OBS_PYTHON\"\nexit $LASTEXITCODE\n"
+        },
+        {
+          "name": "Observe one unchanged original Node test",
+          "id": "target",
+          "shell": "pwsh",
+          "run": "$code = @'\n\"\"\"One instrumented original Node test; diagnostics only, never qualification.\"\"\"\nimport faulthandler\nimport hashlib\nimport json\nimport os\nimport platform\nimport shutil\nimport sys\nimport threading\nimport time\nimport unittest\nfrom pathlib import Path\n\nfrom agent_lifecycle.changesets import git_io\nfrom tests.adapters import test_opencode_projection_runtime as smoke\n\nOUT = Path(\"work/node-observation\")\nOUT.mkdir(parents=True, exist_ok=True)\nEXPECTED = {\n    \"tests/adapters/test_opencode_projection_runtime.py\": \"44a962e91a2a0b0778ebc58427456c0a99477071b1d123ab0b7cb0b2eabe56dd\",\n    \"src/agent_lifecycle/changesets/git_io.py\": \"846ad18e275bd4ef4aa4e2959843d606692705bf073b2f9681acca509497f340\",\n    \"adapters/opencode/plugins/agent-lifecycle-kit.js\": \"ea4b6f404d529d348f206d6152db42632c6af82879f763b0c8ee4f1f8079c2ae\",\n}\nfor name, expected in EXPECTED.items():\n    if hashlib.sha256(Path(name).read_bytes()).hexdigest() != expected:\n        raise RuntimeError(\"Diagnostic input mismatch: \" + name)\n\nstarted = time.monotonic()\nlock = threading.Lock()\nevents = (OUT / \"events.jsonl\").open(\"x\", encoding=\"utf-8\")\nobservation_failures = []\n\n\ndef emit(stage, **fields):\n    row = {\"stage\": stage, \"seconds\": time.monotonic() - started, **fields}\n    try:\n        with lock:\n            events.write(json.dumps(row, sort_keys=True) + \"\\n\")\n            events.flush()\n    except Exception as exc:\n        if len(observation_failures) < 8:\n            observation_failures.append(type(exc).__name__)\n\n\ndef _state(owner):\n    reader = getattr(owner, \"stdout\", None)\n    process = getattr(owner, \"process\", None)\n    return {\n        \"pid\": getattr(process, \"pid\", None),\n        \"poll\": process.poll() if process is not None else None,\n        \"deadlineRemaining\": owner.deadline - time.monotonic(),\n        \"failure\": owner.failure,\n        \"stopping\": owner.stopping.is_set(),\n        \"stdoutBuffered\": len(reader.buffer) if reader is not None else None,\n        \"stdoutQueued\": reader.chunks.qsize() if reader is not None else None,\n        \"stdoutEOF\": reader.eof if reader is not None else None,\n        \"stderrBuffered\": len(owner.stderr),\n        \"threads\": [{\"name\": t.name, \"alive\": t.is_alive(), \"nativeId\": t.native_id}\n                    for t in owner.threads],\n    }\n\n\ndef state(owner):\n    try:\n        return _state(owner)\n    except Exception as exc:\n        observation_failures.append(type(exc).__name__)\n        return {\"observationError\": type(exc).__name__}\n\n\noriginal_popen = git_io.subprocess.Popen\noriginal_windows = git_io._windows_cleanup\noriginal_pump = git_io._PipeReader._pump\noriginal_stderr = git_io.BoundedProcess._drain_stderr\noriginal_close = git_io.BoundedProcess.close\n\n\ndef observed_popen(argv, *args, **kwargs):\n    emit(\"popen-begin\", executable=str(argv[0]), argc=len(argv))\n    try:\n        process = original_popen(argv, *args, **kwargs)\n    except BaseException as exc:\n        emit(\"popen-error\", exception=type(exc).__name__)\n        raise\n    emit(\"popen-end\", pid=process.pid)\n    return process\n\n\ndef observed_windows(process):\n    emit(\"windows-job-begin\", pid=process.pid)\n    try:\n        cleanup = original_windows(process)\n    except BaseException as exc:\n        emit(\"windows-job-error\", exception=type(exc).__name__)\n        raise\n    emit(\"windows-job-end\", pid=process.pid)\n    if cleanup is None:\n        return None\n\n    def observed_cleanup():\n        emit(\"windows-job-cleanup-begin\", pid=process.pid)\n        try:\n            return cleanup()\n        finally:\n            emit(\"windows-job-cleanup-end\", pid=process.pid)\n\n    return observed_cleanup\n\n\ndef observed_pump(self):\n    emit(\"stdout-reader-begin\", nativeId=threading.get_native_id())\n    try:\n        return original_pump(self)\n    finally:\n        emit(\"stdout-reader-end\", eof=self.eof, queued=self.chunks.qsize())\n\n\ndef observed_stderr(self):\n    emit(\"stderr-reader-begin\", nativeId=threading.get_native_id())\n    try:\n        return original_stderr(self)\n    finally:\n        emit(\"stderr-reader-end\", buffered=len(self.stderr))\n\n\ndef observed_close(self):\n    emit(\"close-begin\", transport=state(self))\n    try:\n        return original_close(self)\n    finally:\n        emit(\"close-end\", transport=state(self))\n\n\ngit_io.subprocess.Popen = observed_popen\ngit_io._windows_cleanup = observed_windows\ngit_io._PipeReader._pump = observed_pump\ngit_io.BoundedProcess._drain_stderr = observed_stderr\ngit_io.BoundedProcess.close = observed_close\n\nemit(\"metadata\", python=sys.version, pythonExecutable=sys.executable,\n     platform=platform.platform(), nodePath=shutil.which(\"node\"),\n     sourceHashes=EXPECTED, imageOS=os.environ.get(\"ImageOS\"),\n     imageVersion=os.environ.get(\"ImageVersion\"),\n     evidenceBoundary=\"INSTRUMENTED_DIAGNOSTIC_NOT_QUALIFICATION\")\ntrace = (OUT / \"faulthandler.log\").open(\"x\", encoding=\"utf-8\")\nfaulthandler.dump_traceback_later(2, repeat=False, file=trace)\nresult = unittest.TestResult()\ntry:\n    suite = unittest.TestSuite([\n        smoke.OpenCodeProjectionRuntimeTests(\n            \"test_actual_projection_parses_and_exports_an_empty_plugin\")\n    ])\n    suite.run(result)\nfinally:\n    faulthandler.cancel_dump_traceback_later()\n    emit(\"target-end\", tests=result.testsRun, failures=len(result.failures),\n         errors=len(result.errors), skips=len(result.skipped))\n    trace.flush()\n    trace.close()\n\npayload = {\n    \"kind\": \"ONE_ORIGINAL_NODE_TARGET_WITH_OBSERVATIONS\",\n    \"qualification\": False,\n    \"testsRun\": result.testsRun,\n    \"failures\": [(test.id(), text) for test, text in result.failures],\n    \"errors\": [(test.id(), text) for test, text in result.errors],\n    \"skips\": [(test.id(), reason) for test, reason in result.skipped],\n    \"sourceHashes\": EXPECTED,\n    \"originalDeadlineAndOutputLimitsUnchanged\": True,\n    \"noAuxiliaryNodeOrStdinCalls\": True,\n    \"observerMayAffectTiming\": True,\n    \"observationFailures\": observation_failures,\n}\n(OUT / \"result.json\").write_text(json.dumps(payload, indent=2) + \"\\n\", encoding=\"utf-8\")\noversized = [p.name for p in OUT.iterdir() if p.is_file() and p.stat().st_size > 2 * 1024 * 1024]\nif oversized:\n    raise RuntimeError(\"Diagnostic artifact cap exceeded: \" + \",\".join(oversized))\nprint(json.dumps({\"testsRun\": result.testsRun, \"errors\": len(result.errors),\n                  \"failures\": len(result.failures), \"qualification\": False}))\nsys.exit(0 if result.wasSuccessful() and result.testsRun == 1 and not observation_failures else 1)\n\n'@\n& .venv/Scripts/python.exe -c $code\nexit $LASTEXITCODE\n"
+        },
+        {
+          "name": "Record Node file metadata after target without launching Node",
+          "if": "always()",
+          "shell": "pwsh",
+          "run": "New-Item -ItemType Directory -Force work/node-observation | Out-Null\n$command = Get-Command node -CommandType Application -ErrorAction Stop\n$item = Get-Item $command.Source\n$record = @{nodePath=$item.FullName; nodeFileVersion=$item.VersionInfo.FileVersion; nodeProductVersion=$item.VersionInfo.ProductVersion; nodeFileSha256=(Get-FileHash -Algorithm SHA256 $item.FullName).Hash.ToLower(); imageOS=$env:ImageOS; imageVersion=$env:ImageVersion; observedAfterTarget=$true; qualification=$false}\n$record | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 work/node-observation/host.json\n"
+        },
+        {
+          "name": "Bound diagnostic artifacts",
+          "id": "artifact_caps",
+          "if": "always()",
+          "shell": "pwsh",
+          "run": "$files = Get-ChildItem work/node-observation -File -ErrorAction SilentlyContinue\n$tooLarge = @($files | Where-Object {$_.Length -gt 2097152})\nif ($tooLarge.Count -gt 0) { $tooLarge | Select-Object Name,Length | ConvertTo-Json; exit 1 }\n"
+        },
+        {
+          "name": "Save bounded original observations",
+          "if": "always() && steps.artifact_caps.outcome == 'success'",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "r238-node-observation-py${{ matrix.python }}",
+            "path": "work/node-observation/*",
+            "retention-days": 1,
+            "if-no-files-found": "error"
+          }
+        }
+      ]
+    }
+  }
+}
