@@ -278,6 +278,9 @@ _EXACT_NON_SECRET_LITERALS = {
     "tests/workflow/test_artifact_builders.py": {
         "password": ("31160254d1297393d2ad00e1c01851aec834361e02c524b89fe06aff2879ce6a",),
     },
+    "tests/workflow/test_research_preflight.py": {
+        "secret": ("c885e48b9fdaa30a58749c414b36d8bcf350c385850c3596e7017b812f2b81c8",),
+    },
     "tools/release/validate_project_workflow_presets.py": {
         "credentials": ("a26075ed2e784cb181eaabb10acd083520d311bc68b4b7d00d57de825bb3ec86",),
     },
