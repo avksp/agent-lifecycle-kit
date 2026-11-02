@@ -5,7 +5,7 @@ import copy
 import unittest
 from pathlib import Path
 
-from agent_lifecycle.contracts import canonical_digest
+from agent_lifecycle.contracts import canonical_bytes, canonical_digest
 from agent_lifecycle.planning.task_compatibility import (
     build_task_plan_compatibility_receipt,
     task_contract_digest,
@@ -44,7 +44,7 @@ class TaskPlanCompatibilityTests(unittest.TestCase):
             state=_state(plan_revision=2, plan_digest="2" * 64, source_revision="new"),
             task=current_task,
             report=_report(),
-            report_identity={"path": "audit.json", "sha256": "4" * 64, "bytes": 40},
+            report_identity=_report_identity(),
         )
 
         self.assertEqual(validation["status"], "PASS")
@@ -95,7 +95,7 @@ class TaskPlanCompatibilityTests(unittest.TestCase):
             state=_state(plan_revision=8, plan_digest="8" * 64, source_revision="old"),
             task=current_task,
             report=_report(),
-            report_identity={"path": "audit.json", "sha256": "4" * 64, "bytes": 40},
+            report_identity=_report_identity(),
         )
 
         self.assertEqual(validation["status"], "PASS")
@@ -137,9 +137,7 @@ def _state(*, plan_revision: int, plan_digest: str, source_revision: str) -> dic
 
 def _task() -> dict:
     report_identity = {
-        "path": "audit.json",
-        "sha256": "4" * 64,
-        "bytes": 40,
+        **_report_identity(),
         "taskId": "WS-01",
         "attempt": 1,
         "verdict": "ACCEPTED",
@@ -169,6 +167,12 @@ def _task() -> dict:
         "review": {"path": "review.json", "sha256": "3" * 64, "bytes": 30},
         "implementationAuditReport": report_identity,
     }
+
+
+def _report_identity() -> dict:
+    report = _report()
+    return {"path": "audit.json", "sha256": canonical_digest(report),
+            "bytes": len(canonical_bytes(report))}
 
 
 def _report() -> dict:
