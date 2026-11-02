@@ -8,6 +8,8 @@
 - Preserve enabled context references through canonical candidate preparation and test prepare, reviewed lock, v4 adoption and start together.
 - Document bounded research profiles, genuine review reuse and unavailable usage without claiming global optimality or host-wide budget enforcement.
 
+- Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
+
 ## 2.37.0 - 2026-11-01
 
 - Refuse imports that exceed existing requirement or validation limits before losing critical text.
