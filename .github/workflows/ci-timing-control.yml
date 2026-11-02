@@ -155,184 +155,287 @@ jobs:
 
   release235-diagnostic-windows:
     if: inputs.mode == 'release-2-35-diagnostic'
-    name: windows-native-group-diagnostic / py3.15 / UNIT_ONLY
+    name: r238-final-stalled-stdin-batch / py3.14.9-and-3.15.1 / UNIT_ONLY
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.candidate_sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
-          python-version: "3.15"
-      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+          python-version: "3.15.1"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
         with:
           version: "0.13.1"
-      - name: Bind one diagnostic source and current attempt deadline
-        shell: pwsh
-        env:
-          DIAGNOSTIC_CANDIDATE: ${{ inputs.candidate_sha }}
-          DIAGNOSTIC_DEADLINE: ${{ inputs.deadline_utc }}
-        run: |
-          $diagnosticBinding = @'
-          import hashlib, json, os, platform, re, subprocess, sys
-          from datetime import datetime, timezone
-          from pathlib import Path
-          output = Path("work/ci/release235-diagnostic")
-          output.mkdir(parents=True, exist_ok=True)
-          candidate = os.environ["DIAGNOSTIC_CANDIDATE"]
-          deadline = os.environ["DIAGNOSTIC_DEADLINE"]
-          head = subprocess.check_output(["git", "rev-parse", "HEAD"], timeout=15).decode().strip()
-          paths = ("src/agent_lifecycle/changesets/git_io.py", "tests/changesets/test_git_io.py",
-                   ".github/workflows/ci-timing-control.yml", "tests/cli/test_external_consumer_contract.py")
-          value = {"schemaVersion": "r235-windows-diagnostic-source.v1", "authorityClaimed": False,
-                   "evidenceBoundary": "UNIT_ONLY", "candidate": candidate, "head": head,
-                   "githubSha": os.environ["GITHUB_SHA"], "ref": os.environ["GITHUB_REF_NAME"],
-                   "deadlineUtc": deadline, "observedAt": datetime.now(timezone.utc).isoformat(),
-                   "python": sys.version, "platform": platform.platform(),
-                   "sources": {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths},
-                   "providerTokens": None, "providerUSD": None, "releaseQualificationClaimed": False}
-          (output / "source.json").write_text(json.dumps(value, sort_keys=True, indent=2), encoding="utf-8")
-          (output / "command-results.json").write_text(json.dumps({"status": "NOT_STARTED", "sourceHead": head}), encoding="utf-8")
-          (output / "native-errors.json").write_text("[]", encoding="utf-8")
-          for name in ("stdout.log", "stderr.log", "consumer-receipts.jsonl"):
-              (output / name).touch()
-          assert re.fullmatch(r"[0-9a-f]{40}", candidate), "exact 40-hex candidate required"
-          assert head == candidate == value["githubSha"], "diagnostic source mismatch"
-          assert value["ref"] == "diag/release-2.35-win-group-a1", "diagnostic branch required"
-          assert deadline == "2026-10-31T23:36:59Z", "current native attempt deadline required"
-          assert datetime.now(timezone.utc) < datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-          print(json.dumps({"status": "BOUND", "head": head, "deadlineUtc": deadline}))
-          '@
-          python -c $diagnosticBinding
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Restore canonical disposable CI fixture
+      - name: Restore original disposable fixture
         run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
-      - name: Install frozen Python 3.15 quality environment and source project
+      - name: Install frozen Python3.15.1 quality environment
+        run: uv sync --frozen --group quality --python 3.15.1
+      - name: Install separate frozen Python3.14.9 control environment
+        shell: pwsh
         env:
-          UV_PROJECT_ENVIRONMENT: work/ci/release235-diag-venv
-        run: uv sync --frozen --group quality --python 3.15
-      - name: Capture the three fixed diagnostic modules and public consumer replies
+          UV_PROJECT_ENVIRONMENT: .venv314
+        run: uv sync --frozen --group quality --python 3.14.9
+      - name: Run one final fixed same-host replication batch
         shell: pwsh
         env:
           DIAGNOSTIC_CANDIDATE: ${{ inputs.candidate_sha }}
           DIAGNOSTIC_DEADLINE: ${{ inputs.deadline_utc }}
+          PYTHONDONTWRITEBYTECODE: "1"
         run: |
-          $diagnosticRun = @'
-          import hashlib, json, os, re, subprocess, sys, time
-          from datetime import datetime, timezone
-          from pathlib import Path
-          root = Path.cwd()
-          output = root / "work/ci/release235-diagnostic"
-          source = json.loads((output / "source.json").read_text(encoding="utf-8"))
-          head = subprocess.check_output(["git", "rev-parse", "HEAD"], timeout=15).decode().strip()
-          assert head == source["head"] == os.environ["DIAGNOSTIC_CANDIDATE"] == os.environ["GITHUB_SHA"]
-          assert os.environ["DIAGNOSTIC_DEADLINE"] == source["deadlineUtc"] == "2026-10-31T23:36:59Z"
-          deadline = datetime.strptime(source["deadlineUtc"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-          remaining = (deadline - datetime.now(timezone.utc)).total_seconds()
-          assert remaining > 0, "diagnostic task deadline expired"
-          python = root / "work/ci/release235-diag-venv/Scripts/python.exe"
-          executable = python.with_name("agent-lifecycle.exe")
-          assert python.is_file() and executable.is_file()
-          probe = "import sys,json,importlib.metadata as m;print(json.dumps({'executable':sys.executable,'python':sys.version,'tools':{n:m.version(n) for n in ('ruff','mypy','coverage','jsonschema')}}))"
-          observed = json.loads(subprocess.check_output([str(python), "-c", probe], timeout=30))
-          assert observed["tools"] == {"ruff": "0.17.3", "mypy": "2.4.0", "coverage": "7.17.0", "jsonschema": "4.26.0"}
-          observed["pythonSha256"] = hashlib.sha256(python.read_bytes()).hexdigest()
-          observed["cliSha256"] = hashlib.sha256(executable.read_bytes()).hexdigest()
-          (output / "environment.json").write_text(json.dumps(observed, sort_keys=True, indent=2), encoding="utf-8")
-          modules = ["tests.cli.test_external_consumer_contract", "tests.cli.test_plan_delta_commands", "tests.changesets.test_git_io"]
-          command = [str(python), "-m", "unittest", *modules, "-v"]
-          env = dict(os.environ)
-          env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(root / "src"), PYTHONNOUSERSITE="1",
-                     ALK_EXTERNAL_CONSUMER_EXECUTABLE=str(executable),
-                     ALK_EXTERNAL_CONSUMER_RECEIPTS=str(output / "consumer-receipts.jsonl"))
-          started = datetime.now(timezone.utc).isoformat()
-          clock = time.monotonic()
-          timed_out = False
-          remaining = (deadline - datetime.now(timezone.utc)).total_seconds()
-          assert remaining > 0, "diagnostic task deadline expired before test launch"
-          with (output / "stdout.log").open("wb") as stdout, (output / "stderr.log").open("wb") as stderr:
-              try:
-                  result = subprocess.run(command, cwd=root, env=env, stdin=subprocess.DEVNULL,
-                                          stdout=stdout, stderr=stderr, timeout=min(900, remaining), check=False)
-                  exit_code = result.returncode
-              except subprocess.TimeoutExpired:
-                  timed_out, exit_code = True, 124
-          retained = {}
-          for name in ("stdout.log", "stderr.log", "consumer-receipts.jsonl"):
-              path = output / name
-              size = path.stat().st_size
-              digest = hashlib.file_digest(path.open("rb"), "sha256").hexdigest()
-              if size > 8 * 1024 * 1024:
-                  with path.open("rb") as stream:
-                      prefix = stream.read(8 * 1024 * 1024)
-                  path.rename(output / (name + ".unuploaded-original"))
-                  path.write_bytes(prefix)
-              retained[name] = {"originalBytes": size, "originalSha256": digest,
-                                "retainedBytes": path.stat().st_size, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                                "truncated": size > 8 * 1024 * 1024}
-          native = []
-          consumer_env_clean = True
-          def collect(value, origin, depth=0):
-              if depth > 16:
-                  return
-              if isinstance(value, dict):
-                  if "nativeStage" in value:
-                      native.append({"origin": origin, "details": value})
-                  for child in value.values():
-                      collect(child, origin, depth + 1)
-              elif isinstance(value, list):
-                  for child in value[:256]:
-                      collect(child, origin, depth + 1)
-          for line in (output / "consumer-receipts.jsonl").read_text(encoding="utf-8", errors="replace").splitlines()[:256]:
-              try:
-                  receipt = json.loads(line)
-                  consumer_env_clean = consumer_env_clean and "PYTHONPATH" not in receipt["env"] and "PYTHONHOME" not in receipt["env"]
-                  collect(json.loads(receipt["stdout"]), "consumer-public-stdout")
-              except (ValueError, KeyError):
-                  continue
-          decoder = json.JSONDecoder()
-          for name in ("stdout.log", "stderr.log"):
-              text = (output / name).read_text(encoding="utf-8", errors="replace")
-              for match in list(re.finditer(r"\{", text))[:256]:
-                  try:
-                      value, end = decoder.raw_decode(text, match.start())
-                      collect(value, name)
-                  except ValueError:
-                      continue
-          (output / "native-errors.json").write_text(json.dumps(native, sort_keys=True, indent=2), encoding="utf-8")
-          source_after = {p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in source["sources"]}
-          summary = {"schemaVersion": "r235-windows-diagnostic-command.v1", "authorityClaimed": False,
-                     "evidenceBoundary": "UNIT_ONLY", "sourceHead": head, "argv": command,
-                     "startedAt": started, "finishedAt": datetime.now(timezone.utc).isoformat(),
-                     "elapsedSeconds": time.monotonic() - clock, "exitCode": exit_code, "timedOut": timed_out,
-                     "retainedFiles": retained, "sourceUnchanged": source_after == source["sources"],
-                     "nativeErrorCount": len(native), "consumerChildEnvironmentClean": consumer_env_clean,
-                     "providerTokens": None, "providerUSD": None,
-                     "releaseQualificationClaimed": False}
-          (output / "command-results.json").write_text(json.dumps(summary, sort_keys=True, indent=2), encoding="utf-8")
-          print(json.dumps({"sourceHead": head, "exitCode": exit_code, "nativeErrorCount": len(native), "timedOut": timed_out}))
-          sys.exit(exit_code if summary["sourceUnchanged"] and consumer_env_clean else 1)
+          $r238Payload = @'
+          ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhbm5vdGF0aW9ucwppbXBvcnQgZmF1bHRo
+          YW5kbGVyLGhhc2hsaWIsanNvbixvcyxwbGF0Zm9ybSxydW5weSxzdWJwcm9jZXNz
+          LHN5cyx0aHJlYWRpbmcsdGltZSx1bml0dGVzdApmcm9tIGRhdGV0aW1lIGltcG9y
+          dCBkYXRldGltZSx0aW1lem9uZQpmcm9tIHBhdGhsaWIgaW1wb3J0IFBhdGgKT1VU
+          PVBhdGgoIndvcmsvY2kvcjIzOC1kZWFkbGluZS1maW5hbC1iYXRjaCIpClRBUkdF
+          VD0idGVzdHMuYWRhcHRlcl9zZXNzaW9ucy50ZXN0X3NlY3VyZV9sYXVuY2hlci5T
+          ZWN1cmVBZGFwdGVyTGF1bmNoZXJUZXN0cy50ZXN0X29yZGluYXJ5X3N0YWxsZWRf
+          c3RkaW5fZGVhZGxpbmVfa2VlcHNfdW5rbm93bl9tZWFzdXJlbWVudCIKQkFTRT0i
+          MDQ3OGQxZDUyY2YzNzlkYTE5NTM3Yzg4NmVkMGQ0OTlmNmQ4MjNiOCIKREVBRExJ
+          TkU9IjIwMjYtMTEtMDJUMTU6NDE6NDBaIgpFWFBFQ1RFRD17J3NyYy9hZ2VudF9s
+          aWZlY3ljbGUvYWRhcHRlcl9zZXNzaW9ucy9wcm9jZXNzLnB5JzogJzAxZmIzZTZl
+          ZDdiMDIzNGU3Mzg4OWM2OWU5OTExZmI5ZmQ2MmJmNGRmNTJlNGU0M2ZjOTRhNjQ2
+          N2ZlY2UxNTInLCAnc3JjL2FnZW50X2xpZmVjeWNsZS9hZGFwdGVyX3Nlc3Npb25z
+          L3Byb2Nlc3NfZ3JvdXBzLnB5JzogJ2NkZjIwNjUwNjExMWZhMGZjMjJlYzAzNGNi
+          OTI3Y2E1ZDdjNDllMGEyZDI4NzIyMWFlZTBkMWNjYTdmODUxYjcnLCAnc3JjL2Fn
+          ZW50X2xpZmVjeWNsZS9hZGFwdGVyX3Nlc3Npb25zL3Byb2Nlc3NfY2FwdHVyZS5w
+          eSc6ICdjYzAyNzg1NjRjYjIxZDJjYjkyMWU4YTU4NTYyMjFiMmUxOWUwYThiNjlj
+          NmUxMzU2YmNjOTQ4NGQyYjdhZDM3JywgJ3Rlc3RzL2FkYXB0ZXJfc2Vzc2lvbnMv
+          dGVzdF9zZWN1cmVfbGF1bmNoZXIucHknOiAnOWQ2YzAyNDMwM2ExM2Q0Y2VkODgy
+          NzliN2IyYWQ5YjUzOGRhM2Y4MTU4YjBiYTM3OTEyMzQ2Yzg5ZWRjODNmMCcsICd0
+          b29scy9jaS9ydW5fdW5pdHRlc3QucHknOiAnMDU1ZWIyNTAxYWY4NDAxNWQ2NGI3
+          YzZiYTI5NGY5MDk4MGRjOGY2MjA4YzhlOTNhZTk2NzI5N2M0MThhZDE3YycsICd1
+          di5sb2NrJzogJ2ZlYjU5ZGYzYTAxY2Q0NGNiMGQxOTY0Y2YxNTU4NmI1ZTdhNjY5
+          OWFmOGYyZTA5ZTcyZDJkMWI4MzcxMzNlMjYnLCAnZml4dHVyZXMvcmVsZWFzZS0y
+          LTE2LXRlc3RzLnppcCc6ICcyMDg1NjkxNzgxOWZhZjQ4Y2RkZGRiMzdmOGI3MTlj
+          OThlN2E0MTNjYjI1MGQxMTgzZjBhOWE0ZWVmNTg2YzU2J30KQ09SRT0oIi9hZ2Vu
+          dF9saWZlY3ljbGUvYWRhcHRlcl9zZXNzaW9ucy9wcm9jZXNzLnB5IiwiL2FnZW50
+          X2xpZmVjeWNsZS9hZGFwdGVyX3Nlc3Npb25zL3Byb2Nlc3NfZ3JvdXBzLnB5Iiwi
+          L2FnZW50X2xpZmVjeWNsZS9hZGFwdGVyX3Nlc3Npb25zL3Byb2Nlc3NfY2FwdHVy
+          ZS5weSIpCk1BWF9FVkVOVFM9MTIwMDAKCmRlZiB3cml0ZShwYXRoLHZhbHVlKToK
+          ICAgIHBhdGgud3JpdGVfdGV4dChqc29uLmR1bXBzKHZhbHVlLHNvcnRfa2V5cz1U
+          cnVlLGluZGVudD0yKSxlbmNvZGluZz0idXRmLTgiKQoKZGVmIHNoYShwYXRoKToK
+          ICAgIHJldHVybiBoYXNobGliLnNoYTI1NihwYXRoLnJlYWRfYnl0ZXMoKSkuaGV4
+          ZGlnZXN0KCkKCmRlZiBnaXQoKmFyZ3MpOgogICAgcmV0dXJuIHN1YnByb2Nlc3Mu
+          Y2hlY2tfb3V0cHV0KFsiZ2l0IiwqYXJnc10sdGltZW91dD0yMCkuZGVjb2RlKCku
+          c3RyaXAoKQoKZGVmIGJpbmQoKToKICAgIE9VVC5ta2RpcihwYXJlbnRzPVRydWUs
+          ZXhpc3Rfb2s9VHJ1ZSkKICAgIGhlYWQ9Z2l0KCJyZXYtcGFyc2UiLCJIRUFEIikK
+          ICAgIHNvdXJjZT17cDpzaGEoUGF0aChwKSkgZm9yIHAgaW4gRVhQRUNURUR9CiAg
+          ICB2PXsic2NoZW1hVmVyc2lvbiI6InIyMzgtd2luZG93cy1kZWFkbGluZS1kaWFn
+          bm9zdGljLXNvdXJjZS52MSIsImhlYWQiOmhlYWQsInJ1bnRpbWVCYXNlbGluZSI6
+          QkFTRSwicHl0aG9uIjpwbGF0Zm9ybS5weXRob25fdmVyc2lvbigpLCJwbGF0Zm9y
+          bSI6cGxhdGZvcm0ucGxhdGZvcm0oKSwic291cmNlSGFzaGVzIjpzb3VyY2UsInNj
+          cmlwdFNoYTI1NiI6c2hhKFBhdGgoX19maWxlX18pKSwid29ya2Zsb3dTaGEyNTYi
+          OnNoYShQYXRoKCIuZ2l0aHViL3dvcmtmbG93cy9jaS10aW1pbmctY29udHJvbC55
+          bWwiKSksImdpdGh1YlNoYSI6b3MuZW52aXJvbi5nZXQoIkdJVEhVQl9TSEEiKSwi
+          cmVmIjpvcy5lbnZpcm9uLmdldCgiR0lUSFVCX1JFRl9OQU1FIiksImRlYWRsaW5l
+          VXRjIjpERUFETElORSwib2JzZXJ2ZWRBdCI6ZGF0ZXRpbWUubm93KHRpbWV6b25l
+          LnV0YykuaXNvZm9ybWF0KCksImxvZ2ljYWxDUFVzIjpvcy5jcHVfY291bnQoKSwi
+          ZW52aXJvbm1lbnQiOntrOm9zLmVudmlyb24uZ2V0KGspIGZvciBrIGluICgiR0lU
+          SFVCX1JVTl9JRCIsIkdJVEhVQl9SVU5fQVRURU1QVCIsIlJVTk5FUl9PUyIsIlJV
+          Tk5FUl9BUkNIIiwiSW1hZ2VPUyIsIkltYWdlVmVyc2lvbiIpfSwiYXV0aG9yaXR5
+          Q2xhaW1lZCI6RmFsc2UsInJlbGVhc2VRdWFsaWZpY2F0aW9uQ2xhaW1lZCI6RmFs
+          c2UsImV2aWRlbmNlQm91bmRhcnkiOiJVTklUX09OTFlfRElBR05PU1RJQyIsInBy
+          b3ZpZGVyVG9rZW5zIjpOb25lLCJwcm92aWRlclVTRCI6Tm9uZX0KICAgIHdyaXRl
+          KE9VVC8ic291cmNlLmpzb24iLHYpCiAgICBhc3NlcnQgcmVfZnVsbF9zaGEoaGVh
+          ZCkgYW5kIGhlYWQ9PW9zLmVudmlyb25bIkRJQUdOT1NUSUNfQ0FORElEQVRFIl09
+          PXZbImdpdGh1YlNoYSJdLCJleGFjdCBkaXNwYXRjaGVkIHNvdXJjZSByZXF1aXJl
+          ZCIKICAgIGFzc2VydCBnaXQoInJldi1wYXJzZSIsIkhFQUReIik9PUJBU0UsImV4
+          YWN0IG9yaWdpbmFsIHNvdXJjZSBwYXJlbnQgcmVxdWlyZWQiCiAgICBhc3NlcnQg
+          Z2l0KCJkaWZmIiwiLS1uYW1lLW9ubHkiLEJBU0UsIkhFQUQiKS5zcGxpdGxpbmVz
+          KCk9PVsiLmdpdGh1Yi93b3JrZmxvd3MvY2ktdGltaW5nLWNvbnRyb2wueW1sIl0s
+          ImRpYWdub3N0aWMgWUFNTCBvbmx5IgogICAgYXNzZXJ0IHZbInJlZiJdPT0iZGlh
+          Zy9yZWxlYXNlLTIuMzgtc3RkaW4tYTMiLCJmcmVzaCBib3VuZGVkIGRpYWdub3N0
+          aWMgcmVmIHJlcXVpcmVkIgogICAgYXNzZXJ0IHZbInB5dGhvbiJdPT0iMy4xNS4x
+          Iiwic2FtZSBmYWlsaW5nIGludGVycHJldGVyIHJlcXVpcmVkIgogICAgYXNzZXJ0
+          IHNvdXJjZT09RVhQRUNURUQsIm9yaWdpbmFsIGNvcmUvdGVzdC9ydW5uZXIvZml4
+          dHVyZSBieXRlcyByZXF1aXJlZCIKICAgIGFzc2VydCBvcy5lbnZpcm9uWyJESUFH
+          Tk9TVElDX0RFQURMSU5FIl09PURFQURMSU5FLCJhY3R1YWwgbmF0aXZlIGRlYWRs
+          aW5lIHJlcXVpcmVkIgogICAgYXNzZXJ0IGRhdGV0aW1lLm5vdyh0aW1lem9uZS51
+          dGMpPGRhdGV0aW1lLmZyb21pc29mb3JtYXQoREVBRExJTkUucmVwbGFjZSgiWiIs
+          IiswMDowMCIpKSwicHJvYmUgd2luZG93IGV4cGlyZWQiCiAgICBhc3NlcnQgbm90
+          IGdpdCgic3RhdHVzIiwiLS1wb3JjZWxhaW4iLCItLXVudHJhY2tlZC1maWxlcz1u
+          byIpLCJ0cmFja2VkIGNoZWNrb3V0IG11c3QgYmUgY2xlYW4iCiAgICByZXR1cm4g
+          dgoKZGVmIHJlX2Z1bGxfc2hhKHZhbHVlKToKICAgIHJldHVybiBsZW4odmFsdWUp
+          PT00MCBhbmQgYWxsKHggaW4gIjAxMjM0NTY3ODlhYmNkZWYiIGZvciB4IGluIHZh
+          bHVlKQoKZGVmIHNhbXBsZShtb2RlLHNhbXBsZV9pZCxleHBlY3RlZF9weXRob24p
+          OgogICAgT1VULm1rZGlyKHBhcmVudHM9VHJ1ZSxleGlzdF9vaz1UcnVlKQogICAg
+          aW5mbz17Im1vZGUiOm1vZGUsInNhbXBsZUlkIjpzYW1wbGVfaWQsInRhcmdldCI6
+          VEFSR0VULCJ0YXJnZXRTZWVuIjpGYWxzZSwiY2FzZUNhcCI6MTAwMCwicHl0aG9u
+          IjpwbGF0Zm9ybS5weXRob25fdmVyc2lvbigpLCJzb3VyY2VIYXNoZXMiOntwOnNo
+          YShQYXRoKHApKSBmb3IgcCBpbiBFWFBFQ1RFRH0sImluc3RydW1lbnRhdGlvbiI6
+          Im5hdGl2ZWZhdWx0aGFuZGxlcjJzIG9ubHk7IG5vIGxpbmUvcHJvZmlsZWNhbGxi
+          YWNrcyJ9CiAgICBhc3NlcnQgaW5mb1sicHl0aG9uIl09PWV4cGVjdGVkX3B5dGhv
+          biwiZXhhY3Qgc2FtcGxlIGludGVycHJldGVyIHJlcXVpcmVkIgogICAgYXNzZXJ0
+          IGluZm9bInNvdXJjZUhhc2hlcyJdPT1FWFBFQ1RFRCwic2FtZSBzYW1wbGUgc291
+          cmNlIHJlcXVpcmVkIgogICAgYXNzZXJ0IHN5cy5nZXR0cmFjZSgpIGlzIE5vbmUg
+          YW5kIHN5cy5nZXRwcm9maWxlKCkgaXMgTm9uZSwibm8gdHJhY2UvcHJvZmlsZSBj
+          YWxsYmFja3MiCiAgICBzZWVuPVtdO2V2ZW50cz1bXQogICAgc3lzLnBhdGguaW5z
+          ZXJ0KDAsc3RyKFBhdGguY3dkKCkpKQogICAgb3JpZ2luYWw9dW5pdHRlc3QuVGVz
+          dENhc2UucnVuCiAgICBkZWYgbWVhc3VyZWQoY2FzZSxyZXN1bHQ9Tm9uZSk6CiAg
+          ICAgICAgY2FzZV9pZD1jYXNlLmlkKCk7c2Vlbi5hcHBlbmQoY2FzZV9pZCkKICAg
+          ICAgICBpZiBtb2RlPT0icHJlZml4IiBhbmQgbGVuKHNlZW4pPjEwMDA6CiAgICAg
+          ICAgICAgIGlmIHJlc3VsdCBpcyBub3QgTm9uZTpyZXN1bHQuc3RvcCgpCiAgICAg
+          ICAgICAgIHJhaXNlIFJ1bnRpbWVFcnJvcigiYm91bmRlZCBkaWFnbm9zdGljIHBy
+          ZWZpeCBjYXNlIGNhcCIpCiAgICAgICAgaWYgY2FzZV9pZCE9VEFSR0VUOnJldHVy
+          biBvcmlnaW5hbChjYXNlLHJlc3VsdCkKICAgICAgICBpbmZvLnVwZGF0ZSh0YXJn
+          ZXRTZWVuPVRydWUsdGFyZ2V0T3JkaW5hbD1sZW4oc2VlbikpCiAgICAgICAgc3Rh
+          cnRlZD10aW1lLm1vbm90b25pYygpO2V2ZW50cy5hcHBlbmQoeyJldmVudCI6InRh
+          cmdldC1lbnRlciIsIm1vbm90b25pY05zIjp0aW1lLm1vbm90b25pY19ucygpfSkK
+          ICAgICAgICB3aXRoIChPVVQvKHNhbXBsZV9pZCsiLWRlYWRsaW5lLXN0YWNrLmxv
+          ZyIpKS5vcGVuKCJ3YiIpIGFzIHN0YWNrX2ZpbGU6CiAgICAgICAgICAgIGZhdWx0
+          aGFuZGxlci5kdW1wX3RyYWNlYmFja19sYXRlcigyLHJlcGVhdD1GYWxzZSxmaWxl
+          PXN0YWNrX2ZpbGUsZXhpdD1GYWxzZSkKICAgICAgICAgICAgdHJ5OnJldHVybiBv
+          cmlnaW5hbChjYXNlLHJlc3VsdCkKICAgICAgICAgICAgZmluYWxseToKICAgICAg
+          ICAgICAgICAgIGZhdWx0aGFuZGxlci5jYW5jZWxfZHVtcF90cmFjZWJhY2tfbGF0
+          ZXIoKQogICAgICAgICAgICAgICAgaW5mb1sidGFyZ2V0V2FsbFNlY29uZHMiXT10
+          aW1lLm1vbm90b25pYygpLXN0YXJ0ZWQKICAgICAgICAgICAgICAgIGV2ZW50cy5h
+          cHBlbmQoeyJldmVudCI6InRhcmdldC1leGl0IiwibW9ub3RvbmljTnMiOnRpbWUu
+          bW9ub3RvbmljX25zKCl9KQogICAgICAgICAgICAgICAgaWYgcmVzdWx0IGlzIG5v
+          dCBOb25lOgogICAgICAgICAgICAgICAgICAgIGluZm9bInRhcmdldEZhaWx1cmVz
+          Il09c3VtKDEgZm9yIGMsXyBpbiByZXN1bHQuZmFpbHVyZXMgaWYgYy5pZCgpPT1U
+          QVJHRVQpCiAgICAgICAgICAgICAgICAgICAgaW5mb1sidGFyZ2V0RXJyb3JzIl09
+          c3VtKDEgZm9yIGMsXyBpbiByZXN1bHQuZXJyb3JzIGlmIGMuaWQoKT09VEFSR0VU
+          KQogICAgICAgICAgICAgICAgICAgIGluZm9bInRhcmdldFNraXBwZWQiXT1zdW0o
+          MSBmb3IgYyxfIGluIHJlc3VsdC5za2lwcGVkIGlmIGMuaWQoKT09VEFSR0VUKQog
+          ICAgICAgICAgICAgICAgICAgIHJlc3VsdC5zdG9wKCkKICAgIHVuaXR0ZXN0LlRl
+          c3RDYXNlLnJ1bj1tZWFzdXJlZAogICAgZXhpdF9jb2RlPTAKICAgIHRyeToKICAg
+          ICAgICBpZiBtb2RlPT0iaXNvbGF0ZWQiOgogICAgICAgICAgICByZXN1bHQ9dW5p
+          dHRlc3QuVGV4dFRlc3RSdW5uZXIodmVyYm9zaXR5PTIpLnJ1bih1bml0dGVzdC5k
+          ZWZhdWx0VGVzdExvYWRlci5sb2FkVGVzdHNGcm9tTmFtZShUQVJHRVQpKQogICAg
+          ICAgICAgICBleGl0X2NvZGU9MCBpZiByZXN1bHQud2FzU3VjY2Vzc2Z1bCgpIGVs
+          c2UgMQogICAgICAgIGVsc2U6CiAgICAgICAgICAgIHN5cy5hcmd2PVsidG9vbHMv
+          Y2kvcnVuX3VuaXR0ZXN0LnB5IiwiLS1zdGFydCIsInRlc3RzIiwiLS10b3AiLCIu
+          IiwiLS1vdXQiLHN0cihPVVQvKHNhbXBsZV9pZCsiLXJ1bm5lci5qc29uIikpXQog
+          ICAgICAgICAgICB0cnk6cnVucHkucnVuX3BhdGgoInRvb2xzL2NpL3J1bl91bml0
+          dGVzdC5weSIscnVuX25hbWU9Il9fbWFpbl9fIikKICAgICAgICAgICAgZXhjZXB0
+          IFN5c3RlbUV4aXQgYXMgZXJyb3I6ZXhpdF9jb2RlPWludChlcnJvci5jb2RlIG9y
+          IDApCiAgICBleGNlcHQgQmFzZUV4Y2VwdGlvbiBhcyBlcnJvcjoKICAgICAgICBp
+          bmZvLnVwZGF0ZShoZWxwZXJFcnJvclR5cGU9dHlwZShlcnJvcikuX19uYW1lX18s
+          aGVscGVyRXJyb3I9c3RyKGVycm9yKVs6MTAwMF0pO2V4aXRfY29kZT0yCiAgICBm
+          aW5hbGx5OgogICAgICAgIHVuaXR0ZXN0LlRlc3RDYXNlLnJ1bj1vcmlnaW5hbAog
+          ICAgICAgIGluZm8udXBkYXRlKGV4aXRDb2RlPWV4aXRfY29kZSxjYW5vbmljYWxQ
+          cmVmaXhSZXBvcnRJbnRlbnRpb25hbGx5SW5jb21wbGV0ZT0obW9kZT09InByZWZp
+          eCIpLGNhbm9uaWNhbFByZWZpeFN0b3BJc05vdEZ1bGxTdWl0ZVByb29mPShtb2Rl
+          PT0icHJlZml4IiksZXhlY3V0ZWRDYXNlQ291bnQ9bGVuKHNlZW4pLGNhc2VPcmRl
+          clNoYTI1Nj1oYXNobGliLnNoYTI1Nihqc29uLmR1bXBzKHNlZW4sc2VwYXJhdG9y
+          cz0oIiwiLCI6IikpLmVuY29kZSgpKS5oZXhkaWdlc3QoKSxhdXRob3JpdHlDbGFp
+          bWVkPUZhbHNlLHJlbGVhc2VRdWFsaWZpY2F0aW9uQ2xhaW1lZD1GYWxzZSxldmlk
+          ZW5jZUJvdW5kYXJ5PSJVTklUX09OTFlfRElBR05PU1RJQyIscHJvdmlkZXJUb2tl
+          bnM9Tm9uZSxwcm92aWRlclVTRD1Ob25lKQogICAgICAgIHdyaXRlKE9VVC8oc2Ft
+          cGxlX2lkKyItc3VtbWFyeS5qc29uIiksaW5mbyk7d3JpdGUoT1VULyhzYW1wbGVf
+          aWQrIi1ldmVudHMuanNvbiIpLGV2ZW50cyk7d3JpdGUoT1VULyhzYW1wbGVfaWQr
+          Ii1jYXNlLW9yZGVyLmpzb24iKSxzZWVuKQogICAgcmV0dXJuIGV4aXRfY29kZSBp
+          ZiBpbmZvWyJ0YXJnZXRTZWVuIl0gZWxzZSAyCgpkZWYgcGFyZW50KCk6CiAgICBz
+          b3VyY2U9YmluZCgpO3Jlc3VsdHM9W10KICAgIHB5MzE0PXN0cihQYXRoKCIudmVu
+          djMxNC9TY3JpcHRzL3B5dGhvbi5leGUiKS5yZXNvbHZlKCkpCiAgICBweTMxNT1z
+          eXMuZXhlY3V0YWJsZQogICAgc2NoZWR1bGU9WygiY29udHJvbDMxNCIscHkzMTQs
+          IjMuMTQuOSIsImlzb2xhdGVkIiw0NSldK1soImlzb2xhdGVkMzE1LSIrc3RyKGkp
+          LHB5MzE1LCIzLjE1LjEiLCJpc29sYXRlZCIsNDUpIGZvciBpIGluIHJhbmdlKDEs
+          NSldK1soInByZWZpeDMxNSIscHkzMTUsIjMuMTUuMSIsInByZWZpeCIsNjAwKV0K
+          ICAgIGVhcmx5X3N0b3A9Tm9uZQogICAgZm9yIHNhbXBsZV9pZCxweXRob24sdmVy
+          c2lvbixtb2RlLGNhcCBpbiBzY2hlZHVsZToKICAgICAgICByZW1haW5pbmc9KGRh
+          dGV0aW1lLmZyb21pc29mb3JtYXQoREVBRExJTkUucmVwbGFjZSgiWiIsIiswMDow
+          MCIpKS1kYXRldGltZS5ub3codGltZXpvbmUudXRjKSkudG90YWxfc2Vjb25kcygp
+          LTYwCiAgICAgICAgYXNzZXJ0IHJlbWFpbmluZz4wLCJubyBwcm9iZSBsYXVuY2gg
+          YWZ0ZXIgbmF0aXZlIGRlYWRsaW5lIgogICAgICAgIGFyZ3Y9W3B5dGhvbixzdHIo
+          UGF0aChfX2ZpbGVfXykucmVzb2x2ZSgpKSxtb2RlLHNhbXBsZV9pZCx2ZXJzaW9u
+          XQogICAgICAgIHN0YXJ0ZWQ9ZGF0ZXRpbWUubm93KHRpbWV6b25lLnV0YykuaXNv
+          Zm9ybWF0KCk7Y2xvY2s9dGltZS5tb25vdG9uaWMoKTt0aW1lZF9vdXQ9RmFsc2U7
+          Y2xlYW51cD1Ob25lCiAgICAgICAgd2l0aCAoT1VULyhzYW1wbGVfaWQrIi5zdGRv
+          dXQubG9nIikpLm9wZW4oIndiIikgYXMgc3Rkb3V0LChPVVQvKHNhbXBsZV9pZCsi
+          LnN0ZGVyci5sb2ciKSkub3Blbigid2IiKSBhcyBzdGRlcnI6CiAgICAgICAgICAg
+          IGNoaWxkPXN1YnByb2Nlc3MuUG9wZW4oYXJndixzdGRvdXQ9c3Rkb3V0LHN0ZGVy
+          cj1zdGRlcnIsc3RkaW49c3VicHJvY2Vzcy5ERVZOVUxMKQogICAgICAgICAgICB0
+          cnk6ZXhpdF9jb2RlPWNoaWxkLndhaXQodGltZW91dD1taW4oY2FwLHJlbWFpbmlu
+          ZykpCiAgICAgICAgICAgIGV4Y2VwdCBzdWJwcm9jZXNzLlRpbWVvdXRFeHBpcmVk
+          OgogICAgICAgICAgICAgICAgdGltZWRfb3V0PVRydWUKICAgICAgICAgICAgICAg
+          IHRyeToKICAgICAgICAgICAgICAgICAgICBzdG9wcGVkPXN1YnByb2Nlc3MucnVu
+          KFsidGFza2tpbGwiLCIvUElEIixzdHIoY2hpbGQucGlkKSwiL1QiLCIvRiJdLGNh
+          cHR1cmVfb3V0cHV0PVRydWUsdGltZW91dD0xMCkKICAgICAgICAgICAgICAgICAg
+          ICBjbGVhbnVwPXsiY29tbWFuZCI6InRhc2traWxsIG93bmVkIGRpYWdub3N0aWMg
+          Y2hpbGQgdHJlZSBvbmx5IiwicGlkIjpjaGlsZC5waWQsImV4aXRDb2RlIjpzdG9w
+          cGVkLnJldHVybmNvZGV9CiAgICAgICAgICAgICAgICBleGNlcHQgKE9TRXJyb3Is
+          c3VicHJvY2Vzcy5UaW1lb3V0RXhwaXJlZCkgYXMgZXJyb3I6Y2xlYW51cD17InBp
+          ZCI6Y2hpbGQucGlkLCJlcnJvclR5cGUiOnR5cGUoZXJyb3IpLl9fbmFtZV9ffQog
+          ICAgICAgICAgICAgICAgaWYgY2hpbGQucG9sbCgpIGlzIE5vbmU6Y2hpbGQua2ls
+          bCgpCiAgICAgICAgICAgICAgICB0cnk6Y2hpbGQud2FpdCh0aW1lb3V0PTMpCiAg
+          ICAgICAgICAgICAgICBleGNlcHQgc3VicHJvY2Vzcy5UaW1lb3V0RXhwaXJlZDpw
+          YXNzCiAgICAgICAgICAgICAgICBleGl0X2NvZGU9MTI0CiAgICAgICAgc3VtbWFy
+          eV9wYXRoPU9VVC8oc2FtcGxlX2lkKyItc3VtbWFyeS5qc29uIikKICAgICAgICBz
+          dW1tYXJ5PWpzb24ubG9hZHMoc3VtbWFyeV9wYXRoLnJlYWRfdGV4dChlbmNvZGlu
+          Zz0idXRmLTgiKSkgaWYgc3VtbWFyeV9wYXRoLmV4aXN0cygpIGVsc2Uge30KICAg
+          ICAgICBoZWxwZXJfb2s9bm90IHRpbWVkX291dCBhbmQgc3VtbWFyeS5nZXQoInRh
+          cmdldFNlZW4iKSBpcyBUcnVlIGFuZCBub3Qgc3VtbWFyeS5nZXQoImhlbHBlckVy
+          cm9yVHlwZSIpIGFuZCBzdW1tYXJ5LmdldCgidGFyZ2V0U2tpcHBlZCIpPT0wCiAg
+          ICAgICAgdGFyZ2V0X3JlZD1oZWxwZXJfb2sgYW5kIGJvb2woc3VtbWFyeS5nZXQo
+          InRhcmdldEZhaWx1cmVzIikgb3Igc3VtbWFyeS5nZXQoInRhcmdldEVycm9ycyIp
+          KQogICAgICAgIHJlc3VsdHMuYXBwZW5kKHsic2FtcGxlSWQiOnNhbXBsZV9pZCwi
+          cHl0aG9uIjp2ZXJzaW9uLCJtb2RlIjptb2RlLCJ0YXJnZXRTdW1tYXJ5IjpzdW1t
+          YXJ5LCJoZWxwZXJWYWxpZCI6Ym9vbChoZWxwZXJfb2spLCJwcm9kdWN0RmFpbHVy
+          ZU9ic2VydmVkIjpib29sKHRhcmdldF9yZWQpLCJhcmd2Ijphcmd2LCJzdGFydGVk
+          QXQiOnN0YXJ0ZWQsImZpbmlzaGVkQXQiOmRhdGV0aW1lLm5vdyh0aW1lem9uZS51
+          dGMpLmlzb2Zvcm1hdCgpLCJ3YWxsU2Vjb25kcyI6dGltZS5tb25vdG9uaWMoKS1j
+          bG9jaywiZXhpdENvZGUiOmV4aXRfY29kZSwidGltZWRPdXQiOnRpbWVkX291dCwi
+          Y2xlYW51cCI6Y2xlYW51cH0pCiAgICAgICAgd3JpdGUoT1VULyJiYXRjaC1wcm9n
+          cmVzcy5qc29uIix7InNhbXBsZXMiOnJlc3VsdHMsInBsYW5uZWRTYW1wbGVzIjo2
+          LCJyZWxlYXNlUXVhbGlmaWNhdGlvbkNsYWltZWQiOkZhbHNlfSkKICAgICAgICBp
+          ZiBsZW4ocmVzdWx0cyk+PTIgYW5kIGFueSh4WyJwcm9kdWN0RmFpbHVyZU9ic2Vy
+          dmVkIl0gb3Igbm90IHhbImhlbHBlclZhbGlkIl0gZm9yIHggaW4gcmVzdWx0cyk6
+          CiAgICAgICAgICAgIGVhcmx5X3N0b3A9IlJFRF9PUl9IRUxQRVJfRVJST1JfQUZU
+          RVJfQ09OVFJPTF9BTkRfT05FMzE1X1NBTVBMRSI7YnJlYWsKICAgIGFmdGVyPXtw
+          OnNoYShQYXRoKHApKSBmb3IgcCBpbiBFWFBFQ1RFRH0KICAgIHVuY2hhbmdlZD1h
+          ZnRlcj09c291cmNlWyJzb3VyY2VIYXNoZXMiXSBhbmQgbm90IGdpdCgic3RhdHVz
+          IiwiLS1wb3JjZWxhaW4iLCItLXVudHJhY2tlZC1maWxlcz1ubyIpCiAgICBoZWxw
+          ZXJfb2s9dW5jaGFuZ2VkIGFuZCBhbGwoeFsiaGVscGVyVmFsaWQiXSBmb3IgeCBp
+          biByZXN1bHRzKQogICAgcmVkPWFueSh4WyJwcm9kdWN0RmFpbHVyZU9ic2VydmVk
+          Il0gZm9yIHggaW4gcmVzdWx0cykKICAgIHZhbHVlPXsic2NoZW1hVmVyc2lvbiI6
+          InIyMzgtZmluYWwtZml4ZWQtZGlhZ25vc3RpYy1iYXRjaC52MSIsInNvdXJjZUhl
+          YWQiOnNvdXJjZVsiaGVhZCJdLCJydW50aW1lQmFzZWxpbmUiOkJBU0UsInNhbXBs
+          ZXMiOnJlc3VsdHMsInNhbXBsZUNvdW50IjpsZW4ocmVzdWx0cyksImZpeGVkTWF4
+          aW11bVNhbXBsZXMiOjYsImVhcmx5U3RvcCI6ZWFybHlfc3RvcCwic291cmNlVW5j
+          aGFuZ2VkIjp1bmNoYW5nZWQsInByb2R1Y3RGYWlsdXJlT2JzZXJ2ZWQiOnJlZCwi
+          cm9vdENhdXNlIjoiVU5DT05GSVJNRURfUkVRVUlSRVNfQUNUVUFMX1NUQUNLX0FO
+          QUxZU0lTIiwibm9GdXJ0aGVyQXV0b21hdGljRXhwZXJpbWVudHNBdXRob3JpemVk
+          IjpUcnVlLCJldmlkZW5jZUJvdW5kYXJ5IjoiVU5JVF9PTkxZX0RJQUdOT1NUSUMi
+          LCJhdXRob3JpdHlDbGFpbWVkIjpGYWxzZSwicmVsZWFzZVF1YWxpZmljYXRpb25D
+          bGFpbWVkIjpGYWxzZSwicHJvdmlkZXJUb2tlbnMiOk5vbmUsInByb3ZpZGVyVVNE
+          IjpOb25lfQogICAgd3JpdGUoT1VULyJjb21tYW5kLXJlc3VsdHMuanNvbiIsdmFs
+          dWUpCiAgICBwcmludChqc29uLmR1bXBzKHsic291cmNlSGVhZCI6c291cmNlWyJo
+          ZWFkIl0sInNhbXBsZUNvdW50IjpsZW4ocmVzdWx0cyksInRhcmdldFNlY29uZHMi
+          Olt4WyJ0YXJnZXRTdW1tYXJ5Il0uZ2V0KCJ0YXJnZXRXYWxsU2Vjb25kcyIpIGZv
+          ciB4IGluIHJlc3VsdHNdLCJwcm9kdWN0RmFpbHVyZU9ic2VydmVkIjpyZWQsInNv
+          dXJjZVVuY2hhbmdlZCI6dW5jaGFuZ2VkLCJyZWxlYXNlUXVhbGlmaWNhdGlvbkNs
+          YWltZWQiOkZhbHNlfSkpCiAgICByZXR1cm4gMiBpZiBub3QgaGVscGVyX29rIGVs
+          c2UgKDEgaWYgcmVkIGVsc2UgMCkKCmlmIF9fbmFtZV9fPT0iX19tYWluX18iOgog
+          ICAgdHJ5OnJhaXNlIFN5c3RlbUV4aXQoc2FtcGxlKHN5cy5hcmd2WzFdLHN5cy5h
+          cmd2WzJdLHN5cy5hcmd2WzNdKSBpZiBsZW4oc3lzLmFyZ3YpPjEgZWxzZSBwYXJl
+          bnQoKSkKICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZXJyb3I6CiAgICAgICAgT1VU
+          Lm1rZGlyKHBhcmVudHM9VHJ1ZSxleGlzdF9vaz1UcnVlKTt3cml0ZShPVVQvImhl
+          bHBlci1lcnJvci5qc29uIix7ImVycm9yVHlwZSI6dHlwZShlcnJvcikuX19uYW1l
+          X18sIm1lc3NhZ2UiOnN0cihlcnJvcilbOjE1MDBdLCJhdXRob3JpdHlDbGFpbWVk
+          IjpGYWxzZSwicmVsZWFzZVF1YWxpZmljYXRpb25DbGFpbWVkIjpGYWxzZX0pO3Jh
+          aXNlCg==
           '@
-          python -c $diagnosticRun
+          $r238Bootstrap = @'
+          import base64,hashlib,pathlib,sys; raw=base64.b64decode(sys.stdin.buffer.read()); assert hashlib.sha256(raw).hexdigest()=="06ffbeb44e8d7d2b9f4d5320295d999bd5babefffa2b4b6cd0921b5e4b106a02"; p=pathlib.Path("work/ci/r238-deadline-final-batch/driver.py"); p.parent.mkdir(parents=True,exist_ok=True); p.write_bytes(raw)
+          '@
+          $r238Payload | & ".venv/Scripts/python.exe" -c $r238Bootstrap
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Retain bounded diagnostic evidence even on failure
+          & ".venv/Scripts/python.exe" "work/ci/r238-deadline-final-batch/driver.py"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain final batch evidence on success or failure
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: release235-windows-native-diagnostic-${{ github.run_id }}
-          path: |
-            work/ci/release235-diagnostic/source.json
-            work/ci/release235-diagnostic/environment.json
-            work/ci/release235-diagnostic/stdout.log
-            work/ci/release235-diagnostic/stderr.log
-            work/ci/release235-diagnostic/consumer-receipts.jsonl
-            work/ci/release235-diagnostic/native-errors.json
-            work/ci/release235-diagnostic/command-results.json
+          name: r238-final-stalled-stdin-batch-${{ github.run_id }}
+          path: work/ci/r238-deadline-final-batch/
           if-no-files-found: error
           retention-days: 14
 
