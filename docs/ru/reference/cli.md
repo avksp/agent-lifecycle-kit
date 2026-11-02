@@ -289,7 +289,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.37.0
+python -m pip install agent-lifecycle-kit==2.38.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -1090,3 +1090,20 @@ agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-
 ## Замеры производительности в 2.28
 
 В 2.28 добавлены [ограниченные замеры lifecycle и журнала расходов](performance-and-resource-budgets.md). Инструменты из репозитория измеряют реальные операции чтения и отдельно показывают подготовку данных, саму операцию и запуск процесса. Сравнение Windows-фикстур показало снижение медианы на 13,08% в одном эксперименте из шести измерений; это не универсальная гарантия скорости. Проверки безопасности и платформ сохраняются.
+
+
+## Исследование решений перед стартом
+
+Настройте необязательный `workstreams[].decisionResearch` до независимого review
+и freeze. Существующие `workflow task-start` и `workflow continue` проверят
+объявленные frozen-байты входов/записи и принятый review до старта работы.
+Подготовка переносит включённые ссылки контекста в inventory кандидата.
+
+Ошибки `decision-research-*` обозначают отказ по декларации, привязке или
+ограниченному чтению и не раскрывают содержимое доказательств. Задача не
+стартует; continue может сохранить неисполняющий decision receipt. Исправляйте
+затронутый DRAFT/evidence штатными reviewed-шагами, сохраняя прежние расходы и часы.
+
+См. [research workflow](../guides/research-workflow.md) и
+[wire-контракты](research-evidence.md). Опция проверяет evidence, а не создаёт
+исследование, доказательство глобального оптимума или учёт каждого вызова хоста.

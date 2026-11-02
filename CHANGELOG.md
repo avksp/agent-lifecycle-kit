@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.38.0 - 2026-11-02
+
+- Add optional decision research bound to a frozen task and its declared context inputs.
+- Refuse missing, stale, unsafe or unsupported research before native task start; direct start and continue share the check.
+- Keep legacy task digests and behavior unchanged when the new field is absent.
+- Preserve enabled context references through canonical candidate preparation and test prepare, reviewed lock, v4 adoption and start together.
+- Document bounded research profiles, genuine review reuse and unavailable usage without claiming global optimality or host-wide budget enforcement.
+
 ## 2.37.0 - 2026-11-01
 
 - Refuse imports that exceed existing requirement or validation limits before losing critical text.
