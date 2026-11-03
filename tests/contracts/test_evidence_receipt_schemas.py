@@ -94,14 +94,19 @@ class EvidenceReceiptSchemaTests(unittest.TestCase):
 
     def test_async_readiness_and_coverage_use_observed_duration(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            started = time.monotonic_ns()
             absent_violation = threading.Event()
-            self.assertFalse(absent_violation.wait(0.03))
-            elapsed = (time.monotonic_ns() - started) // 1_000_000
+            started = time.perf_counter_ns()
+            elapsed = 0
+            for _ in range(3):
+                self.assertFalse(absent_violation.wait(0.03))
+                elapsed = (time.perf_counter_ns() - started) // 1_000_000
+                if elapsed >= 20:
+                    break
             self.assertGreaterEqual(elapsed, 20)
             value, descriptor = self._async_receipt(Path(directory), end_ms=elapsed)
-            candidate = classify_evidence_candidate(value, descriptor=descriptor,
-                evidence_id=value["evidenceId"], expected_subject=value["subject"])
+            candidate = classify_evidence_candidate(
+                value, descriptor=descriptor, evidence_id=value["evidenceId"], expected_subject=value["subject"]
+            )
             self.assertEqual(candidate["status"], "DATA_CANDIDATE")
             self.assertFalse(candidate["acceptanceAuthority"])
             mutations = (
@@ -115,8 +120,12 @@ class EvidenceReceiptSchemaTests(unittest.TestCase):
                 altered = copy.deepcopy(value)
                 mutate(altered["payload"])
                 with self.subTest(case=name), self.assertRaises(LifecycleError):
-                    classify_evidence_candidate(_bind(altered), descriptor=descriptor,
-                        evidence_id=altered["evidenceId"], expected_subject=altered["subject"])
+                    classify_evidence_candidate(
+                        _bind(altered),
+                        descriptor=descriptor,
+                        evidence_id=altered["evidenceId"],
+                        expected_subject=altered["subject"],
+                    )
 
     def test_async_seeded_delayed_violation_cannot_back_pass(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
