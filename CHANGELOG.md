@@ -9,6 +9,7 @@
 - Preserve sealed accepted audit reports through repeated compatible plan and source changes; reject modified evidence.
 - Document bounded research profiles, genuine review reuse and unavailable usage without claiming global optimality or host-wide budget enforcement.
 - Prepare both journals before the test starts the real process epoch-install race; preserve production deadlines and safety assertions. The cause of the earlier Windows admission delay remains unproven.
+- Wait for a real descendant and verify channel EOF after cleanup in the POSIX cancellation test; preserve production limits and the original assertions. The cause of the earlier macOS failure remains unproven.
 
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
 - Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
