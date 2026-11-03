@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.37.0
+python -m pip install agent-lifecycle-kit==2.38.0
 ```
 
 ## Task evidence identity
@@ -1023,3 +1023,20 @@ remain; measurements do not establish token savings or host enforcement.
 ## Release 2.28 performance measurements
 
 Release 2.28 adds [bounded lifecycle and accounting baselines](performance-and-resource-budgets.md#release-228-lifecycle-and-accounting-baselines). Repository tools measure real read-only operations and separate fixture preparation from operation and subprocess time. The Windows fixture comparison observed a 13.08% median reduction in one six-sample experiment; it is not a universal speed promise. All security and platform checks remain required.
+
+
+## Decision research at task start
+
+Configure optional `workstreams[].decisionResearch` before independent review
+and freeze. Existing `workflow task-start` and `workflow continue` then validate
+the declared frozen input/record bytes and adopted review before starting work.
+Preparation rebases enabled context references into the candidate inventory.
+
+`decision-research-*` errors identify a refused declaration, binding or bounded
+read without exposing evidence bodies. A refused task is not started; continue
+can retain a non-executing decision receipt. Repair the affected draft/evidence
+through reviewed lifecycle steps and keep earlier costs and clocks.
+
+See [research workflow](../guides/research-workflow.md) and
+[wire contracts](research-evidence.md). This option validates evidence; it does
+not generate research, establish global optimality or meter every host call.

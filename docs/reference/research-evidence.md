@@ -115,3 +115,44 @@ embedding raw documents in metadata.
 
 See [public contracts](public-contracts.md) for the complete schema policy and
 [the research workflow guide](../guides/research-workflow.md) for examples.
+
+
+## Frozen decision research
+
+A workstream can declare `decisionResearch` using the closed schema
+`agent-decision-research-requirement.v1`. Its record uses
+`agent-decision-research-record.v1`. Both are available through the existing
+schema registry. A present malformed object is not an opt-out; omit the field
+in a draft to retain legacy behavior.
+
+| Binding | Exact domain |
+| --- | --- |
+| `scopeDigest` | Canonical selected package/base/tier/task fields, mapped requirement descriptions and acceptance bindings. `writes` is included. Physical context containers, research itself, artifact output locations and output bytes are excluded. |
+| `inputDigest` | Canonical ordered vector of declared `{sourceId, path, sha256}` inputs. |
+| `policyDigest` | Canonical `{scope, profile}` only. |
+| Input and record `sha256` | Exact raw file bytes, including whitespace and final newline. |
+
+Scope is exactly `FROZEN_CONTEXT_INPUTS`. Each input is a unique leaf reference
+resolved through the frozen task context and plan inventory; the record is a
+separate declared plan file. Authority manifests, locks and review reports
+cannot be research inputs. The specification source must be included when set.
+Traversal, drives, absolute paths, ambiguous names and unsafe filesystem objects
+refuse. A rootless completeness PASS is a structural preview, not file admission.
+
+The record requires `ownerId`, `entryPoints`, `alternatives`,
+`selectedAlternativeId`, `outcome`, `assessments`, `budget`, `probeCount` and
+`reviewRoundCount`, plus the three matching digests. Alternatives have
+`id/kind/title/rationale`; kinds are `NO_CHANGE`, `SIMPLIFY`, `REPLACE`.
+Assessments have `criterion/status/rationale` and optional declared `sourceIds`;
+status is `ADDRESSED` or `NOT_APPLICABLE`. All records set
+`sourceOfTruth=false`, `lifecycleAuthority="none"`,
+`productionPromotionClaimed=false`, `optimalityClaimed=false`.
+
+The guard uses the adopted full independent plan review and its explicit raw
+identity, not a reviewer claim in the research record. A changed required policy
+cannot preserve an old accepted task as compatible. An absent field leaves
+legacy task digests, reads and events unchanged.
+
+See the [authoring sequence and limits](../guides/research-workflow.md#check-decisions-before-task-start).
+This contract covers bounded declared frozen inputs, not continuous A5, live
+workspace freshness, provider billing or global optimality.

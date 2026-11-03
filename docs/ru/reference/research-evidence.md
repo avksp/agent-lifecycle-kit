@@ -116,3 +116,44 @@ agent-lifecycle research summary \
 
 См. [публичные контракты](public-contracts.md) и [руководство по работе с
 исследованием](../guides/research-workflow.md).
+
+
+## Замороженное исследование решений
+
+Workstream может объявить `decisionResearch` по закрытой схеме
+`agent-decision-research-requirement.v1`. Для записи используется
+`agent-decision-research-record.v1`. Обе схемы доступны в существующем schema
+registry. Некорректный присутствующий объект не отключает проверку; для прежнего
+поведения поле нужно убрать из DRAFT.
+
+| Привязка | Точная область хеширования |
+| --- | --- |
+| `scopeDigest` | Canonical-проекция выбранных package/base/tier/task, описаний связанных требований и acceptance bindings. `writes` включены. Физические контейнеры контекста, само исследование, служебные artifactPaths и фактические байты результата исключены. |
+| `inputDigest` | Canonical-вектор объявленных `{sourceId, path, sha256}` входов с сохранением порядка. |
+| `policyDigest` | Только canonical `{scope, profile}`. |
+| `sha256` входа и записи | Точные исходные байты файла, включая пробелы и завершающий перевод строки. |
+
+Scope равен только `FROZEN_CONTEXT_INPUTS`. Вход — уникальное имя файла без
+каталогов, разрешаемое через frozen task context и plan inventory; запись —
+отдельный объявленный файл плана. Manifest, lock и review не могут быть входами
+исследования. Если задан источник спецификации, его нужно включить. Traversal,
+диски, абсолютные пути, неоднозначные имена и опасные файловые объекты вызывают
+отказ. Rootless completeness PASS — структурный preview, а не файловый допуск.
+
+Запись требует `ownerId`, `entryPoints`, `alternatives`,
+`selectedAlternativeId`, `outcome`, `assessments`, `budget`, `probeCount`,
+`reviewRoundCount` и три совпадающих digest. Вариант содержит
+`id/kind/title/rationale`; допустимые kind — `NO_CHANGE`, `SIMPLIFY`, `REPLACE`.
+Оценка содержит `criterion/status/rationale` и необязательные объявленные
+`sourceIds`; status — `ADDRESSED` или `NOT_APPLICABLE`. Каждая запись задаёт
+`sourceOfTruth=false`, `lifecycleAuthority="none"`,
+`productionPromotionClaimed=false`, `optimalityClaimed=false`.
+
+Guard использует принятый полный независимый plan review и его явную raw identity,
+а не заявление о reviewer в записи исследования. Изменённая обязательная политика
+не позволяет сохранить старую принятую задачу как совместимую. При отсутствии
+поля сохраняются legacy task digest, чтения и события.
+
+Порядок подготовки и лимиты приведены в [research workflow](../guides/research-workflow.md).
+Контракт относится к ограниченным объявленным frozen-входам, а не к непрерывному
+A5, актуальности live-workspace, оплате провайдера или глобальной оптимальности.

@@ -16,6 +16,7 @@ from agent_lifecycle.contracts.ownership_paths import (
 from agent_lifecycle.contracts.statistical_evidence_schemas import validate_statistical_evidence_requirement
 from agent_lifecycle.planning.traceability import validate_plan_traceability
 from agent_lifecycle.quality.validation_ladder import validation_ladder_manifest_blockers
+from agent_lifecycle.research.preflight import decision_research_blockers
 
 PROFILE_SCHEMA = "agent-plan-completeness-profile.v1"
 VALIDATION_SCHEMA = "agent-plan-completeness-validation.v1"
@@ -131,6 +132,7 @@ def validate_plan_completeness(
     active_profile = profile or build_plan_completeness_profile()
     profile_validation = validate_plan_completeness_profile(active_profile)
     blockers = list(profile_validation["blockers"])
+    blockers.extend(decision_research_blockers(manifest))
     tier = _tier(manifest)
     if tier not in SUPPORTED_TIERS:
         blockers.append(_blocker("invalid-plan-tier", "plan tier must be S0, S1 or S2", {"tier": tier}))
@@ -138,6 +140,11 @@ def validate_plan_completeness(
     required_checks = _required_checks(active_profile, tier)
     for check in required_checks:
         _CHECKS[check](manifest, tier, blockers)
+    workstreams = manifest.get("workstreams", [])
+    if isinstance(workstreams, list) and any(
+        isinstance(item, dict) and "decisionResearch" in item for item in workstreams
+    ):
+        required_checks = [*required_checks, "decision-research"]
     if tier == "S2":
         _check_s2_integrity(manifest, blockers)
         _check_traceability(manifest, tier, blockers)

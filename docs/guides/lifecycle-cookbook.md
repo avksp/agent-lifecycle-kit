@@ -462,3 +462,18 @@ Example: Release 2.24 WS-03 keeps `resolve_declared_ledger_context`'s
 usage-interface fixture is UNIT_ONLY. Isolating legacy paths is a refactor;
 a generic financial ledger or a newly qualified host route would be a separate
 capability requiring lower-layer ownership and end-to-end evidence.
+
+
+## Require a bounded decision record
+
+Select a research profile for the task and project; use DORA delivery measures
+in the external SDLC when they fit the project. Add `decisionResearch` to the
+draft workstream, with bounded frozen inputs and a separate record. Include a
+no-change alternative, criterion assessments and a finite declared budget.
+
+Follow the [research authoring sequence](research-workflow.md#check-decisions-before-task-start),
+then independent review, reviewed freeze and adoption. Existing task-start and
+continue perform one native freshness check. Reuse unchanged research; retain
+failed work, unknown usage and original clocks when correcting a refusal.
+`STOP` or `SPLIT` needs a revised reviewed plan. The record cannot waive the
+frozen quality floor or grant execution permission.

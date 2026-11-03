@@ -243,6 +243,14 @@ def _relocated_candidate(
         spec["status"] = "FROZEN"
         if isinstance(spec.get("source"), str):
             spec["source"] = relocate(spec["source"])
+    workstreams = candidate.get("workstreams")
+    if isinstance(workstreams, list):
+        for workstream in workstreams:
+            if not isinstance(workstream, dict) or "decisionResearch" not in workstream:
+                continue
+            references = workstream.get("contextRefs")
+            if isinstance(references, list):
+                workstream["contextRefs"] = [relocate(name) if isinstance(name, str) else name for name in references]
     review = relocate(
         manifest.get("planReview", {}).get(
             "report",

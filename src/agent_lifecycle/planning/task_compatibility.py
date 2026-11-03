@@ -43,10 +43,13 @@ ACCEPTED_ARTIFACT_KEYS = (
 def canonical_task_contract(task: dict[str, Any]) -> dict[str, Any]:
     """Return the exact task fields whose equality permits preservation."""
 
-    return {
+    contract = {
         key: deepcopy(task.get(key, []) if key in EMPTY_LIST_CONTRACT_KEYS else task.get(key))
         for key in TASK_CONTRACT_KEYS
     }
+    if "decisionResearch" in task:
+        contract["decisionResearch"] = deepcopy(task["decisionResearch"])
+    return contract
 
 
 def task_contract_digest(task: dict[str, Any]) -> str:
@@ -185,21 +188,38 @@ def _validate_prior_report(
     if not isinstance(previous_plan, dict):
         blockers.append({"code": "task-plan-compatibility-previous-plan"})
         return
-    for key in ("runId", "packageId", "sourceRevision"):
+    expected_identity = artifacts.get("implementationAuditReport")
+    report_hash = canonical_digest(report)
+    plan_compatible = _report_plan_lineage_is_compatible(report, previous_plan)
+    source = report.get("sourceRevision")
+    preserved_origin = (
+        plan_compatible
+        and report.get("planRevision") != previous_plan.get("planRevision")
+        and isinstance(expected_identity, dict)
+        and report_hash == expected_identity.get("sha256")
+    )
+    for key in ("runId", "packageId"):
         if report.get(key) != previous_plan.get(key):
             blockers.append({"code": "task-plan-compatibility-report-lineage", "field": key})
-    if not _report_plan_lineage_is_compatible(report, previous_plan):
+    if (
+        not isinstance(source, str)
+        or not source.strip()
+        or (source != previous_plan.get("sourceRevision") and not preserved_origin)
+    ):
+        blockers.append({"code": "task-plan-compatibility-report-lineage", "field": "sourceRevision"})
+    if not plan_compatible:
         for key in ("planRevision", "planDigest"):
             blockers.append({"code": "task-plan-compatibility-report-lineage", "field": key})
     if report.get("taskId") != task.get("id") or report.get("attempt") != task.get("attempt"):
         blockers.append({"code": "task-plan-compatibility-report-task"})
-    expected_identity = artifacts.get("implementationAuditReport")
     if not isinstance(expected_identity, dict) or not isinstance(report_identity, dict):
         blockers.append({"code": "task-plan-compatibility-report-identity-missing"})
         return
     for key in ("path", "sha256", "bytes"):
         if report_identity.get(key) != expected_identity.get(key):
             blockers.append({"code": "task-plan-compatibility-report-identity", "field": key})
+    if report_hash != expected_identity.get("sha256"):
+        blockers.append({"code": "task-plan-compatibility-report-identity", "field": "sha256"})
     if report.get("reportDigest") != expected_identity.get("reportDigest"):
         blockers.append({"code": "task-plan-compatibility-report-digest"})
 

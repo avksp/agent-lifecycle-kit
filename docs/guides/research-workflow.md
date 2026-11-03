@@ -101,3 +101,78 @@ or decide which model's conclusion is correct.
 
 See [research evidence](../reference/research-evidence.md) for the contract,
 security rules and complete result semantics.
+
+
+## Check decisions before task start
+
+Use an optional workstream `decisionResearch` when a task needs a recorded
+comparison before execution. It checks the declared frozen inputs. It does not
+claim that the selected solution is globally optimal. Tasks without this field
+keep their existing behavior.
+
+1. Select a profile at or above the frozen plan tier. S0 requires
+   `requirement-fit`; S1 also requires `security`; S2 also requires
+   `architecture`, `resources` and `feasibility`. Each required criterion needs
+   an assessment and a reason, including when it is not applicable. Add project
+   criteria when needed. DORA delivery metrics and scheduling belong to the
+   project or external SDLC; they are not a universal ALK policy.
+2. Declare the bounded inputs and the record in `planFiles`. Each input must
+   also be in the workstream's `contextRefs`. Use unique leaf names in the
+   descriptor, with exact raw SHA-256 values. Include `specification.source`
+   when present. A whole-workspace or live-input scope is unsupported.
+3. Write a record with alternatives, a selected decision, assessments, owner
+   and a finite research budget. Include a `NO_CHANGE` alternative. Outcomes
+   `KEEP`, `SIMPLIFY` and `REPLACE` can proceed; `SPLIT` and `STOP` require a
+   revised reviewed plan. The record has no lifecycle or review authority.
+4. Calculate bindings during draft authoring. Use canonical JSON with a final
+   newline for JSON files that pass through `freeze-prepare`: its existing
+   writer canonicalizes JSON. Hash only after final formatting. Store exactly
+   the bytes that you hash; the native guard has no normalization fallback.
+5. Prepare the candidate, obtain independent plan review, create the reviewed
+   lock and adopt it through the normal lifecycle. Preparation rebases opt-in
+   context references into the candidate inventory. Before start, ALK checks
+   actual bounded input/record bytes and the adopted independent review.
+
+The core provides deterministic helpers for draft authoring:
+
+```python
+from hashlib import sha256
+from agent_lifecycle.contracts import canonical_bytes
+from agent_lifecycle.research.preflight import (
+    decision_input_digest, decision_policy_digest, decision_scope_digest,
+)
+
+policy = workstream["decisionResearch"]
+policy["scopeDigest"] = decision_scope_digest(manifest, workstream)
+policy["inputDigest"] = decision_input_digest(policy["inputs"])
+policy["policyDigest"] = decision_policy_digest(policy)
+for key in ("scopeDigest", "inputDigest", "policyDigest"):
+    record[key] = policy[key]
+record_bytes = canonical_bytes(record) + b"\n"
+policy["record"]["sha256"] = sha256(record_bytes).hexdigest()
+```
+
+Here `manifest`, `workstream`, `policy` and `record` are complete draft objects.
+Write `record_bytes` to the declared record file before review. These helpers
+do not create review, a lock or execution permission. Do not edit frozen files
+or workflow state to refresh evidence.
+
+The v1 hard ceilings are eight inputs, 65,536 bytes per input, 262,144 record
+bytes, three entry points, three alternatives, one probe and two review rounds.
+Profiles can lower these limits. A planned budget declares `maxCommands`
+(1–100), `maxActiveSeconds` (1–3600) and at least one `reservedCommands`, less
+than `maxCommands`. Unknown observed usage uses `UNAVAILABLE` with null
+`usedCommands` and `usedActiveSeconds`. `DECLARED` usage remains a report, not
+provider telemetry. This check does not meter all host/model calls or tests.
+
+Unchanged bindings and raw bytes can reuse research. A new declared base,
+selected task contract, input or profile changes the relevant binding. The
+scope excludes physical containers, planned output bytes and unrelated tasks.
+Missing, stale, unsafe, over-cap or unsupported evidence refuses before task
+start. Direct start and `workflow continue` use the same native guard. A refusal
+starts no model research or automatic retry; retain earlier costs and clocks.
+
+The optional generic `evidencePackage` must pass its validator and have actual
+snapshots for all declared package sources, with matched citations. A generic
+package PASS with unavailable quote evidence is not enough for this preflight.
+See [research evidence](../reference/research-evidence.md) for both wire schemas.
