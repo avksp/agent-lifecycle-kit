@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import sys
 import tempfile
 import threading
@@ -262,33 +263,56 @@ class ExternalJobCleanupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "jobs"
             request = _request("cancelled-wrapper")
-            script = (
-                "import os,pathlib,subprocess,sys,time; "
-                "p=pathlib.Path(os.environ['ALK_EXTERNAL_JOB_ARTIFACT_DIR'])/'child.txt'; "
-                "code=\"import pathlib,time; p=pathlib.Path(%r); time.sleep(.4); p.write_text('late',encoding='utf-8'); time.sleep(30)\" % str(p); "
-                "subprocess.Popen([sys.executable,'-c',code]); time.sleep(30)"
-            )
-            holder: dict[str, Any] = {}
-            worker = threading.Thread(
-                target=lambda: holder.setdefault(
-                    "view",
-                    run_external_job(request, [sys.executable, "-c", script], env=dict(os.environ), job_root=root),
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+                listener.bind(("127.0.0.1", 0))
+                listener.listen(1)
+                listener.settimeout(5)
+                port = listener.getsockname()[1]
+                child_code = (
+                    "import pathlib,socket,time; "
+                    f"channel=socket.create_connection(('127.0.0.1',{port}),timeout=5); "
+                    "channel.settimeout(None); channel.sendall(b'R'); command=channel.recv(1); "
+                    "p=pathlib.Path(%r); "
+                    "p.write_text('late',encoding='utf-8') if command==b'W' else None; time.sleep(30)"
                 )
-            )
-            worker.start()
-            _wait_for_state(request, root, "RUNNING")
-            first = request_external_job_cancel(request, job_root=root)
-            second = request_external_job_cancel(request, job_root=root)
-            worker.join(timeout=8)
+                script = (
+                    "import os,pathlib,subprocess,sys,time; "
+                    "p=pathlib.Path(os.environ['ALK_EXTERNAL_JOB_ARTIFACT_DIR'])/'child.txt'; "
+                    f"code={child_code!r} % str(p); "
+                    "subprocess.Popen([sys.executable,'-c',code]); time.sleep(30)"
+                )
+                holder: dict[str, Any] = {}
+                worker = threading.Thread(
+                    target=lambda: holder.setdefault(
+                        "view",
+                        run_external_job(request, [sys.executable, "-c", script], env=dict(os.environ), job_root=root),
+                    )
+                )
+                worker.start()
+                try:
+                    with listener.accept()[0] as channel:
+                        channel.settimeout(5)
+                        self.assertEqual(channel.recv(1), b"R")
+                        _wait_for_state(request, root, "RUNNING")
+                        first = request_external_job_cancel(request, job_root=root)
+                        second = request_external_job_cancel(request, job_root=root)
+                        worker.join(timeout=8)
 
-            self.assertFalse(worker.is_alive())
-            self.assertEqual(first["status"], "PASS")
-            self.assertTrue(second["idempotent"])
-            view = holder["view"]
-            self.assertEqual(view["result"]["state"], "CANCELLED")
-            self.assertEqual(view["jobStatus"]["processCleanupStatus"], "PASS")
-            self.assertFalse(view["jobStatus"]["postTerminalWriteDetected"])
-            self.assertFalse((root / "cancelled-wrapper/attempt-1/artifacts/child.txt").exists())
+                        self.assertFalse(worker.is_alive())
+                        self.assertEqual(channel.recv(1), b"")
+                        self.assertEqual(first["status"], "PASS")
+                        self.assertTrue(second["idempotent"])
+                        view = holder["view"]
+                        self.assertEqual(view["result"]["state"], "CANCELLED")
+                        self.assertEqual(view["jobStatus"]["processCleanupStatus"], "PASS")
+                        self.assertFalse(view["jobStatus"]["postTerminalWriteDetected"])
+                        self.assertFalse((root / "cancelled-wrapper/attempt-1/artifacts/child.txt").exists())
+                finally:
+                    if worker.is_alive():
+                        try:
+                            request_external_job_cancel(request, job_root=root)
+                        finally:
+                            worker.join(timeout=12)
 
     def test_cancel_before_timeout_persists_terminal_state_within_wall_budget(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
