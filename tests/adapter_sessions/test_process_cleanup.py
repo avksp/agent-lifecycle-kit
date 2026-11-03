@@ -338,39 +338,122 @@ class ProcessCleanupTests(unittest.TestCase):
         tail_entered = threading.Event()
         release = threading.Event()
         threads = []
+        processes = []
+        observers_started = []
+        input_join_seconds = []
         real_run = Thread.run
+        real_start = Thread.start
+        real_join = Thread.join
+        real_popen = subprocess.Popen
+        clock_base_ns = time.monotonic_ns()
+        clock_resumed_ns: list[int] = []
+
+        class FixtureTime:
+            @staticmethod
+            def monotonic_ns() -> int:
+                if not clock_resumed_ns:
+                    now_ns = time.monotonic_ns()
+                    if now_ns - clock_base_ns < 10_000_000_000:
+                        return clock_base_ns
+                    clock_resumed_ns.append(now_ns)
+                elapsed = time.monotonic_ns() - clock_resumed_ns[0]
+                return clock_base_ns + 200_000_001 + elapsed
+
+            @staticmethod
+            def monotonic() -> float:
+                return FixtureTime.monotonic_ns() / 1_000_000_000
+
+            def __getattr__(self, name: str):
+                return getattr(time, name)
+
+        class CapturedPopen(real_popen):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                processes.append(self)
+
+        def observe_input(_event):
+            self.assertTrue(processes)
+            self.assertEqual(processes[0].wait(5), 0)
+            returned.set()
 
         def tail_after_callback(thread):
             real_run(thread)
-            if thread.name == 'alk-process-observer' and returned.is_set():
+            if thread.name == "alk-process-observer" and returned.is_set():
                 threads.append(thread)
                 tail_entered.set()
                 release.wait()
 
+        def start_observer(thread):
+            try:
+                if thread.name != "alk-process-observer":
+                    return real_start(thread)
+                observers_started.append(thread)
+                real_start(thread)
+                if len(observers_started) == 1:
+                    real_join(thread, 5)
+                    self.assertFalse(thread.is_alive())
+                else:
+                    self.assertTrue(tail_entered.wait(5))
+            except BaseException:
+                if not clock_resumed_ns:
+                    clock_resumed_ns.append(time.monotonic_ns())
+                raise
+
+        def join_observer(thread, timeout=None):
+            if thread not in threads:
+                return real_join(thread, timeout)
+            input_join_seconds.append(timeout)
+            try:
+                return real_join(thread, timeout)
+            finally:
+                if not clock_resumed_ns:
+                    clock_resumed_ns.append(time.monotonic_ns())
+
         try:
-            with patch.object(Thread, 'run', tail_after_callback):
-                result = run_process([sys.executable, '-c', 'import sys; sys.stdin.buffer.read()'],
-                    env=dict(os.environ), timeout_seconds=0.2, cleanup_grace_seconds=0.15,
-                    stdin_text='private', on_started=lambda _event: None,
-                    on_input=lambda _event: returned.set(), _observer_slots=slots)
+            with (
+                patch.object(process_module, "time", FixtureTime()),
+                patch.object(process_module.subprocess, "Popen", CapturedPopen),
+                patch.object(Thread, "run", tail_after_callback),
+                patch.object(Thread, "start", start_observer),
+                patch.object(Thread, "join", join_observer),
+            ):
+                result = run_process(
+                    [sys.executable, "-c", "import sys; sys.stdin.buffer.read()"],
+                    env=dict(os.environ),
+                    timeout_seconds=0.2,
+                    cleanup_grace_seconds=0.15,
+                    stdin_text="private",
+                    on_started=lambda _event: None,
+                    on_input=observe_input,
+                    _observer_slots=slots,
+                )
                 self.assertTrue(tail_entered.is_set())
                 self.assertTrue(returned.is_set())
                 self.assertTrue(threads[0].is_alive())
-                self.assertEqual(result['exitCode'], 0)
-                self.assertTrue(result['timedOut'])
-                self.assertTrue(result['startedFailure'])
-                self.assertEqual(result['cleanup']['status'], 'PASS')
-                self.assertEqual(result['observerDisposition'], 'MAY_STILL_RUN')
-                self.assertEqual(result['blockers'][-1]['costStatus'], 'UNAVAILABLE')
-                with patch.object(process_module.subprocess, 'Popen', side_effect=AssertionError('no slot')):
-                    refused = run_process([sys.executable, '-c', 'pass'], env=dict(os.environ),
-                        timeout_seconds=1, on_started=lambda _event: None,
-                        on_input=lambda _event: None, _observer_slots=slots)
-                self.assertFalse(refused['processStarted'])
+                self.assertEqual(result["exitCode"], 0)
+                self.assertTrue(result["timedOut"])
+                self.assertTrue(result["startedFailure"])
+                self.assertEqual(result["cleanup"]["status"], "PASS")
+                self.assertEqual(result["observerDisposition"], "MAY_STILL_RUN")
+                self.assertEqual(result["blockers"][-1]["costStatus"], "UNAVAILABLE")
+                self.assertEqual(result["deadlineMonotonicNs"], clock_base_ns + 200_000_000)
+                self.assertTrue(input_join_seconds)
+                self.assertTrue(all(value is not None and 0 < value <= 0.200001 for value in input_join_seconds))
+                with patch.object(process_module.subprocess, "Popen", side_effect=AssertionError("no slot")) as popen:
+                    refused = run_process(
+                        [sys.executable, "-c", "pass"],
+                        env=dict(os.environ),
+                        timeout_seconds=1,
+                        on_started=lambda _event: None,
+                        on_input=lambda _event: None,
+                        _observer_slots=slots,
+                    )
+                    self.assertFalse(refused["processStarted"])
+                    popen.assert_not_called()
         finally:
             release.set()
             for thread in threads:
-                thread.join(1)
+                thread.join(5)
         self.assertTrue(all(not thread.is_alive() for thread in threads))
         lease = slots.acquire()
         self.assertIsNotNone(lease)

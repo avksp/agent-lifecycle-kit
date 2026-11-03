@@ -13,6 +13,9 @@
 - Wait for a real descendant and verify channel EOF after cleanup in the POSIX cancellation test; preserve production limits and the original assertions. The cause of the earlier macOS failure remains unproven.
 - В POSIX-тесте отмены дождаться реального потомка и подтвердить EOF после очистки; сохранить производственные лимиты и исходные проверки. Причина прежнего отказа на macOS остаётся неподтверждённой.
 
+- Coordinate the real child and input observer in the POSIX R11 test; preserve the original deadlines, slot guard and assertions. Keep process capture compatible with the Popen type. The cause of the earlier natural macOS failure remains unproven.
+- В POSIX-тесте R11 согласовать реальный дочерний процесс и наблюдатель ввода; сохранить исходные сроки, защиту слота и проверки. Сохранить тип Popen при захвате процесса. Причина прежнего естественного отказа macOS остаётся неподтверждённой.
+
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
 - Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
 
