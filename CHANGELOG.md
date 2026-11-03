@@ -13,6 +13,8 @@
 
 - Coordinate the real child and input observer in the POSIX R11 test; preserve the original deadlines, slot guard and assertions. Keep process capture compatible with the Popen type. The cause of the earlier natural macOS failure remains unproven.
 
+- Measure the synthetic duration test with the short-interval performance counter and bounded cumulative waits; preserve the 20 ms requirement and all rejection checks. The failed Windows runner's exact clock resolution remains unknown.
+
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
 - Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
 
