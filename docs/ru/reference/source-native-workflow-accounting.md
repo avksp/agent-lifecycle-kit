@@ -23,6 +23,22 @@ Wall time и CPU текущего процесса измеряются моно
 вместе с неизвестным даёт частичный итог. Резерв, выделенный бюджет и фактический
 расход провайдера — разные величины.
 
+## Сохранённый declared ledger релиза 2.16
+
+Существующая точка входа Python
+`agent_lifecycle.accounting.declared_ledger.resolve_declared_ledger_context`
+(`repository_root`, `frozen_manifest`, `opening_ref`) поддерживает только зарегистрированный frozen-пакет
+release-2-16 с независимо выбранной ссылкой на исходное открытие учёта.
+Неподдерживаемый пакет получает declared-ledger-route-unsupported, перепривязанное
+открытие — declared-ledger-opening-mismatch. Существующий тест
+[DeclaredLedgerContextTests.test_unsupported_package_and_rebound_opening_refuse](../../../tests/accounting/test_declared_ledger.py)
+проверяет обе границы.
+
+Сохраняются legacy runtime, точные байты, хэши и происхождение, удержания UNKNOWN
+и предыдущие финансовые расходы. Обобщённый маршрут ledger и продвижение хоста
+этим не разрешаются. Переносимый SQLite Journal сохраняет отдельный действующий
+контракт.
+
 ## Готовность исполнителей
 
 `agent-lifecycle adapter provider-preflight --profile .alk/host-launch/<имя>.json`

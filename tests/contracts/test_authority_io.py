@@ -13,6 +13,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -267,6 +268,80 @@ class AuthorityReadTests(unittest.TestCase):
             with patch.object(os, "O_NOFOLLOW", 0), self.assertRaises(LifecycleError) as raised:
                 authority_io.read_authority_bytes(path, max_bytes=32)
             self.assertEqual(raised.exception.code, "authority-io-unavailable")
+
+
+    def test_invalid_anchors_refuse_and_contained_child_resolves(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            base = root / "nested" / "state.json"
+            invalid = [
+                ("type", None, "invalid-workflow-state"),
+                ("empty", "", "invalid-workflow-state"),
+                ("backslash", "child\\alias", "invalid-workflow-state"),
+                ("drive", "C:child", "invalid-workflow-state"),
+                ("overlong", "../" * 1400 + "..", "invalid-workflow-state"),
+                ("escape", "../../outside", "authority-path-outside-root"),
+            ]
+            for label, reference, code in invalid:
+                with self.subTest(case=label), self.assertRaises(LifecycleError) as raised:
+                    authority_io.resolve_authority_anchor(base, reference, root=root)
+                self.assertEqual(raised.exception.code, code)
+            with self.assertRaises(LifecycleError) as raised:
+                authority_io.resolve_authority_anchor(root / "state.json", ".", root=root / "other")
+            self.assertEqual(raised.exception.code, "authority-path-outside-root")
+            self.assertEqual(authority_io.resolve_authority_anchor(base, "../child", root=root), root / "child")
+            self.assertEqual(authority_io.resolve_authority_anchor(base, ".", root=root), root / "nested")
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_utf8_path_boundary_refuses_before_any_file_is_opened(self) -> None:
+        boundary = "a/" * 2047 + "aa"
+        self.assertEqual(len(boundary.encode("utf-8")), authority_io.MAX_AUTHORITY_PATH_BYTES)
+        self.assertEqual(authority_io.normalize_authority_path(boundary), boundary)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            for label, value in [("bytes", "é" * 2049), ("encoding", "\ud800")]:
+                with self.subTest(case=label), self.assertRaises(LifecycleError) as raised:
+                    authority_io.normalize_authority_path(value, label="selected input")
+                self.assertEqual(raised.exception.code, "invalid-repo-path")
+            with self.assertRaises(LifecycleError) as raised:
+                authority_io.read_authority_bytes(root / ("é" * 2049), root=root, max_bytes=8)
+            self.assertEqual(raised.exception.code, "invalid-repo-path")
+            self.assertEqual(list(root.iterdir()), [])
+
+    def test_invalid_read_caps_refuse_before_opening(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "document"
+            path.write_bytes(b"unchanged")
+            for cap in (None, True, False, 0, -1, "4", 1.5):
+                with self.subTest(cap=cap), patch.object(authority_io, "open_authority_read") as opened:
+                    with self.assertRaises(LifecycleError) as raised:
+                        authority_io.read_authority_bytes(path, root=root, max_bytes=cap)
+                    self.assertEqual(raised.exception.code, "invalid-authority-input-cap")
+                    opened.assert_not_called()
+            self.assertEqual(path.read_bytes(), b"unchanged")
+
+    def test_actual_read_bytes_remain_bounded_when_size_metadata_understates(self) -> None:
+        # UNIT_ONLY metadata injection around a real held stream, not a native race proof.
+        original = authority_io.open_authority_read
+
+        @contextmanager
+        def understated(path, *, root=None):
+            with original(path, root=root) as handle:
+                metadata = list(os.fstat(handle.fileno()))
+                metadata[6] = 1
+                with patch.object(authority_io.os, "fstat", return_value=os.stat_result(metadata)):
+                    yield handle
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "document"
+            path.write_bytes(b"four")
+            with patch.object(authority_io, "open_authority_read", understated):
+                with self.assertRaises(LifecycleError) as raised:
+                    authority_io.read_authority_bytes(path, root=root, max_bytes=2)
+            self.assertEqual(raised.exception.code, "authority-input-too-large")
+            self.assertEqual(path.read_bytes(), b"four")
 
 
 class AuthorityWriteTests(unittest.TestCase):
@@ -556,6 +631,71 @@ class AuthorityWriteTests(unittest.TestCase):
                 self.assertEqual(target.read_bytes(), b"unchanged")
                 self.assertTrue(link.is_symlink())
 
+
+    def test_precommit_write_fsync_and_replace_failures_retain_original(self) -> None:
+        # Real staging descriptors/bytes; only the named failure boundary is injected.
+        def partial_write(fd, data, *, mode=None):
+            with os.fdopen(fd, "wb") as handle:
+                self.assertEqual(handle.write(data[:2]), 2)
+                handle.flush()
+                raise OSError("injected failure after partial staging write")
+
+        scenarios = [
+            ("partial-write", authority_io, "_write_fd", partial_write),
+            ("file-fsync", authority_io.os, "fsync", OSError("injected file fsync failure")),
+            ("replace", authority_io._Directory, "replace_child", OSError("injected replace failure")),
+        ]
+        for label, owner, name, failure in scenarios:
+            with self.subTest(stage=label), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                path = root / "document"
+                path.write_bytes(b"original")
+                before_mode = path.stat().st_mode
+                with patch.object(owner, name, side_effect=failure):
+                    with self.assertRaises(LifecycleError) as raised:
+                        authority_io.replace_authority_bytes(path, b"replacement", root=root)
+                self.assertEqual(raised.exception.code, "authority-output-unavailable")
+                self.assertEqual(path.read_bytes(), b"original")
+                self.assertEqual(path.stat().st_mode, before_mode)
+                self.assertEqual([item.name for item in root.iterdir()], ["document"])
+
+    def test_postcommit_directory_durability_failure_does_not_promise_rollback(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "document"
+            path.write_bytes(b"original")
+            error = LifecycleError("authority-durability-unavailable", "injected directory barrier failure")
+            with patch.object(authority_io._Directory, "sync", side_effect=error):
+                with self.assertRaises(LifecycleError) as raised:
+                    authority_io.replace_authority_bytes(path, b"committed", root=root)
+            self.assertIs(raised.exception, error)
+            self.assertEqual(path.read_bytes(), b"committed")
+            self.assertEqual([item.name for item in root.iterdir()], ["document"])
+
+    @unittest.skipUnless(os.name == "nt", "native Windows private-handle path; injected policy observation")
+    def test_private_policy_observation_change_refuses_after_real_write(self) -> None:
+        from agent_lifecycle.contracts import windows_security
+
+        original = windows_security.private_handle_fingerprint
+        observed = {}
+
+        def changed_fingerprint(handle):
+            fingerprint = original(handle)
+            observed[handle] = observed.get(handle, 0) + 1
+            if observed[handle] > 1:
+                return "f" * 64 if fingerprint != "f" * 64 else "e" * 64
+            return fingerprint
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            path = root / "private" / "document"
+            authority_io.create_authority_bytes(path, b"before", root=root, private=True)
+            with patch.object(windows_security, "private_handle_fingerprint", changed_fingerprint):
+                with self.assertRaises(LifecycleError) as raised:
+                    authority_io.replace_authority_bytes(path, b"after", root=root)
+            self.assertEqual(raised.exception.code, "authority-input-changed")
+            self.assertTrue(any(count > 1 for count in observed.values()))
+            self.assertEqual(path.read_bytes(), b"after")
 
 if __name__ == "__main__":
     unittest.main()

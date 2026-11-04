@@ -184,3 +184,102 @@ class WindowsAuthorityBindingTests(unittest.TestCase):
                 handle_error = pool.submit(observe_error, "invalid-handle")
                 self.assertEqual(missing_error.result(timeout=15), 2)
                 self.assertEqual(handle_error.result(timeout=15), 6)
+
+    def test_windows_open_error_mapping_and_sharing_deadline_are_bounded(self):
+        # UNIT_ONLY API/clock observations; production retry bounds are unchanged.
+        for error, expected in [(2, FileNotFoundError), (3, FileNotFoundError),
+                                (80, FileExistsError), (183, FileExistsError), (5, LifecycleError)]:
+            api = fake_api()
+            api.CreateFileW.return_value = ctypes.c_void_p(-1).value
+            with (
+                self.subTest(error=error),
+                patch.object(authority_io.sys, "platform", "win32"),
+                patch.object(authority_io, "_windows_api", return_value=api),
+                patch.object(ctypes, "get_last_error", return_value=error, create=True),
+                patch.object(authority_io.time, "sleep") as slept,
+            ):
+                with self.assertRaises(expected) as raised:
+                    authority_io._windows_open(Path("unopened"), directory=False)
+                if error == 5:
+                    self.assertEqual(raised.exception.code, "authority-input-unavailable")
+                    self.assertEqual(raised.exception.details, {"winerror": 5, "operation": "read"})
+                self.assertEqual(api.CreateFileW.call_count, 1)
+                api.GetFileInformationByHandleEx.assert_not_called()
+                api.CloseHandle.assert_not_called()
+                slept.assert_not_called()
+        api = fake_api()
+        api.CreateFileW.return_value = ctypes.c_void_p(-1).value
+        with (
+            patch.object(authority_io.sys, "platform", "win32"),
+            patch.object(authority_io, "_windows_api", return_value=api),
+            patch.object(ctypes, "get_last_error", return_value=32, create=True),
+            patch.object(authority_io.time, "perf_counter", side_effect=[10.0, 10.01, 10.2]),
+            patch.object(authority_io.time, "sleep") as slept,
+        ):
+            with self.assertRaises(LifecycleError) as raised:
+                authority_io._windows_open(Path("contended"), directory=False)
+            self.assertEqual(raised.exception.details, {"winerror": 32, "operation": "read"})
+            self.assertEqual(api.CreateFileW.call_count, 1)
+            slept.assert_called_once_with(0.005)
+
+    def test_windows_metadata_refusal_closes_each_opened_handle_once(self):
+        for label, attributes, directory, metadata_ok in [
+            ("metadata-unavailable", 0, False, False),
+            ("reparse", 0x400, False, True),
+            ("directory-as-file", 0x10, False, True),
+            ("file-as-directory", 0, True, True),
+        ]:
+            api = fake_api()
+            api.CreateFileW.return_value = 101
+
+            def metadata(handle, kind, pointer, size):
+                ctypes.cast(pointer, ctypes.POINTER(wintypes.DWORD))[0] = attributes
+                return int(metadata_ok)
+
+            api.GetFileInformationByHandleEx.side_effect = metadata
+            with (
+                self.subTest(case=label),
+                patch.object(authority_io.sys, "platform", "win32"),
+                patch.object(authority_io, "_windows_api", return_value=api),
+            ):
+                with self.assertRaises(LifecycleError) as raised:
+                    authority_io._windows_open(Path("selected"), directory=directory)
+                self.assertEqual(
+                    raised.exception.code,
+                    "authority-io-unavailable" if not metadata_ok else "authority-input-symlink",
+                )
+                api.CloseHandle.assert_called_once_with(101)
+
+    def test_missing_readonly_foreign_thread_and_durability_capabilities_refuse(self):
+        # UNIT_ONLY capability checks with a real directory identity; handles are API doubles.
+        api = fake_api()
+        with tempfile.TemporaryDirectory() as directory, patch.object(authority_io, "_windows_api", return_value=api):
+            root = Path(directory)
+            missing = authority_io._Directory(root, None)
+            with self.assertRaises(LifecycleError) as raised:
+                missing.sync()
+            self.assertEqual(raised.exception.code, "authority-io-unavailable")
+            held = authority_io._Directory(root, None, handle=101, writable=False)
+            try:
+                with self.assertRaises(LifecycleError):
+                    authority_io._held_windows_directory(root, writable=True, held_directories={root: held})
+                with self.assertRaises(LifecycleError):
+                    held.sync()
+                api.FlushFileBuffers.assert_not_called()
+
+                def foreign_thread():
+                    with self.assertRaises(LifecycleError) as raised:
+                        authority_io._held_windows_directory(root, writable=False, held_directories={root: held})
+                    return raised.exception.code
+
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    self.assertEqual(pool.submit(foreign_thread).result(timeout=5), "authority-io-unavailable")
+                held.writable = True
+                api.FlushFileBuffers.return_value = 0
+                with self.assertRaises(LifecycleError) as raised:
+                    held.sync()
+                self.assertEqual(raised.exception.code, "authority-durability-unavailable")
+            finally:
+                held.close()
+                held.close()
+            api.CloseHandle.assert_called_once_with(101)
