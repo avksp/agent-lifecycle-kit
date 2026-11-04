@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -42,6 +43,12 @@ class ArtifactBuilderTests(unittest.TestCase):
                 except FileExistsError:
                     return False
                 except LifecycleError as error:
+                    if (
+                        os.name == "nt"
+                        and error.code == "authority-input-unavailable"
+                        and error.details == {"operation": "sync", "winerror": 32}
+                    ):
+                        return False
                     error.add_note(json.dumps({
                         "writer": index, "code": error.code,
                         "details": error.details,
@@ -52,6 +59,9 @@ class ArtifactBuilderTests(unittest.TestCase):
                 outcomes = list(pool.map(write, range(4)))
             self.assertEqual(sum(outcomes), 1)
             self.assertIn(json.loads(path.read_bytes())["winner"], range(4))
+            self.assertEqual(
+                json.loads(path.read_bytes()), {"winner": outcomes.index(True)}
+            )
 
     def test_sensitive_input_is_refused_or_explicitly_advisory_redacted(self):
         original = {"authorityClaimed": False, "password": "secret-value"}
