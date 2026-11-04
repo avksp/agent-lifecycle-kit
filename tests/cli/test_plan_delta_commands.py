@@ -164,6 +164,15 @@ class PlanDeltaCliTests(unittest.TestCase):
                 self.assertEqual(after, before)
 
     def test_outputs_cannot_target_plan_authority_or_protected_paths(self):
+        def snapshot():
+            result = {}
+            for path in root.rglob("*"):
+                if ".git" in path.parts:
+                    continue
+                self.assertFalse(path.is_symlink(), str(path))
+                result[str(path.relative_to(root))] = None if path.is_dir() else path.read_bytes()
+            return result
+
         for output in (
             "plans/r2/new.review-packet.json",
             ".alk/new.review-packet.json",
@@ -173,9 +182,16 @@ class PlanDeltaCliTests(unittest.TestCase):
             with self.subTest(output=output), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 synthetic_case(root, git_repository=True)
-                code, _ = self._packet(root, "--baseline", "plans/r1/review.json", "--out", output)
-                self.assertEqual(code, 2)
+                before = snapshot()
+                code, packet = self._packet(root, "--baseline", "plans/r1/review.json", "--out", output)
+                if code == 0:
+                    self.assertEqual(packet["mode"], "FULL_REQUIRED")
+                    self.assertFalse(packet["modelCallsStarted"])
+                else:
+                    self.assertEqual(code, 2)
+                self.assertEqual((root / output).exists(), str(Path(output)) in before)
                 self.assertFalse((root / "plans/r2/plan.lock.json").exists())
+                self.assertEqual(snapshot(), before)
 
     def test_composite_baseline_has_physical_evidence_and_current_source_checks(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1122,7 +1122,19 @@ class OwnedMeasurementTransportTests(unittest.TestCase):
                             pass
                         process.wait()
                 finally:
-                    process.close()
+                    try:
+                        process.close()
+                    except LifecycleError as error:
+                        self.assertEqual(error.code, "bounded-process-cleanup-failed")
+                        self.assertEqual(str(error), "Child group signal was denied")
+                self.assertTrue(process.closed)
+                self.assertFalse(any(thread.is_alive() for thread in process.threads))
+                self.assertTrue(
+                    all(
+                        stream.closed
+                        for stream in (process.process.stdin, process.process.stdout, process.process.stderr)
+                    )
+                )
                 self.assertIsNotNone(process.process.poll())
                 if label == "timeout":
                     self.assertFalse((root / label).exists())

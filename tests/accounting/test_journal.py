@@ -110,20 +110,40 @@ def open_scope(journal, scope="run", *, cap=1000, protected=None, spent=0, overh
     )
 
 
-def concurrent_worker(path, barrier, output, action, name):
+def concurrent_worker(path, barrier, output, action, name, *, fixture_queue_seconds=None):
+    journal = None
     try:
         with Journal(path, PROOF) as journal:
-            barrier.wait(timeout=10)
-            if action == "claim":
-                op = operation()
-                result = journal.claim("run", "op", op.binding_digest, name)
-            else:
-                result = journal.reserve(operation(name=name, upper=60), expected_revision=1)
-            output.put(result)
+            original_slot = journal._queue.slot
+
+            def fixture_slot(observation, *, timeout):
+                if timeout != 1.0 or fixture_queue_seconds != 10.0:
+                    raise AssertionError("Expected real1second request and explicit10second fixture allowance")
+                observation.update(product_requested_seconds=timeout, fixture_queue_seconds=fixture_queue_seconds)
+                return original_slot(observation, timeout=fixture_queue_seconds)
+
+            scope = (
+                mock.patch.object(journal._queue, "slot", side_effect=fixture_slot)
+                if action == "claim"
+                else nullcontext()
+            )
+            with scope:
+                barrier.wait(timeout=10)
+                if action == "claim":
+                    op = operation()
+                    result = journal.claim("run", "op", op.binding_digest, name)
+                else:
+                    result = journal.reserve(operation(name=name, upper=60), expected_revision=1)
+            output.put((result, dict(journal.last_write_admission)))
     except RevisionConflict:
-        output.put("REVISION_CONFLICT")
+        output.put(("REVISION_CONFLICT", dict(journal.last_write_admission)))
     except JournalUnavailable as exc:
-        output.put(f"UNAVAILABLE: {exc!r}; cause={exc.__cause__!r}; write_outcome={exc.write_outcome!r}")
+        output.put(
+            (
+                f"UNAVAILABLE: {exc!r}; cause={exc.__cause__!r}; write_outcome={exc.write_outcome!r}",
+                dict(journal.last_write_admission) if journal is not None else {},
+            )
+        )
 
 
 def crash_worker(path, stage):
@@ -742,14 +762,20 @@ class JournalTests(unittest.TestCase):
                 open_scope(journal, cap=100)
                 if action == "claim":
                     journal.reserve(operation())
-            barrier, output = ctx.Barrier(2), ctx.Queue()
+            barrier, output = ctx.Barrier(3), ctx.Queue()
             workers = [
-                ctx.Process(target=concurrent_worker, args=(str(path), barrier, output, action, name))
+                ctx.Process(
+                    target=concurrent_worker,
+                    args=(str(path), barrier, output, action, name),
+                    kwargs={"fixture_queue_seconds": 10.0} if action == "claim" else {},
+                )
                 for name in ("one", "two")
             ]
             for child in workers:
                 child.start()
-            results = [output.get(timeout=15) for _ in workers]
+            barrier.wait(timeout=10)
+            replies = [output.get(timeout=15) for _ in workers]
+            results = [reply[0] for reply in replies]
             for child in workers:
                 child.join(15)
                 if child.is_alive():
@@ -764,6 +790,10 @@ class JournalTests(unittest.TestCase):
                     self.assertEqual(journal.snapshot("run").active_reservations, 60)
                 else:
                     self.assertCountEqual(results, ["CLAIM_GRANTED", "ALREADY_CLAIMED"])
+                    for _, observation in replies:
+                        self.assertEqual(observation["product_requested_seconds"], 1.0)
+                        self.assertEqual(observation["fixture_queue_seconds"], 10.0)
+                        self.assertEqual(observation["status"], "ADMITTED")
 
     def test_sv04_dispatch_permit_opening_and_global_source_keys(self):
         for name, change in (
