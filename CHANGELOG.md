@@ -18,6 +18,8 @@
 - Keep deadline, output and original-argv guards in the measurement test; recognize only the exact group-signal refusal after direct-child, thread and pipe cleanup. This does not prove whole-group termination or repair the natural macOS cause.
 - Require protected-output tests to prove no files or directories changed after either a hard refusal or a safe FULL_REQUIRED response with no model start; keep the original Git fixture and runtime path guards. The original Windows response and cause remain unknown.
 
+- Give only the positive concurrent-claim fixture an explicit ten-second queue allowance. Assert the unchanged one-second product request, real admission and strict single-grant outcomes; wait for both workers before result collection. The natural Windows admission delay remains unknown.
+
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
 - Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
 
