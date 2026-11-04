@@ -31,7 +31,8 @@ Wall time и CPU текущего процесса измеряются моно
 release-2-16 с независимо выбранной ссылкой на исходное открытие учёта.
 Неподдерживаемый пакет получает declared-ledger-route-unsupported, перепривязанное
 открытие — declared-ledger-opening-mismatch. Существующий тест
-[DeclaredLedgerContextTests.test_unsupported_package_and_rebound_opening_refuse](../../../tests/accounting/test_declared_ledger.py)
+`DeclaredLedgerContextTests.test_unsupported_package_and_rebound_opening_refuse`
+(исходный файл: `tests/accounting/test_declared_ledger.py`)
 проверяет обе границы.
 
 Сохраняются legacy runtime, точные байты, хэши и происхождение, удержания UNKNOWN
