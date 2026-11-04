@@ -5,6 +5,23 @@ validated `agent-release-accounting.v1` artifact. It is an observability
 boundary, not a billing system and not workflow authority. The command starts
 no model, host process or network call and never infers unavailable usage.
 
+
+## Validation declarations and evidence limits
+
+Both `workflow status` modes expose `validationAccounting`; see the
+[CLI reference](cli.md) for the fields. `maxValidationRunsPerTask` is a declared
+policy limit. It does not observe or block every external validation command.
+A stored `validationRuns` value, including zero, is unverified; missing observed
+usage stays `null`. Keep each actual check receipt and reuse it only when its
+relevant inputs are unchanged. Preserve earlier attempts, costs and clocks.
+
+Keep each admitted evidence artifact within its frozen byte cap. If a capture
+exceeds the cap, retain that failed capture and its costs. A bounded view can
+replace it for admission when it preserves every required observation and its
+exact source binding. Name omitted presentation fields and verify the retained
+data against the original. Keep the original failure visible; the view does
+not supply missing platform or model telemetry.
+
 ## Build phase measurements
 
 Prepare an `agent-phase-resource-input.v1` object:
