@@ -979,6 +979,21 @@ separate display view: `data` contains the complete original status, while
 expand within the rendered set. Prefix lengths range from 4 to 64. Prefixes
 never replace persisted identities or become accepted authority inputs.
 
+Both `workflow status` and `workflow status --full` include a separate
+`validationAccounting` object. It describes the limits of validation accounting:
+
+| Field | Meaning |
+| --- | --- |
+| `mode: DECLARED_ONLY` | The workflow declares a validation budget. It does not observe all external checks. |
+| `declaredMaxPerTask` | The declared `maxValidationRunsPerTask` value, or `null` when absent. |
+| `observedRuns: null` | The number of external validation runs is unknown. |
+| `enforcement: NOT_ENFORCED_FOR_EXTERNAL_COMMANDS` | This budget does not block external commands. |
+| `stateCounterSemantics: UNVERIFIED_LEGACY_COUNTER` | A stored `validationRuns` value is not verified observation. |
+
+Stored counters, including zero, stay unchanged in the full state. This metadata
+does not establish token or cost coverage. Reading status does not update state,
+events or the next action.
+
 For deterministic local continuation, add `--local-only` to the existing
 `workflow continue --until-blocked --apply` command, preserving all required
 bundle, byte, transition and output limits. See [workflow continuation](workflow-continuation.md).

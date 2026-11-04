@@ -18,13 +18,26 @@ from agent_lifecycle.workflow.transition_contract import build_action
 
 def status(state_path: Path, *, full: bool = False) -> dict[str, Any]:
     state = load_state(state_path)
+    budgets = state.get("budgets")
+    validation_accounting = {
+        "mode": "DECLARED_ONLY",
+        "declaredMaxPerTask": budgets.get("maxValidationRunsPerTask") if isinstance(budgets, dict) else None,
+        "observedRuns": None,
+        "enforcement": "NOT_ENFORCED_FOR_EXTERNAL_COMMANDS",
+        "stateCounterSemantics": "UNVERIFIED_LEGACY_COUNTER",
+    }
     if full:
         return {
             "schemaVersion": "agent-workflow-status-full.v1",
             "state": state,
             "nextAction": next_action(state),
+            "validationAccounting": validation_accounting,
         }
-    return {**summarize_state(state_path, state), "nextAction": next_action(state)}
+    return {
+        **summarize_state(state_path, state),
+        "nextAction": next_action(state),
+        "validationAccounting": validation_accounting,
+    }
 
 
 def next_action(state: dict[str, Any]) -> dict[str, Any]:
