@@ -24,6 +24,9 @@
 - Require protected-output tests to prove no files or directories changed after either a hard refusal or a safe FULL_REQUIRED response with no model start; keep the original Git fixture and runtime path guards. The original Windows response and cause remain unknown.
 - В тестах защищённых выходных путей проверять отсутствие изменений файлов и каталогов при жёстком отказе и безопасном ответе FULL_REQUIRED без запуска модели; сохранить исходную Git-фикстуру и защиту путей в продукте. Исходный ответ Windows и причина отказа остаются неизвестными.
 
+- Give only the positive concurrent-claim fixture an explicit ten-second queue allowance. Assert the unchanged one-second product request, real admission and strict single-grant outcomes; wait for both workers before result collection. The natural Windows admission delay remains unknown.
+- Только в положительном тесте конкурентного захвата задать очереди явный допуск 10 секунд. Проверять неизменный производственный запрос на одну секунду, реальный допуск и строго один захват; собирать результаты после готовности обоих процессов. Причина естественной задержки допуска в Windows остаётся неизвестной.
+
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
 - Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
 
