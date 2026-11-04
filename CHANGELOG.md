@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.39.0 - 2026-11-04
+
+- Add read-only validation accounting to both workflow status modes: show the declared per-task limit and unknown external run counts.
+- Preserve stored counters, full state and next actions; do not treat a legacy zero as observed usage or claim external command enforcement.
+- Document the existing release-2-16-only declared ledger boundary and unsupported-package/opening refusals in English and Russian.
+- Add targeted authority input, root, recovery and write/durability failure controls; keep mocked Windows paths separate from native platform qualification.
+
 ## 2.38.0 - 2026-11-04
 
 - Add optional decision research bound to a frozen task and its declared context inputs.

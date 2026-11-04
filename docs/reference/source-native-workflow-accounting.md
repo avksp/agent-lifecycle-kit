@@ -23,6 +23,21 @@ from a missing value. Cache-read/non-cache input, output and derived totals reta
 their basis. Known usage plus an unknown contributor produces a partial total.
 Allocations, conservative holds and measured provider spend are different values.
 
+## Preserved release 2.16 declared ledger
+
+The existing Python entrypoint
+`agent_lifecycle.accounting.declared_ledger.resolve_declared_ledger_context`
+(`repository_root`, `frozen_manifest`, `opening_ref`) supports only the registered frozen package
+release-2-16 and its independently selected opening reference. An unsupported
+package refuses with declared-ledger-route-unsupported; a rebound opening refuses
+with declared-ledger-opening-mismatch. The existing
+[DeclaredLedgerContextTests.test_unsupported_package_and_rebound_opening_refuse](../../tests/accounting/test_declared_ledger.py)
+checks both boundaries.
+
+This scope preserves the legacy runtime, exact bytes/digests/ancestry, UNKNOWN
+holds and previous financial exposure. It grants no generic ledger route or host
+promotion. The portable SQLite Journal retains its existing separate contract.
+
 ## Provider and reviewer readiness
 
 `agent-lifecycle adapter provider-preflight --profile .alk/host-launch/<name>.json`

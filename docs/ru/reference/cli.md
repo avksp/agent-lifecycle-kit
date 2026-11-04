@@ -289,7 +289,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.38.0
+python -m pip install agent-lifecycle-kit==2.39.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -1045,6 +1045,21 @@ agent-lifecycle workflow init --manifest tasks/example/plan.manifest.json \
 Коллизии в отображаемом наборе удлиняют префикс. Допустимая длина — от 4 до 64.
 Префиксы не подменяют сохраняемые идентификаторы и не принимаются вместо
 полных значений при проверке полномочий.
+
+Оба режима `workflow status` и `workflow status --full` содержат отдельный объект
+`validationAccounting`. Он описывает границы учёта проверок:
+
+| Поле | Значение |
+| --- | --- |
+| `mode: DECLARED_ONLY` | Бюджет проверок заявлен в workflow. Все внешние проверки не наблюдаются. |
+| `declaredMaxPerTask` | Заявленное значение `maxValidationRunsPerTask` или `null`, если его нет. |
+| `observedRuns: null` | Число внешних запусков проверок неизвестно. |
+| `enforcement: NOT_ENFORCED_FOR_EXTERNAL_COMMANDS` | Этот бюджет не блокирует внешние команды. |
+| `stateCounterSemantics: UNVERIFIED_LEGACY_COUNTER` | Сохранённое значение `validationRuns` не является подтверждённым наблюдением. |
+
+Сохранённые счётчики, включая ноль, остаются без изменений в полном state.
+Эти данные не подтверждают полноту учёта токенов или стоимости. Чтение статуса
+не изменяет state, события или следующее действие.
 
 Для детерминированного локального продолжения добавьте `--local-only` к
 `workflow continue --until-blocked --apply`, сохраняя обязательные ограничения

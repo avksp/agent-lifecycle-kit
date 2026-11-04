@@ -11,8 +11,10 @@ from unittest.mock import patch
 
 try:
     from .helpers import *  # noqa: F401,F403,E402
+    from .helpers import _run_cli, _write_state
 except ImportError:
     from helpers import *  # noqa: F401,F403,E402
+    from helpers import _run_cli, _write_state
 
 from agent_lifecycle.audit.proof_integrity import (  # noqa: E402
     build_finding_identity,
@@ -101,6 +103,71 @@ class CliWorkflowCommandTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(payload["schemaVersion"], "agent-workflow-status.v1")
             self.assertEqual(payload["nextAction"]["type"], "launch-tasks")
+
+    def test_workflow_status_validation_accounting_is_read_only(self) -> None:
+        cases = (
+            (None, None),
+            ({}, 0),
+            ({"maxValidationRunsPerTask": 12}, 0),
+            ({"maxValidationRunsPerTask": 12}, 7),
+        )
+        for budgets, counter in cases:
+            with self.subTest(budgets=budgets, counter=counter), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                state_path = _write_state(root)
+                state = json.loads(state_path.read_bytes())
+                if budgets is not None:
+                    state["budgets"] = budgets
+                if counter is not None:
+                    state["tasks"][0]["validationRuns"] = counter
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                before = state_path.read_bytes()
+                event_path = root / "events.jsonl"
+                event_bytes = b'{"marker":"retain-existing-bytes"}\n'
+                event_path.write_bytes(event_bytes)
+                entries = set(root.iterdir())
+                expected = {
+                    "mode": "DECLARED_ONLY",
+                    "declaredMaxPerTask": 12 if budgets else None,
+                    "observedRuns": None,
+                    "enforcement": "NOT_ENFORCED_FOR_EXTERNAL_COMMANDS",
+                    "stateCounterSemantics": "UNVERIFIED_LEGACY_COUNTER",
+                }
+                for flags in ([], ["--full"]):
+                    code, payload = _run_cli(["workflow", "status", "--state", str(state_path), *flags])
+                    self.assertEqual(code, 0)
+                    self.assertEqual(payload["validationAccounting"], expected)
+                    self.assertEqual(payload["nextAction"], {"type": "launch-tasks", "taskIds": ["WS-01"]})
+                    if flags:
+                        self.assertEqual(payload["schemaVersion"], "agent-workflow-status-full.v1")
+                        self.assertEqual(payload["state"], state)
+                        self.assertEqual(
+                            set(payload), {"schemaVersion", "state", "nextAction", "validationAccounting"}
+                        )
+                    else:
+                        self.assertEqual(payload["schemaVersion"], "agent-workflow-status.v1")
+                        self.assertEqual(
+                            set(payload),
+                            {
+                                "schemaVersion", "identity", "runId", "packageId", "planRevision",
+                                "planDigest", "sourceRevision", "phase", "blocker", "authorization",
+                                "tasks", "nextAction", "validationAccounting",
+                            },
+                        )
+                        for key in (
+                            "runId", "packageId", "planRevision", "planDigest", "sourceRevision",
+                            "phase", "authorization",
+                        ):
+                            self.assertEqual(payload[key], state[key])
+                        self.assertEqual(payload["identity"]["stateRevision"], 1)
+                        self.assertIsNone(payload["blocker"])
+                        self.assertEqual(
+                            payload["tasks"],
+                            [{"id": "WS-01", "status": "READY", "attempt": 0, "dependsOn": [], "required": True}],
+                        )
+                    self.assertEqual(state_path.read_bytes(), before)
+                    self.assertEqual(event_path.read_bytes(), event_bytes)
+                    self.assertEqual(set(root.iterdir()), entries)
 
     def test_workflow_task_lifecycle_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
