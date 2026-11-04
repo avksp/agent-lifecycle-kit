@@ -20,6 +20,8 @@
 
 - Give only the positive concurrent-claim fixture an explicit ten-second queue allowance. Assert the unchanged one-second product request, real admission and strict single-grant outcomes; wait for both workers before result collection. The natural Windows admission delay remains unknown.
 
+- Recognize only an exact bounded Windows directory sharing refusal as a losing create-only test worker; retain one successful writer and verify its whole payload. Product sharing flags and retry limits remain unchanged; the natural runner cause is unknown.
+
 - Known limitation: one Windows/Python 3.15.1 stalled-stdin check exceeded its deadline. Bounded follow-up checks did not reproduce it; the cause remains unknown. [BUG-R238-STDIN-DEADLINE](docs/known-issues/BUG-R238-STDIN-DEADLINE.md) stays open.
 - Known limitation: the Node syntax/export smoke timed out in two Windows CI cells. A fixed two-target diagnostic passed without establishing the cause. [BUG-R238-NODE-SMOKE-DEADLINE](docs/known-issues/BUG-R238-NODE-SMOKE-DEADLINE.md) stays open.
 
