@@ -5,7 +5,9 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import secrets
 import stat
+from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,8 @@ from agent_lifecycle.accounting.declared_ledger_records import (
 )
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.authority_io import (
+    create_authority_bytes,
+    hold_authority_read_fd,
     normalize_authority_path,
     read_authority_bytes,
     replace_authority_bytes,
@@ -371,6 +375,22 @@ def _decode_coordinator_origin(
     }
 
 
+def _r11_coordinator_claim_matches(primary: Path, pending: Path, owned_claim: tuple[bytes, int] | None) -> bool:
+    if owned_claim is None:
+        return not pending.exists() and not pending.is_symlink()
+    raw, descriptor = owned_claim
+    try:
+        held, current = os.fstat(descriptor), pending.lstat()
+        return (
+            stat.S_ISREG(current.st_mode)
+            and os.path.samestat(held, current)
+            and held.st_mode == current.st_mode
+            and read_authority_bytes(pending, root=primary, max_bytes=131_072) == raw
+        )
+    except (OSError, LifecycleError):
+        return False
+
+
 def read_coordinator_cost_head(project_root: Path, *, ancestor_head_sha256: str | None = None) -> dict[str, Any]:
     """Read current declared provenance and optionally prove a pinned ancestor.
 
@@ -379,6 +399,15 @@ def read_coordinator_cost_head(project_root: Path, *, ancestor_head_sha256: str 
     Missing, altered, cyclic, over-limit or pending ancestry never falls back to
     a current-balance comparison. This reads no session history or telemetry.
     """
+    return _read_coordinator_cost_head(project_root, ancestor_head_sha256=ancestor_head_sha256)
+
+
+def _read_coordinator_cost_head(
+    project_root: Path,
+    *,
+    ancestor_head_sha256: str | None = None,
+    owned_claim: tuple[bytes, int] | None = None,
+) -> dict[str, Any]:
     _require(
         ancestor_head_sha256 is None
         or (isinstance(ancestor_head_sha256, str) and re.fullmatch("[0-9a-f]{64}", ancestor_head_sha256) is not None),
@@ -389,7 +418,7 @@ def read_coordinator_cost_head(project_root: Path, *, ancestor_head_sha256: str 
     path = primary / _R11_COORDINATOR_HEAD
     pending = path.with_suffix(".pending.json")
     _require(
-        not pending.exists() and not pending.is_symlink(),
+        _r11_coordinator_claim_matches(primary, pending, owned_claim),
         "r11-opening-pending",
         "coordinator head update is unresolved",
     )
@@ -495,8 +524,7 @@ def read_coordinator_cost_head(project_root: Path, *, ancestor_head_sha256: str 
         stable = (
             _r11_coordinator_head_bytes(primary) == raw
             and all(read_authority_bytes(p, root=primary, max_bytes=131_072) == value for p, value in observed.items())
-            and not pending.exists()
-            and not pending.is_symlink()
+            and _r11_coordinator_claim_matches(primary, pending, owned_claim)
         )
     except OSError:
         stable = False
@@ -575,8 +603,6 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
 
     def exclusive(target: Path, raw: bytes) -> None:
         if os.name == "nt":
-            from agent_lifecycle.contracts.authority_io import create_authority_bytes
-
             create_authority_bytes(target, raw, root=primary, private=True)
             return
         fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -587,44 +613,58 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
 
     # Refuse unsupported durability before creating a sticky claim.
     _sync_directory(path.parent)
-    exclusive(pending, canonical_bytes(head))
-    _sync_directory(path.parent)
-    if (
-        _r11_coordinator_head_bytes(primary) != previous_raw
-        or read_authority_bytes(primary / source_path, root=primary, max_bytes=131_072) != source_raw
-    ):
-        # This writer has not touched the head. Release only its own stale claim;
-        # a competing successful update must not be left blocked by this loser.
-        pending.unlink()
-        _sync_directory(path.parent)
-        raise LifecycleError("r11-opening-stale", "source/head changed after update claim")
-    if previous_raw is not None:
-        archive = path.parent / "coordinator-cost-head-history"
-        if os.name == "nt":
-            from agent_lifecycle.contracts.private_storage import ensure_private_directory
-
-            ensure_private_directory(archive, boundary=path.parent)
-        else:
-            archive.mkdir(mode=0o700, exist_ok=True)
-        _require(stat.S_ISDIR(archive.lstat().st_mode), "r11-opening-origin", "head archive is indirect")
-        archived = archive / (hashlib.sha256(previous_raw).hexdigest() + ".json")
-        if archived.exists():
+    claim = canonical_bytes({"head": head, "ownerNonce": secrets.token_hex(16)})
+    create_authority_bytes(pending, claim, root=primary, private=True)
+    with ExitStack() as guards:
+        descriptor = guards.enter_context(hold_authority_read_fd(pending, root=primary))
+        ownership = (claim, descriptor)
+        try:
             _require(
-                read_authority_bytes(archived, root=primary, max_bytes=131_072) == previous_raw,
-                "r11-opening-origin",
-                "previous head archive differs",
+                _r11_coordinator_claim_matches(primary, pending, ownership),
+                "r11-opening-pending",
+                "coordinator claim ownership changed",
             )
-        else:
-            exclusive(archived, previous_raw)
-        _sync_directory(archive)
-    exclusive(temporary, canonical_bytes(head))
-    _sync_directory(path.parent)
-    replace_authority_bytes(path, canonical_bytes(head), root=primary)
-    temporary.unlink()
-    _sync_directory(path.parent)
+            _sync_directory(path.parent)
+            if (
+                _r11_coordinator_head_bytes(primary) != previous_raw
+                or read_authority_bytes(primary / source_path, root=primary, max_bytes=131_072) != source_raw
+            ):
+                guards.close()
+                pending.unlink()
+                _sync_directory(path.parent)
+                raise LifecycleError("r11-opening-stale", "source/head changed after update claim")
+            if previous_raw is not None:
+                archive = path.parent / "coordinator-cost-head-history"
+                if os.name == "nt":
+                    from agent_lifecycle.contracts.private_storage import ensure_private_directory
+
+                    ensure_private_directory(archive, boundary=path.parent)
+                else:
+                    archive.mkdir(mode=0o700, exist_ok=True)
+                _require(stat.S_ISDIR(archive.lstat().st_mode), "r11-opening-origin", "head archive is indirect")
+                archived = archive / (hashlib.sha256(previous_raw).hexdigest() + ".json")
+                if archived.exists():
+                    _require(
+                        read_authority_bytes(archived, root=primary, max_bytes=131_072) == previous_raw,
+                        "r11-opening-origin",
+                        "previous head archive differs",
+                    )
+                else:
+                    exclusive(archived, previous_raw)
+                _sync_directory(archive)
+            exclusive(temporary, canonical_bytes(head))
+            _sync_directory(path.parent)
+            replace_authority_bytes(path, canonical_bytes(head), root=primary)
+            temporary.unlink()
+            _sync_directory(path.parent)
+            result = _read_coordinator_cost_head(project_root, owned_claim=ownership)
+        except BaseException:
+            # Close normally so an unrelated publication error keeps its type.
+            guards.close()
+            raise
     pending.unlink()
     _sync_directory(path.parent)
-    return read_coordinator_cost_head(project_root)
+    return result
 
 
 def _sync_directory(path: Path) -> None:

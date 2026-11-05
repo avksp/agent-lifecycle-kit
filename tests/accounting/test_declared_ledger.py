@@ -346,6 +346,225 @@ class CoordinatorDurabilityTests(unittest.TestCase):
         self.assertEqual(ledger.read_coordinator_cost_head(root)['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
 
 
+    def test_coordinator_returns_snapshot_before_a_late_stale_claim(self):
+        from agent_lifecycle.contracts.private_storage import create_private_bytes
+        root, ledger, relative, value = self.fixture()
+        ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+        pending = (root / ledger._R11_COORDINATOR_HEAD).with_suffix('.pending.json')
+        original = ledger._sync_directory
+        calls = 0
+        def late_claim(path):
+            nonlocal calls
+            calls += 1
+            original(path)
+            if calls == 6:
+                create_private_bytes(pending, b'{"ownerNonce":"late-loser"}', root=root)
+        with patch.object(ledger, '_sync_directory', side_effect=late_claim):
+            result = ledger.advance_coordinator_cost_head(root, source_path=relative)
+        self.assertEqual(calls, 6)
+        self.assertEqual(result['head']['sourcePath'], relative)
+        self.assertEqual(result['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
+        self.assertEqual(pending.read_bytes(), b'{"ownerNonce":"late-loser"}')
+        with self.assertRaises(LifecycleError) as blocked:
+            ledger.read_coordinator_cost_head(root)
+        self.assertEqual(blocked.exception.code, 'r11-opening-pending')
+
+    def test_early_coordinator_loser_refuses_while_owner_descriptor_is_held(self):
+        import threading
+        from concurrent.futures import ThreadPoolExecutor
+        root, ledger, relative, value = self.fixture()
+        ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+        head = root / ledger._R11_COORDINATOR_HEAD
+        pending = head.with_suffix('.pending.json')
+        controller = threading.get_ident()
+        ready, held = threading.Event(), threading.Event()
+        claim, reader = ledger.create_authority_bytes, ledger._read_coordinator_cost_head
+        def delayed_claim(path, *args, **kwargs):
+            if path == pending and threading.get_ident() != controller:
+                ready.set()
+                self.assertTrue(held.wait(15))
+            return claim(path, *args, **kwargs)
+        def loser():
+            try:
+                return ledger.advance_coordinator_cost_head(root, source_path=relative)
+            except (OSError, LifecycleError) as exc:
+                return exc
+        def owned_snapshot(*args, **kwargs):
+            if kwargs.get('owned_claim') is not None:
+                self.assertTrue(os.path.samestat(os.fstat(kwargs['owned_claim'][1]), pending.stat()))
+                held.set()
+                self.assertIsInstance(future.result(timeout=15), (OSError, LifecycleError))
+            return reader(*args, **kwargs)
+        with (
+            patch.object(ledger, 'create_authority_bytes', side_effect=delayed_claim),
+            patch.object(ledger, '_read_coordinator_cost_head', side_effect=owned_snapshot),
+            ThreadPoolExecutor(max_workers=1) as pool,
+        ):
+            future = pool.submit(loser)
+            self.assertTrue(ready.wait(15))
+            winner = ledger.advance_coordinator_cost_head(root, source_path=relative)
+        self.assertIsInstance(winner, dict)
+        self.assertEqual(winner['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
+        self.assertFalse(pending.exists() or head.with_suffix('.next.json').exists())
+
+    def test_coordinator_snapshot_holds_a_unique_nonce_and_live_descriptor(self):
+        import json
+        observed = []
+        for nonce in ['1' * 32, '2' * 32]:
+            root, ledger, relative, value = self.fixture()
+            ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+            head = root / ledger._R11_COORDINATOR_HEAD
+            pending = head.with_suffix('.pending.json')
+            original = ledger._read_coordinator_cost_head
+            def inspect(*args, bound=(nonce, head, pending, ledger, root, original), **kwargs):
+                nonce, head, pending, ledger, root, original = bound
+                ownership = kwargs.get('owned_claim')
+                if ownership is not None:
+                    raw, descriptor = ownership
+                    marker = json.loads(raw)
+                    observed.append(marker)
+                    self.assertEqual(marker['ownerNonce'], nonce)
+                    self.assertEqual(marker['head'], json.loads(head.read_bytes()))
+                    self.assertTrue(os.path.samestat(os.fstat(descriptor), pending.stat()))
+                    with self.assertRaises(LifecycleError) as blocked:
+                        ledger.read_coordinator_cost_head(root)
+                    self.assertEqual(blocked.exception.code, 'r11-opening-pending')
+                return original(*args, **kwargs)
+            with patch.object(ledger, 'secrets') as random_nonce:
+                random_nonce.token_hex.return_value = nonce
+                with patch.object(ledger, '_read_coordinator_cost_head', side_effect=inspect):
+                    result = ledger.advance_coordinator_cost_head(root, source_path=relative)
+                self.assertEqual(random_nonce.token_hex.call_count, 1)
+            self.assertEqual(result['head']['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
+            self.assertFalse(pending.exists())
+        self.assertEqual([m['ownerNonce'] for m in observed], ['1' * 32, '2' * 32])
+        self.assertEqual(observed[0]['head'], observed[1]['head'])
+
+    def test_coordinator_unowned_nonce_refuses_before_head_publication(self):
+        import json
+        from contextlib import contextmanager
+
+        from agent_lifecycle.contracts import canonical_bytes
+        root, ledger, relative, _value = self.fixture()
+        ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+        head = root / ledger._R11_COORDINATOR_HEAD
+        pending = head.with_suffix('.pending.json')
+        before = head.read_bytes()
+        original = ledger.hold_authority_read_fd
+        foreign = []
+        @contextmanager
+        def substitute(path, **kwargs):
+            marker = json.loads(path.read_bytes())
+            marker['ownerNonce'] = 'foreign-owner'
+            foreign.append(canonical_bytes(marker))
+            path.write_bytes(foreign[-1])
+            with original(path, **kwargs) as handle:
+                yield handle
+        with (
+            patch.object(ledger, 'hold_authority_read_fd', side_effect=substitute),
+            self.assertRaises(LifecycleError) as caught,
+        ):
+            ledger.advance_coordinator_cost_head(root, source_path=relative)
+        self.assertEqual(caught.exception.code, 'r11-opening-pending')
+        self.assertEqual(head.read_bytes(), before)
+        self.assertEqual(pending.read_bytes(), foreign[0])
+        self.assertFalse(head.with_suffix('.next.json').exists())
+
+    def test_coordinator_postcommit_refusals_retain_head_and_unknown_hold(self):
+        for fault in ['wrong-owner', 'changed-claim', 'foreign-same-bytes', 'snapshot', 'unlink', 'sync']:
+            with self.subTest(fault=fault):
+                self._coordinator_postcommit_refusal(fault)
+
+    def _coordinator_postcommit_refusal(self, fault):
+        import json
+
+        from agent_lifecycle.contracts.private_storage import create_private_bytes
+        root, ledger, relative, value = self.fixture()
+        ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+        head = root / ledger._R11_COORDINATOR_HEAD
+        pending = head.with_suffix('.pending.json')
+        reader = ledger._read_coordinator_cost_head
+        head_bytes = ledger._r11_coordinator_head_bytes
+        sync = ledger._sync_directory
+        unlink = Path.unlink
+        active = False
+        entered = False
+        reads = calls = 0
+        attack_attempted = False
+        foreign_identity = replacement_denied = foreign_raw = None
+        def observe_head(primary):
+            nonlocal reads, attack_attempted, foreign_identity, replacement_denied, foreign_raw
+            raw = head_bytes(primary)
+            if active:
+                reads += 1
+                if reads == 2 and fault in ['changed-claim', 'foreign-same-bytes']:
+                    attack_attempted = True
+                    if fault == 'changed-claim':
+                        pending.write_bytes(b'{"ownerNonce":"changed"}')
+                    else:
+                        foreign = head.with_suffix('.foreign.json')
+                        foreign_raw = pending.read_bytes()
+                        create_private_bytes(foreign, foreign_raw, root=root)
+                        identity = foreign.stat()
+                        try:
+                            foreign.replace(pending)
+                        except OSError as exc:
+                            replacement_denied = exc
+                            raise
+                        foreign_identity = identity
+            return raw
+        def observe_read(*args, **kwargs):
+            nonlocal active, entered
+            ownership = kwargs.get('owned_claim')
+            if ownership is None:
+                return reader(*args, **kwargs)
+            entered = active = True
+            try:
+                if fault == 'wrong-owner':
+                    kwargs['owned_claim'] = (b'unowned', ownership[1])
+                if fault == 'snapshot':
+                    raise LifecycleError('r11-opening-stale', 'injected snapshot refusal')
+                return reader(*args, **kwargs)
+            finally:
+                active = False
+        def refuse_unlink(path, *args, **kwargs):
+            if fault == 'unlink' and path == pending:
+                raise PermissionError('injected pending unlink refusal')
+            return unlink(path, *args, **kwargs)
+        def refuse_sync(path):
+            nonlocal calls
+            calls += 1
+            if fault == 'sync' and calls == 6:
+                raise OSError('injected final sync refusal')
+            return sync(path)
+        with (
+            patch.object(ledger, '_read_coordinator_cost_head', side_effect=observe_read),
+            patch.object(ledger, '_r11_coordinator_head_bytes', side_effect=observe_head),
+            patch.object(ledger, '_sync_directory', side_effect=refuse_sync),
+            patch.object(Path, 'unlink', autospec=True, side_effect=refuse_unlink),
+            self.assertRaises((OSError, LifecycleError)) as caught,
+        ):
+            ledger.advance_coordinator_cost_head(root, source_path=relative)
+        self.assertTrue(entered)
+        actual = json.loads(head.read_bytes())
+        self.assertEqual(actual['sourcePath'], relative)
+        self.assertEqual(actual['unknownHolds'], value['unknownHoldsIncludingThisWindow'])
+        self.assertEqual(pending.exists(), fault != 'sync')
+        self.assertFalse(head.with_suffix('.next.json').exists())
+        if fault in ['changed-claim', 'foreign-same-bytes']:
+            self.assertTrue(attack_attempted)
+        if replacement_denied is not None:
+            self.assertIsInstance(replacement_denied, PermissionError)
+        if fault == 'foreign-same-bytes':
+            self.assertTrue(foreign_identity is not None or replacement_denied is not None)
+            self.assertIsInstance(caught.exception, LifecycleError)
+            if replacement_denied is not None:
+                self.assertEqual(caught.exception.code, 'r11-opening-stale')
+            self.assertEqual(pending.read_bytes(), foreign_raw)
+        if foreign_identity is not None:
+            self.assertTrue(os.path.samestat(pending.stat(), foreign_identity))
+
+
 class GitLaunchContractTests(fixture_controls.DeclaredFixtureIsolationTests):
     """Explicit accounting Git selection plus unchanged inherited isolation controls."""
 
