@@ -275,15 +275,18 @@ class ProcessCleanupTests(unittest.TestCase):
     def _check_after_popen_exceptions(self) -> None:
         real_popen = subprocess.Popen
         real_thread_start = Thread.start
+        entered_faults = set()
 
         def sample_after_init(telemetry, **kwargs):
             if kwargs.get('force_group'):
                 # Keep this injected-fault fixture independent of OS sampling latency.
                 return {}
+            entered_faults.add('telemetry-sample')
             raise RuntimeError('sample fault')
 
         def fail_second_reader(thread):
             if thread.name == 'alk-process-capture-stderr':
+                entered_faults.add('second-reader-start')
                 raise RuntimeError('second capture start fault')
             return real_thread_start(thread)
 
@@ -304,6 +307,7 @@ class ProcessCleanupTests(unittest.TestCase):
         }
         for stage, fault in faults.items():
             with self.subTest(afterPopenStage=stage):
+                entered_faults.clear()
                 children = []
                 def popen(argv, **kwargs):
                     child = real_popen(argv, **kwargs)
@@ -311,7 +315,16 @@ class ProcessCleanupTests(unittest.TestCase):
                         children.append(child)
                     return child
                 began = time.monotonic()
-                with patch.object(process_module.subprocess, 'Popen', side_effect=popen), fault():
+                # These callbacks are known no-ops; real observer timing has
+                # separate coverage and must not preempt the intended fault.
+                with (
+                    patch.object(process_module.subprocess, 'Popen', side_effect=popen),
+                    patch.object(
+                        process_module, '_observe_process_before_deadline',
+                        return_value=(False, None),
+                    ),
+                    fault() as injected_fault,
+                ):
                     result = run_process([sys.executable, '-c', 'import time; time.sleep(30)'],
                         env=dict(os.environ), timeout_seconds=0.12, cleanup_grace_seconds=0.15,
                         stdin_text='private', on_started=lambda _event: None, on_input=lambda _event: None)
@@ -322,12 +335,21 @@ class ProcessCleanupTests(unittest.TestCase):
                 self.assertTrue(all(stream.closed for stream in (child.stdin, child.stdout, child.stderr)))
                 with self.assertRaises(ProcessLookupError):
                     os.killpg(child.pid, 0)
+                self.assertTrue(
+                    stage in entered_faults if stage in {
+                        'second-reader-start', 'telemetry-sample',
+                    } else injected_fault.called,
+                    (stage, result),
+                )
                 self.assertTrue(result['processStarted'])
                 self.assertTrue(result['startedFailure'])
                 self.assertIsNone(result['processReceipt'])
+                self.assertEqual(
+                    result['blockers'][0]['code'],
+                    'adapter-process-after-start-exception', result,
+                )
                 self.assertEqual(result['costStatus'], 'UNAVAILABLE')
                 self.assertFalse(result['retryAuthorized'])
-                self.assertEqual(result['blockers'][0]['code'], 'adapter-process-after-start-exception')
                 self.assertEqual(result['cleanup']['status'], 'BLOCKED' if stage == 'owner-close' else 'PASS')
 
     @unittest.skipUnless(os.name == "posix", "process-group fixture uses POSIX sessions")
