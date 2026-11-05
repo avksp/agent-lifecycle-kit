@@ -374,6 +374,35 @@ def open_authority_read(path: Path, *, root: Path | None = None) -> Iterator[Bin
         raise LifecycleError("authority-input-unavailable", "authority input cannot be safely read") from None
 
 
+@contextmanager
+def hold_authority_read_fd(path: Path, *, root: Path | None = None) -> Iterator[int]:
+    """Borrow a read-only FD; validate file and parents at both boundaries."""
+    root, name = authority_location(path, root=root)
+    target = root / name
+    descriptor = None
+    try:
+        with open_authority_read(target, root=root) as handle:
+            before = os.fstat(handle.fileno())
+            parents = [(parent, parent.lstat()) for parent in target.parents]
+            descriptor = os.dup(handle.fileno())
+            os.set_inheritable(descriptor, False)
+        yield descriptor
+        with open_authority_read(target, root=root) as handle:
+            _same_identity(before, os.fstat(descriptor), content=True)
+            _same_identity(before, os.fstat(handle.fileno()), content=True)
+            for parent, identity in parents:
+                _same_identity(identity, parent.lstat())
+    except FileNotFoundError:
+        if descriptor is None:
+            raise
+        raise LifecycleError("authority-input-changed", "authority input changed during I/O") from None
+    except OSError:
+        raise LifecycleError("authority-input-unavailable", "authority input cannot be safely read") from None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 def read_authority_bytes(path: Path, *, max_bytes: int, root: Path | None = None) -> bytes:
     """Read bounded stable bytes from the actual descriptor consumed by the caller."""
 

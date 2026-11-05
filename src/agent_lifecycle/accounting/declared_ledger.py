@@ -25,8 +25,8 @@ from agent_lifecycle.accounting.declared_ledger_records import (
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.authority_io import (
     create_authority_bytes,
+    hold_authority_read_fd,
     normalize_authority_path,
-    open_authority_read,
     read_authority_bytes,
     replace_authority_bytes,
 )
@@ -616,8 +616,8 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
     claim = canonical_bytes({"head": head, "ownerNonce": secrets.token_hex(16)})
     create_authority_bytes(pending, claim, root=primary, private=True)
     with ExitStack() as guards:
-        handle = guards.enter_context(open_authority_read(pending, root=primary))
-        ownership = (claim, handle.fileno())
+        descriptor = guards.enter_context(hold_authority_read_fd(pending, root=primary))
+        ownership = (claim, descriptor)
         try:
             _require(
                 _r11_coordinator_claim_matches(primary, pending, ownership),

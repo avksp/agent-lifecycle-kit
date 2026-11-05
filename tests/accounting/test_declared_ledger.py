@@ -450,7 +450,7 @@ class CoordinatorDurabilityTests(unittest.TestCase):
         head = root / ledger._R11_COORDINATOR_HEAD
         pending = head.with_suffix('.pending.json')
         before = head.read_bytes()
-        original = ledger.open_authority_read
+        original = ledger.hold_authority_read_fd
         foreign = []
         @contextmanager
         def substitute(path, **kwargs):
@@ -461,7 +461,7 @@ class CoordinatorDurabilityTests(unittest.TestCase):
             with original(path, **kwargs) as handle:
                 yield handle
         with (
-            patch.object(ledger, 'open_authority_read', side_effect=substitute),
+            patch.object(ledger, 'hold_authority_read_fd', side_effect=substitute),
             self.assertRaises(LifecycleError) as caught,
         ):
             ledger.advance_coordinator_cost_head(root, source_path=relative)
