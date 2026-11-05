@@ -51,18 +51,6 @@
     },
     {
       "path": "accounting/closing_resource_recovery.py",
-      "name": "_window_operations",
-      "score": 37,
-      "fingerprint": "bfecebcd3dbb67c1baeb9a1aaaad455f8e71f8856f3e448573040ff5982c18df"
-    },
-    {
-      "path": "accounting/closing_resource_recovery.py",
-      "name": "reconstruct_closing_balances",
-      "score": 52,
-      "fingerprint": "d627fb8cc4d2baf80abc38fe8d1a35dec509d5513297915015404abf4e91aa99"
-    },
-    {
-      "path": "accounting/closing_resource_recovery.py",
       "name": "read_persisted_closing_balances",
       "score": 63,
       "fingerprint": "319836c3bcdf618924a78151304b2971342a1743a3762ca0bef2cccabfd754eb"
@@ -1706,6 +1694,6 @@
       "fingerprint": "62fd5a8857305e6684349ad9c1eff2a25af86570deb85a9455062370b2befd3b"
     }
   ],
-  "branchBaselineDigest": "7acbd80342c99778c91c2f98a6cebe93e45d6c41e6ebb4505b761ab8847c975c",
+  "branchBaselineDigest": "dcdf192946d019837d94c524a01b47fb2f8930d2fa463096f669d2cd91603b35",
   "branchExceptions": []
 }

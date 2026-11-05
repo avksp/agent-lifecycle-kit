@@ -1,0 +1,799 @@
+{
+  "schemaVersion": "agent-release-accounting.v1",
+  "status": "PASS",
+  "releaseId": "2.40.0",
+  "generatedBy": "agent-lifecycle metrics release-accounting",
+  "sourceArtifacts": [
+    {
+      "path": "work/release-2-40/release-accounting-a3/source.json",
+      "sha256": "0582637a5a186acd18d15a6b06969674e51d34fe9f180b58d6c5e7932518c98e",
+      "bytes": 7985,
+      "schemaVersion": "agent-release-accounting-source.v1",
+      "payloadDigest": "5c3ee454c5b0022b64596439996ca0015009e83194d88428d7f5db926759da4e"
+    }
+  ],
+  "entryCount": 5,
+  "entries": [
+    {
+      "costCategory": "pipelineCompliance",
+      "entryId": "r240-alkProcess-whole-host-unavailable",
+      "metrics": {
+        "computeMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "tokens": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "scope": {
+        "additive": true,
+        "id": "release-2-40-current-host-alkProcess",
+        "kind": "current-release-telemetry-unavailable"
+      },
+      "view": "alkProcess",
+      "workflowMetrics": {
+        "controllerTransitions": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "failedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelCachedInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelOutputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelTurns": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "packetBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "parallelComputeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "passedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "requiredGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolCalls": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolOutputBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "sourceArtifactDigest": "5c3ee454c5b0022b64596439996ca0015009e83194d88428d7f5db926759da4e"
+    },
+    {
+      "costCategory": "implementation",
+      "entryId": "r240-implementation-whole-host-unavailable",
+      "metrics": {
+        "computeMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "tokens": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "scope": {
+        "additive": true,
+        "id": "release-2-40-current-host-implementation",
+        "kind": "current-release-telemetry-unavailable"
+      },
+      "view": "implementation",
+      "workflowMetrics": {
+        "controllerTransitions": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "failedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelCachedInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelOutputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelTurns": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "packetBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "parallelComputeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "passedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "requiredGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolCalls": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolOutputBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "sourceArtifactDigest": "5c3ee454c5b0022b64596439996ca0015009e83194d88428d7f5db926759da4e"
+    },
+    {
+      "costCategory": "productValidation",
+      "entryId": "r240-audit-whole-host-unavailable",
+      "metrics": {
+        "computeMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "tokens": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "scope": {
+        "additive": true,
+        "id": "release-2-40-current-host-audit",
+        "kind": "current-release-telemetry-unavailable"
+      },
+      "view": "audit",
+      "workflowMetrics": {
+        "controllerTransitions": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "failedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelCachedInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelOutputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelTurns": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "packetBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "parallelComputeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "passedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "requiredGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolCalls": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolOutputBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "sourceArtifactDigest": "5c3ee454c5b0022b64596439996ca0015009e83194d88428d7f5db926759da4e"
+    },
+    {
+      "costCategory": "implementation",
+      "entryId": "r240-postAuditRemediation-whole-host-unavailable",
+      "metrics": {
+        "computeMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "tokens": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "scope": {
+        "additive": true,
+        "id": "release-2-40-current-host-postAuditRemediation",
+        "kind": "current-release-telemetry-unavailable"
+      },
+      "view": "postAuditRemediation",
+      "workflowMetrics": {
+        "controllerTransitions": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "failedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelCachedInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelOutputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelTurns": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "packetBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "parallelComputeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "passedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "requiredGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolCalls": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolOutputBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "sourceArtifactDigest": "5c3ee454c5b0022b64596439996ca0015009e83194d88428d7f5db926759da4e"
+    },
+    {
+      "costCategory": "pipelineCompliance",
+      "entryId": "r240-observed-required-precommit-whitespace",
+      "metrics": {
+        "computeMs": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "additive": true,
+          "status": "DERIVED",
+          "value": 19
+        },
+        "steps": {
+          "additive": true,
+          "status": "DERIVED",
+          "value": 1
+        },
+        "tokens": {
+          "additive": true,
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "scope": {
+        "additive": true,
+        "id": "required-precommit-whitespace",
+        "kind": "one-observed-command-not-whole-run"
+      },
+      "view": "alkProcess",
+      "workflowMetrics": {
+        "controllerTransitions": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "failedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelCachedInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelInputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelOutputTokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "modelTurns": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "packetBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "parallelComputeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "passedGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "requiredGateCount": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolCalls": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolOutputBytes": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "toolWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "sourceArtifactDigest": "5c3ee454c5b0022b64596439996ca0015009e83194d88428d7f5db926759da4e"
+    }
+  ],
+  "views": {
+    "alkProcess": {
+      "entryCount": 2,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "PARTIAL",
+          "value": 1
+        },
+        "elapsedWallMs": {
+          "status": "PARTIAL",
+          "value": 19
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    },
+    "implementation": {
+      "entryCount": 1,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    },
+    "audit": {
+      "entryCount": 1,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    },
+    "postAuditRemediation": {
+      "entryCount": 1,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    }
+  },
+  "categoryTotals": {
+    "implementation": {
+      "entryCount": 2,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    },
+    "productValidation": {
+      "entryCount": 1,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    },
+    "pipelineCompliance": {
+      "entryCount": 2,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "PARTIAL",
+          "value": 1
+        },
+        "elapsedWallMs": {
+          "status": "PARTIAL",
+          "value": 19
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    },
+    "coordination": {
+      "entryCount": 0,
+      "metrics": {
+        "tokens": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "steps": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "elapsedWallMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        },
+        "computeMs": {
+          "status": "UNAVAILABLE",
+          "value": null
+        }
+      }
+    }
+  },
+  "totals": {
+    "entryCount": 5,
+    "metrics": {
+      "tokens": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "steps": {
+        "status": "PARTIAL",
+        "value": 1
+      },
+      "elapsedWallMs": {
+        "status": "PARTIAL",
+        "value": 19
+      },
+      "computeMs": {
+        "status": "UNAVAILABLE",
+        "value": null
+      }
+    }
+  },
+  "workflowEconomics": {
+    "schemaVersion": "agent-workflow-resource-summary.v1",
+    "status": "PASS",
+    "sourceAvailabilityStatuses": [
+      "MEASURED",
+      "ESTIMATED",
+      "TIME_WINDOW_ONLY",
+      "UNAVAILABLE"
+    ],
+    "derivedAggregateStatuses": [
+      "MIXED",
+      "PARTIAL"
+    ],
+    "sourceCount": 5,
+    "enclosingElapsedWall": {
+      "status": "UNAVAILABLE",
+      "value": null
+    },
+    "metrics": {
+      "modelInputTokens": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "modelCachedInputTokens": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "modelOutputTokens": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "modelTurns": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "toolCalls": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "toolWallMs": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "toolOutputBytes": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "packetBytes": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "controllerTransitions": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "requiredGateCount": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "passedGateCount": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "failedGateCount": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "elapsedWallMs": {
+        "status": "UNAVAILABLE",
+        "value": null
+      },
+      "parallelComputeMs": {
+        "status": "UNAVAILABLE",
+        "value": null
+      }
+    },
+    "productionPromotionClaimed": false,
+    "summaryDigest": "a42de4a6b948d94f09430a3183e25d89a66c515f2491d45a71c7c28cca148a60"
+  },
+  "exclusions": [],
+  "provenance": {
+    "status": "REPORTED",
+    "identities": {
+      "controllerVersion": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "coreVersion": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "hostPluginVersion": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "skillPackageVersion": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "runAlkVersion": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "runId": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "sourceRevision": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      },
+      "measurementDigest": {
+        "declared": null,
+        "observed": [],
+        "status": "UNAVAILABLE"
+      }
+    },
+    "sourceArtifactDigests": [
+      "0582637a5a186acd18d15a6b06969674e51d34fe9f180b58d6c5e7932518c98e"
+    ],
+    "confidencePromotionClaimed": false
+  },
+  "blockers": [],
+  "liveCallsStarted": false,
+  "productionPromotionClaimed": false,
+  "accountingDigest": "d8a5a5e41c3794c223deb477f7b7456e8f3e3812c6d66f46e003a188d66d528e"
+}

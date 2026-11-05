@@ -156,6 +156,97 @@ _SIDECAR_FIELDS = frozenset(
 )
 
 
+def _closing_sidecar_owner(
+    item: dict,
+    operations: dict,
+    seen: set[str],
+    window: str,
+    proposal: dict,
+    effect_digest: str,
+) -> tuple[str, str]:
+    """Validate sidecar membership before inspecting native financial facts."""
+    if (
+        type(item) is not dict
+        or set(item) != _SIDECAR_FIELDS
+        or (item.get("schemaVersion") != "agent-closing-operation-binding.v1")
+    ):
+        _unavailable("Closing operation sidecar is malformed")
+    operation_id = item.get("operationId")
+    if type(operation_id) is not str or operation_id in seen or operation_id not in operations:
+        _unavailable("Closing operation is duplicated or absent from native accounting")
+    seen.add(operation_id)
+    if item.get("closingWindowId") != window:
+        _unavailable("Closing operation belongs to another window")
+    if (
+        item.get("runId") != proposal["runId"]
+        or item.get("budgetScopeId") != proposal["budgetScopeId"]
+        or item.get("bindingId") != proposal["bindingId"]
+        or item.get("policyEffectDigest") != effect_digest
+        or item.get("unit") != proposal["unit"]
+    ):
+        _unavailable("Closing operation differs from the signed scope")
+    for revision_name in ("expectedJournalRevision", "expectedWorkflowRevision", "expectedAuthorityEpoch"):
+        if _amount(item[revision_name], revision_name) > (1 << 53) - 1:
+            _unavailable("Closing operation revision exceeds the safe-integer domain")
+    if (
+        type(item["expectedGuardStateDigest"]) is not str
+        or re.fullmatch(r"[0-9a-f]{64}", item["expectedGuardStateDigest"]) is None
+    ):
+        _unavailable("Closing guard identity is malformed")
+    owner = _owner_key(item.get("owner"))
+    return operation_id, owner
+
+
+def _validate_closing_native_binding(
+    item: dict,
+    native: dict,
+    operation_id: str,
+    owner: str,
+    proposal: dict,
+) -> None:
+    """Require the exact persisted native identity for this sidecar."""
+    binding = native.get("binding")
+    if type(binding) is not dict or native.get("digest") != digest(binding):
+        _unavailable("Native operation binding is corrupted")
+    if (
+        item.get("nativeOperationDigest") != native["digest"]
+        or binding.get("operation_id") != operation_id
+        or binding.get("budget_scope_id") != proposal["budgetScopeId"]
+        or binding.get("run_id") != proposal["runId"]
+        or (binding.get("task_id") or "") != owner
+        or binding.get("unit_definition_id") != proposal["unit"]["unitDefinitionId"]
+        or binding.get("upper_bound_tokens") != item.get("upperBound")
+    ):
+        _unavailable("Closing sidecar does not match the native operation")
+
+
+def _closing_native_amounts(item: dict, native: dict) -> tuple[int | None, int]:
+    """Preserve settlement and reservation checks in their original order."""
+    upper = _amount(item["upperBound"], "operation upper bound")
+    reserved = _amount(native.get("reservation"), "native reservation")
+    if reserved not in {0, upper}:
+        _unavailable("Native reservation has an unsupported partial value")
+    actual = native.get("actual")
+    if actual is not None:
+        _amount(actual, "native actual")
+    native_status = native.get("state")
+    if native_status not in {
+        "RESERVED",
+        "DISPATCHED",
+        "UNAVAILABLE",
+        "SETTLED",
+        "CANCELLED_WITH_NO_DISPATCH_PROOF",
+    }:
+        _unavailable("Native operation state is unsupported")
+    if (native_status == "SETTLED") != (actual is not None):
+        _unavailable("Native settlement state and actual differ")
+    if native_status in {"SETTLED", "CANCELLED_WITH_NO_DISPATCH_PROOF"} and reserved != 0:
+        _unavailable("Finalized operation still holds a reservation")
+    if native_status in {"RESERVED", "DISPATCHED", "UNAVAILABLE"} and reserved != upper:
+        _unavailable("Pending operation lost its reservation")
+    return actual, reserved
+
+
 def _window_operations(
     state: dict,
     proposal: dict,
@@ -170,71 +261,17 @@ def _window_operations(
     totals: dict[str, dict[str, int]] = {}
     seen: set[str] = set()
     for item in bindings:
-        if (
-            type(item) is not dict
-            or set(item) != _SIDECAR_FIELDS
-            or (item.get("schemaVersion") != "agent-closing-operation-binding.v1")
-        ):
-            _unavailable("Closing operation sidecar is malformed")
-        operation_id = item.get("operationId")
-        if type(operation_id) is not str or operation_id in seen or operation_id not in operations:
-            _unavailable("Closing operation is duplicated or absent from native accounting")
-        seen.add(operation_id)
-        if item.get("closingWindowId") != window:
-            _unavailable("Closing operation belongs to another window")
-        if (
-            item.get("runId") != proposal["runId"]
-            or item.get("budgetScopeId") != proposal["budgetScopeId"]
-            or item.get("bindingId") != proposal["bindingId"]
-            or item.get("policyEffectDigest") != effect_digest
-            or item.get("unit") != proposal["unit"]
-        ):
-            _unavailable("Closing operation differs from the signed scope")
-        for revision_name in ("expectedJournalRevision", "expectedWorkflowRevision", "expectedAuthorityEpoch"):
-            if _amount(item[revision_name], revision_name) > (1 << 53) - 1:
-                _unavailable("Closing operation revision exceeds the safe-integer domain")
-        if (
-            type(item["expectedGuardStateDigest"]) is not str
-            or re.fullmatch(r"[0-9a-f]{64}", item["expectedGuardStateDigest"]) is None
-        ):
-            _unavailable("Closing guard identity is malformed")
-        owner = _owner_key(item.get("owner"))
+        operation_id, owner = _closing_sidecar_owner(
+            item,
+            operations,
+            seen,
+            window,
+            proposal,
+            effect_digest,
+        )
         native = operations[operation_id]
-        binding = native.get("binding")
-        if type(binding) is not dict or native.get("digest") != digest(binding):
-            _unavailable("Native operation binding is corrupted")
-        if (
-            item.get("nativeOperationDigest") != native["digest"]
-            or binding.get("operation_id") != operation_id
-            or binding.get("budget_scope_id") != proposal["budgetScopeId"]
-            or binding.get("run_id") != proposal["runId"]
-            or (binding.get("task_id") or "") != owner
-            or binding.get("unit_definition_id") != proposal["unit"]["unitDefinitionId"]
-            or binding.get("upper_bound_tokens") != item.get("upperBound")
-        ):
-            _unavailable("Closing sidecar does not match the native operation")
-        upper = _amount(item["upperBound"], "operation upper bound")
-        reserved = _amount(native.get("reservation"), "native reservation")
-        if reserved not in {0, upper}:
-            _unavailable("Native reservation has an unsupported partial value")
-        actual = native.get("actual")
-        if actual is not None:
-            _amount(actual, "native actual")
-        native_status = native.get("state")
-        if native_status not in {
-            "RESERVED",
-            "DISPATCHED",
-            "UNAVAILABLE",
-            "SETTLED",
-            "CANCELLED_WITH_NO_DISPATCH_PROOF",
-        }:
-            _unavailable("Native operation state is unsupported")
-        if (native_status == "SETTLED") != (actual is not None):
-            _unavailable("Native settlement state and actual differ")
-        if native_status in {"SETTLED", "CANCELLED_WITH_NO_DISPATCH_PROOF"} and reserved != 0:
-            _unavailable("Finalized operation still holds a reservation")
-        if native_status in {"RESERVED", "DISPATCHED", "UNAVAILABLE"} and reserved != upper:
-            _unavailable("Pending operation lost its reservation")
+        _validate_closing_native_binding(item, native, operation_id, owner, proposal)
+        actual, reserved = _closing_native_amounts(item, native)
         row = totals.setdefault(owner, {"spent": 0, "reservations": 0})
         row["spent"] = _sum([row["spent"], actual or 0], "window spend")
         row["reservations"] = _sum([row["reservations"], reserved], "window reservations")
@@ -275,19 +312,15 @@ def _protected_buckets(state: dict, proposal: dict, buckets: list[dict], owners:
     return current
 
 
-def reconstruct_closing_balances(
+def _validate_closing_reconstruction(
     state: dict,
     journal_revision: int,
     proposal: dict,
     operation_bindings: list[dict],
     protection_buckets: list[dict],
     policy_effect_digest: str,
-) -> list[dict]:
-    """Rebuild all owner rows from persisted membership and current native state.
-
-    A caller must authenticate the proposal, effect, and SQL snapshot separately.
-    Returned rows deliberately contain no financial admission or permission.
-    """
+) -> tuple[int, list[dict]]:
+    """Validate reconstruction scope and domain before selecting native owners."""
     if type(state) is not dict or type(proposal) is not dict:
         _unavailable("Native state or closing proposal is missing")
     if proposal.get("schemaVersion") != "agent-closing-resource-proposal.v1":
@@ -314,6 +347,11 @@ def reconstruct_closing_balances(
     limits = proposal.get("limits")
     if type(limits) is not list or not limits:
         _unavailable("Closing owner inventory is missing")
+    return revision, limits
+
+
+def _select_closing_owner_limits(state: dict, limits: list[dict]) -> dict[str, dict]:
+    """Require complete owner membership and consistent known financial facts."""
     selected: dict[str, dict] = {}
     for item in limits:
         try:
@@ -333,6 +371,77 @@ def reconstruct_closing_balances(
         or state.get("opening", {}).get("pending_operations") != []
     ):
         _unavailable("Native qualification contradicts unknown financial facts")
+    return selected
+
+
+def _closing_balance_row(
+    native: Any,
+    owner: str,
+    limit: dict,
+    proposal: dict,
+    revision: int,
+    qualified: bool,
+    status: str,
+    window: dict[str, int],
+    pool: int,
+) -> dict:
+    """Project one validated owner without granting financial authority."""
+    entry = native.tasks[owner] if owner else None
+    known = entry["known_spent"] if entry else native.known_spent
+    spent = entry["spent"] if entry else native.spent
+    reserved = entry["active_reservations"] if entry else native.active_reservations
+    protected = entry["protected_closeout"] if entry else native.protected_closeout
+    enabled = limit["participation"] == "CLOSING_ENABLED"
+    if not enabled and (window["spent"] or window["reservations"] or pool):
+        _unavailable("Retained task acquired new-window resources")
+    if protected is not None and pool > protected:
+        _unavailable("Window protection exceeds native owner pool")
+    return {
+        "schemaVersion": "agent-closing-resource-balance.v1",
+        "runId": proposal["runId"],
+        "budgetScopeId": proposal["budgetScopeId"],
+        "closingWindowId": proposal["closingWindowId"],
+        "journalRevision": revision,
+        "unit": proposal["unit"],
+        "scope": limit["scope"],
+        "spentAtActivation": limit["knownSpentAtAnchor"],
+        "currentKnownCumulativeSpent": known,
+        "currentCumulativeSpent": spent if qualified else None,
+        "windowKnownSpent": window["spent"],
+        "windowSpent": window["spent"] if qualified else None,
+        "allActiveReservations": reserved,
+        "windowActiveReservations": window["reservations"] if reserved is not None else None,
+        "globalProtected": protected,
+        "windowProtected": pool if protected is not None else None,
+        "cumulativeCeiling": limit["prospectiveCumulativeCeiling"],
+        "windowAllowance": limit["approvedAdditional"],
+        "priorViolationsDigest": limit["priorViolationSetDigest"],
+        "qualification": status,
+    }
+
+
+def reconstruct_closing_balances(
+    state: dict,
+    journal_revision: int,
+    proposal: dict,
+    operation_bindings: list[dict],
+    protection_buckets: list[dict],
+    policy_effect_digest: str,
+) -> list[dict]:
+    """Rebuild all owner rows from persisted membership and current native state.
+
+    A caller must authenticate the proposal, effect, and SQL snapshot separately.
+    Returned rows deliberately contain no financial admission or permission.
+    """
+    revision, limits = _validate_closing_reconstruction(
+        state,
+        journal_revision,
+        proposal,
+        operation_bindings,
+        protection_buckets,
+        policy_effect_digest,
+    )
+    selected = _select_closing_owner_limits(state, limits)
     operation_totals = _window_operations(state, proposal, operation_bindings, policy_effect_digest)
     if not set(operation_totals) <= set(selected):
         _unavailable("Closing operation has no owner")
@@ -353,45 +462,24 @@ def reconstruct_closing_balances(
     run_reserved = _sum([x["reservations"] for x in operation_totals.values()], "run window reservations")
     rows = []
     for owner, limit in selected.items():
-        entry = native.tasks[owner] if owner else None
-        known = entry["known_spent"] if entry else native.known_spent
-        spent = entry["spent"] if entry else native.spent
-        reserved = entry["active_reservations"] if entry else native.active_reservations
-        protected = entry["protected_closeout"] if entry else native.protected_closeout
         window = operation_totals.get(owner, {"spent": 0, "reservations": 0})
         if owner == "":
             window = {"spent": run_spent, "reservations": run_reserved}
             pool = _sum(list(window_protected.values()), "run window protection")
         else:
             pool = window_protected.get(owner, 0)
-        enabled = limit["participation"] == "CLOSING_ENABLED"
-        if not enabled and (window["spent"] or window["reservations"] or pool):
-            _unavailable("Retained task acquired new-window resources")
-        if protected is not None and pool > protected:
-            _unavailable("Window protection exceeds native owner pool")
         rows.append(
-            {
-                "schemaVersion": "agent-closing-resource-balance.v1",
-                "runId": proposal["runId"],
-                "budgetScopeId": proposal["budgetScopeId"],
-                "closingWindowId": proposal["closingWindowId"],
-                "journalRevision": revision,
-                "unit": unit,
-                "scope": limit["scope"],
-                "spentAtActivation": limit["knownSpentAtAnchor"],
-                "currentKnownCumulativeSpent": known,
-                "currentCumulativeSpent": spent if qualified else None,
-                "windowKnownSpent": window["spent"],
-                "windowSpent": window["spent"] if qualified else None,
-                "allActiveReservations": reserved,
-                "windowActiveReservations": window["reservations"] if reserved is not None else None,
-                "globalProtected": protected,
-                "windowProtected": pool if protected is not None else None,
-                "cumulativeCeiling": limit["prospectiveCumulativeCeiling"],
-                "windowAllowance": limit["approvedAdditional"],
-                "priorViolationsDigest": limit["priorViolationSetDigest"],
-                "qualification": status,
-            }
+            _closing_balance_row(
+                native,
+                owner,
+                limit,
+                proposal,
+                revision,
+                qualified,
+                status,
+                window,
+                pool,
+            )
         )
     return rows
 
