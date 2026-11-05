@@ -557,7 +557,9 @@ class CoordinatorDurabilityTests(unittest.TestCase):
             self.assertIsInstance(replacement_denied, PermissionError)
         if fault == 'foreign-same-bytes':
             self.assertTrue(foreign_identity is not None or replacement_denied is not None)
-            self.assertIsInstance(caught.exception, LifecycleError if foreign_identity else OSError)
+            self.assertIsInstance(caught.exception, LifecycleError)
+            if replacement_denied is not None:
+                self.assertEqual(caught.exception.code, 'r11-opening-stale')
             self.assertEqual(pending.read_bytes(), foreign_raw)
         if foreign_identity is not None:
             self.assertTrue(os.path.samestat(pending.stat(), foreign_identity))
