@@ -96,8 +96,14 @@ class PythonQualityValidatorTests(unittest.TestCase):
             self.assertIn("quality-tests-scope-escape", {row["code"] for row in _validate_policy(invalid)})
         names = ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline")
         baselines = [("ruff", name) for name in names] + [("mypy", "baseline")]
+        disguised = (
+            "./" + selected,
+            str(Path.cwd() / selected),
+            selected.replace("/", "\\"),
+            "tests/../" + selected,
+        )
         for section, name in baselines:
-            for test_path in (selected, outside):
+            for test_path in (selected, outside, *disguised):
                 invalid = copy.deepcopy(policy)
                 invalid[section][name].append(
                     {"path": test_path, "code": "F821", "count": 1, "sourceDigest": "a" * 64}

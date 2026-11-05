@@ -226,7 +226,9 @@ def _test_scope_boundaries(policy: dict[str, Any], selected: list[str], ruff: di
     baselines["mypy.baseline"] = mypy.get("baseline") if isinstance(mypy, dict) else None
     for key, values in baselines.items():
         if isinstance(values, list) and any(
-            isinstance(item, dict) and isinstance(item.get("path"), str) and item["path"].startswith("tests/")
+            isinstance(item, dict)
+            and isinstance(item.get("path"), str)
+            and (_coverage_file_name(item["path"]) != item["path"] or item["path"].startswith("tests/"))
             for item in values
         ):
             blockers.append({"code": "quality-tests-baseline-forbidden", "baseline": key})
