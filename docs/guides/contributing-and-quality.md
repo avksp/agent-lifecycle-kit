@@ -111,8 +111,38 @@ PYTHONPATH=src python3 tools/release/validate_module_dependencies.py \
 ```
 
 The mypy baseline is empty: every new source-wide mypy error blocks acceptance.
-The obsolete `runner/attempt_snapshots.py` entry is removed; deleted source is not restored.
 Existing lint/format baselines do not expand and the 76% coverage floor stays fixed.
 Run full local unittest once for an unchanged candidate; the CI quality runner
 performs discovery for its own coverage evidence. Repeating a successful local
 check requires a change to its dependencies.
+
+## Checked Python scopes
+
+`policy/python-quality.json` defines each checked file set. The package uses
+the existing debt ratchet. Files in `tooling.paths`, including the quality
+runner, pass all selected Ruff checks, formatting and strict mypy with no debt
+baseline. Files in `tests.paths` pass E4/E7/E9/F/B correctness checks. Tests
+outside that list still run in the required test suite.
+
+The validator binds selected test bytes and command arguments to the receipt.
+It rejects an invalid revision, a weaker test selector set, undeclared test
+paths in tooling or strict scopes, and test entries in Ruff or mypy baselines.
+Valid historical policies without the selected test scope keep their earlier
+interpretation. A passing validation means the checked scopes satisfy policy;
+read the diagnostic summary for retained debt. The full quality runner already
+runs unittest for coverage, so one local full run can satisfy both checks for
+the same source and inputs.
+
+## Prepare repository test data
+
+Full repository tests use the bundled release fixture. In a clean checkout,
+restore it with the same command as CI before the full test run:
+
+```bash
+python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
+```
+
+The command writes `tasks/release-2-16`. Use a separate clean worktree when
+that directory contains existing planning data. Keep the fixture restoration
+and the full quality run in that worktree so existing plans and evidence stay
+intact.

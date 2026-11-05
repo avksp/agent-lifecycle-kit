@@ -39,6 +39,7 @@ def quality_command_argv(policy: dict[str, Any], package_root: Path) -> dict[str
             "ruff",
             "check",
             *scopes,
+            *policy.get("tests", {}).get("paths", []),
             "--select",
             ",".join(ruff.get("correctnessSelectors", [])),
             "--output-format",
@@ -68,6 +69,7 @@ def source_inventory(root: Path, policy_path: Path, package: Path, policy: dict[
     """Bind all checked sources and their command/policy inputs to this invocation."""
     paths = set(package.rglob("*.py")) | {policy_path}
     paths.update(root / name for name in policy.get("tooling", {}).get("paths", []))
+    paths.update(root / name for name in policy.get("tests", {}).get("paths", []))
     paths.update(root / name for name in policy.get("mypy", {}).get("strictClean", []))
     paths.update(
         root / name
@@ -326,7 +328,7 @@ def _run_command(
     }
 
 
-def _drain(stream: Any, limit: int) -> "_Drain":
+def _drain(stream: Any, limit: int) -> _Drain:
     output = bytearray()
     limited = threading.Event()
 
@@ -381,8 +383,7 @@ def _changed_paths(root: Path, base_sha: str) -> list[str]:
         ["git", "diff", "--name-only", base_sha, "--"],
         cwd=root,
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         check=False,
     )

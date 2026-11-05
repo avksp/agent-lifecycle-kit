@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.41.0 - 2026-11-05
+
+### Changed
+
+- Include the Python quality runner in the selected zero-baseline tooling and strict type checks.
+- Check the two quality test modules with E4/E7/E9/F/B and bind their source bytes and exact command scope.
+- Reject weakened selector sets, invalid revisions, undeclared test scopes and test debt in Ruff or mypy baselines.
+- Preserve valid historical policy interpretation, existing runtime debt, tool pins and coverage floors. The broader Python quality finding remains partially open.
+
 ## 2.40.0
 
 ### Changed

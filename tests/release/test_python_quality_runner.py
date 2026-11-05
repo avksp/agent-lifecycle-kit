@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -8,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import patch
 
@@ -89,6 +91,8 @@ class PythonQualityRunnerTests(unittest.TestCase):
         policy["limits"]["maxWallSeconds"] = 30
         policy["limits"]["maxOutputBytes"] = 65536
         policy.pop("tooling")
+        policy.pop("tests")
+        policy["revision"] = 6
         policy["mypy"]["strictClean"] = []
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -149,6 +153,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
         for name in ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline"):
             policy["ruff"][name] = []
         policy["mypy"]["strictClean"] = ["src/agent_lifecycle/__init__.py"]
+        policy["tests"]["paths"] = ["tests/test_case.py"]
         policy["coverage"] = {"minimumStatementLinePercent": 76, "baseline": {}}
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -265,6 +270,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
             )
             self.assertEqual(checked["status"], "PASS", checked["blockers"])
             self.assertEqual(relative["sourceInventory"], control["sourceInventory"])
+            self._assert_selected_test_gate(root, policy_path, run_path, control, execute)
             for selected in policy["tooling"]["paths"]:
                 self.assertIn(selected, control["sourceInventory"])
                 for identifier in ("ruff-correctness", "ruff-migration", "ruff-format", "mypy-strict"):
@@ -316,6 +322,55 @@ class PythonQualityRunnerTests(unittest.TestCase):
                 repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
             )
             self.assertIn("quality-command-scope-mismatch", {row["code"] for row in checked["blockers"]})
+
+    def _assert_selected_test_gate(
+        self,
+        root: Path,
+        policy_path: Path,
+        run_path: Path,
+        control: dict,
+        execute: Callable[[], tuple[dict, dict]],
+    ) -> None:
+        selected = root / "tests/test_case.py"
+        original = selected.read_bytes()
+        original_policy = policy_path.read_bytes()
+        self.assertIn("tests/test_case.py", control["sourceInventory"])
+        try:
+            seed = b"\n\ndef quality_scope_probe():\n    return undefined_quality_test_probe\n"
+            selected.write_bytes(original + seed)
+            run, checked = execute()
+            self.assertIn("new-quality-finding", {row["code"] for row in checked["blockers"]})
+            findings = json.loads((root / run["artifacts"]["ruffCorrectness"]).read_text())
+            self.assertTrue(any(row["code"] == "F821" and row["filename"] == str(selected) for row in findings))
+            # With F removed, real Ruff misses the seed. The policy floor must
+            # still refuse the otherwise passing run, independently of Ruff.
+            weakened = json.loads(original_policy)
+            weakened["ruff"]["correctnessSelectors"].remove("F")
+            policy_path.write_text(json.dumps(weakened), encoding="utf-8")
+            run, checked = execute()
+            self.assertEqual(run["status"], "PASS", run["blockers"])
+            self.assertEqual(json.loads((root / run["artifacts"]["ruffCorrectness"]).read_text()), [])
+            self.assertIn("quality-correctness-selectors-invalid", {row["code"] for row in checked["blockers"]})
+            policy_path.write_bytes(original_policy)
+            selected.write_bytes(original + b"\n# changed clean test source\n")
+            run_path.write_text(json.dumps(control), encoding="utf-8")
+            checked = validate_quality(
+                repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
+            )
+            self.assertIn("quality-source-inventory-drift", {row["code"] for row in checked["blockers"]})
+            selected.write_bytes(original)
+            omitted = copy.deepcopy(control)
+            command = next(row for row in omitted["commands"] if row["id"] == "ruff-correctness")
+            command["argv"].remove("tests/test_case.py")
+            run_path.write_text(json.dumps(omitted), encoding="utf-8")
+            checked = validate_quality(
+                repository_root=root, policy_path=policy_path, run_receipt_path=run_path, work_root=root / "work"
+            )
+            self.assertIn("quality-command-scope-mismatch", {row["code"] for row in checked["blockers"]})
+            print(json.dumps({"case": "selected-test-real-lint-floor-source-argv", "status": "PASS"}))
+        finally:
+            selected.write_bytes(original)
+            policy_path.write_bytes(original_policy)
 
 
 if __name__ == "__main__":
