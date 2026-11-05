@@ -311,6 +311,68 @@ class ClosingRecoveryTests(unittest.TestCase):
         finally:
             db.close()
 
+    def test_closing_reconstruction_preserves_first_financial_refusal(self) -> None:
+        cases = [
+            (
+                [("sidecar", "closingWindowId", "wrong"), ("native", "binding", None)],
+                "Closing operation belongs to another window",
+            ),
+            (
+                [("sidecar", "nativeOperationDigest", "0" * 64), ("native", "actual", -1)],
+                "Closing sidecar does not match the native operation",
+            ),
+            (
+                [("sidecar", "expectedAuthorityEpoch", 2**53), ("sidecar", "expectedGuardStateDigest", "bad")],
+                "Closing operation revision exceeds the safe-integer domain",
+            ),
+            (
+                [("native", "reservation", 1), ("native", "state", "unsupported")],
+                "Native reservation has an unsupported partial value",
+            ),
+        ]
+        for mutations, expected in cases:
+            with self.subTest(expected=expected):
+                state, proposal, sidecars, buckets = _example()
+                targets = {"sidecar": sidecars[0], "native": state["operations"]["task-current"]}
+                for target, key, value in mutations:
+                    targets[target][key] = value
+                with self.assertRaises(LifecycleError) as caught:
+                    reconstruct_closing_balances(state, 7, proposal, sidecars, buckets, "b" * 64)
+                self.assertEqual(caught.exception.code, "closing-resource-recovery-unavailable")
+                self.assertEqual(str(caught.exception), expected)
+
+    def test_closing_native_states_keep_spend_and_reservations_separate(self) -> None:
+        states = [
+            ("RESERVED", None, 4),
+            ("DISPATCHED", None, 4),
+            ("UNAVAILABLE", None, 4),
+            ("SETTLED", 3, 0),
+            ("CANCELLED_WITH_NO_DISPATCH_PROOF", None, 0),
+        ]
+        for status, actual, reservation in states:
+            with self.subTest(status=status):
+                state, proposal, sidecars, buckets = _example()
+                native = state["operations"]["task-current"]
+                native.update(state=status, actual=actual, reservation=reservation)
+                run, task = reconstruct_closing_balances(state, 7, proposal, sidecars, buckets, "b" * 64)
+                self.assertEqual(task["windowKnownSpent"], actual or 0)
+                self.assertEqual(task["windowActiveReservations"], reservation)
+                self.assertEqual(run["windowActiveReservations"], reservation + 8)
+                self.assertEqual(run["currentKnownCumulativeSpent"], 98)
+                self.assertNotIn("financialAdmission", task)
+
+    def test_unqualified_closing_projection_preserves_unknown_cumulative_spend(self) -> None:
+        state, proposal, sidecars, buckets = _example()
+        state["qualified"] = False
+        state["task_spent"]["task"] = None
+        run, task = reconstruct_closing_balances(state, 7, proposal, sidecars, buckets, "b" * 64)
+        for row in (run, task):
+            self.assertEqual(row["qualification"], "UNAVAILABLE")
+            self.assertIsNone(row["currentCumulativeSpent"])
+            self.assertIsNone(row["windowSpent"])
+        self.assertEqual(task["windowKnownSpent"], 3)
+        self.assertEqual(run["windowAllowance"], 30)
+
     def test_late_old_spend_consumes_global_without_minting_window_allowance(self) -> None:
         state, proposal, sidecars, buckets = _example()
         rows = reconstruct_closing_balances(state, 7, proposal, sidecars, buckets, "b" * 64)

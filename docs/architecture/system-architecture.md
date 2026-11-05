@@ -1212,3 +1212,15 @@ financial rules receive only `_FinancialTransactionPort`.
 For Python 3.15, the fingerprint serializer omits only the known integer
 `is_lazy=0` field on eager import nodes. Nonzero flags, fields on other node
 types and unknown future fields remain. Baseline hashes and limits are unchanged.
+
+## Closing balance reconstruction
+
+Closing balances are diagnostic projections of persisted accounting. The recovery
+module checks proposal scope and owner membership, verifies sidecar and native
+operation identities, and checks settlement and reservation states before it
+builds each owner row. Local helpers keep these responsibilities in the
+accounting layer. They introduce no new port or layer.
+
+Unknown cumulative spend remains unavailable. A balance row does not authorize
+a model call, change a limit, or grant a protected closing route. Callers must
+authenticate the proposal, policy effect, and journal snapshot separately.

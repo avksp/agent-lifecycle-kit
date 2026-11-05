@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.40.0
+
+### Changed
+
+- Separate closing-resource scope, membership, native financial checks, and balance projection into local accounting responsibilities.
+- Reduce the branch scores of `_window_operations` from 37 to 3 and `reconstruct_closing_balances` from 52 to 10. Each new helper remains below the existing limit of 20.
+- Preserve output fields, first-error ordering, unknown cumulative costs, and the separation between diagnostic balances and financial authority.
+- Remove exactly the two resolved branch baseline entries. The broader architecture debt inventory remains partially open; existing private-import and compatibility allowances remain visible.
+- Add matching English and Russian architecture guidance and current-version consumer/publication metadata.
+
+
 ## 2.39.0 - 2026-11-04
 
 - Add read-only validation accounting to both workflow status modes: show the declared per-task limit and unknown external run counts.
