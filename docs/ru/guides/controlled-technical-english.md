@@ -32,3 +32,30 @@ Draft не даёт execution authority. Frozen plan связывает reviewed
 ## Измерение и review
 
 Parity guards проверяют hashes, package bytes и bounded clauses, но не произвольный смысл, поведение модели или общее STE compliance. Считайте UTF-8 intervals и whitespace words (`len(text.split())`), включая Markdown/code: это не tokens, model calls или cost. Сохраняйте exact before/after bytes/hashes и тот же stage. Учитывайте полные role/shared contracts и все обязательные transitive links. Объединяйте пересечения внутри document/case; повторно учитывайте reuse в другом case. Missing sources означают `INCOMPLETE`. Сообщайте увеличения. Нельзя исключать обязанности или предполагать reuse после compact ради красивого числа. User/system/packet/host input вне этой projection. Равные S0/S2 authoring bytes не означают равную workflow cost. Независимый semantic review проверяет actor, condition, action, refusal, MUST/MAY, UNKNOWN, commands и schemas. Token savings и model behavior остаются UNAVAILABLE без сопоставимых измерений.
+
+
+### Как понимать границы измерения
+
+В рабочей копии репозитория ALK можно получить существующий отчёт паритета:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+python3 tools/release/validate_skill_parity.py --root . \
+  --evidence work/skill-parity.json
+```
+
+Строки `skills` считают каждый маршрутизатор и его полный контракт роли. Они
+не учитывают cookbook, общие руководства, активный packet, сообщения пользователя
+и инструкции хоста. `packageCompared` и `archiveCompared` означают фактическое
+сравнение байтов, только если переданы соответствующие входы `--package` и
+`--archive`. Значение `hostInstallationAttested` остаётся false.
+
+Для оценки чтения на этапе добавьте к источникам роли обязательные общие документы
+и выбранные связанные инструкции. Запишите точные диапазоны байтов, хеши исходников
+и основание включения каждой ссылки или условие её применения. Например, выбранное
+исследование решений включает руководство исследования и контракт доказательств;
+маршрут продолжения добавляет свой контракт, когда используется этот маршрут.
+До и после изменения используйте одинаковую схему учёта. Такая оценка не доказывает,
+что именно прочитал хост, помещается ли полный ввод и потратила ли модель меньше
+токенов. При отсутствии сопоставимой телеметрии укажите фактические токены и
+стоимость как `UNAVAILABLE`.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.42.0 - 2026-11-06
+
+### Changed
+
+- Organize the performance and resource manual by current topic, with equivalent English and Russian guidance and links to retained release history.
+- Preserve existing commands, resource ceilings, comparison rules, refusal states and the historical Ed25519 reference threshold without adding a new universal performance gate.
+- Check documentation contracts without requiring an obsolete release number.
+- Explain the limits of skill byte counts and package parity. Complete fixed-case instruction projections include mandatory follow-ups and report increases; they do not measure whole-host input or token savings.
+- Keep all lifecycle, security, architecture, Python quality and platform gates. Unselected documentation debt remains open.
+
 ## 2.41.0 - 2026-11-05
 
 ### Changed

@@ -71,3 +71,29 @@ outside this projection. Equal S0/S2 authoring bytes do not imply equal workflow
 cost. Independent semantic review checks actor, condition, action, refusal,
 MUST/MAY, UNKNOWN, commands and schemas. Token savings and model behavior remain
 UNAVAILABLE without comparable measured evidence.
+
+
+### Read the measurement boundary
+
+From an ALK repository checkout, inspect the existing parity report:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+python3 tools/release/validate_skill_parity.py --root . \
+  --evidence work/skill-parity.json
+```
+
+The `skills` rows count each router and its complete role reference. They do
+not count the cookbook, shared guides, active packet, user messages or host
+instructions. `packageCompared` and `archiveCompared` indicate an actual byte
+comparison only when the corresponding `--package` and `--archive` inputs
+were supplied. `hostInstallationAttested` remains false.
+
+For a stage reading projection, add the mandatory shared documents and selected
+follow-ups to those role sources. Record exact byte ranges, source digests and
+the reason for each included or conditional link. For example, selected decision
+research includes its research workflow and evidence contract; a continuation
+route adds its contract when that route is used. Keep the same mapping before
+and after a change. This projection cannot prove what the host actually read,
+whether the full input fits, or that a model used fewer tokens. Report actual
+tokens and cost as `UNAVAILABLE` when no comparable telemetry exists.
