@@ -337,9 +337,10 @@ def _drain(stream: Any, limit: int) -> _Drain:
             chunk = stream.read(8192)
             if not chunk:
                 return
-            if len(output) < limit:
-                output.extend(chunk[: max(0, limit - len(output))])
-            if len(output) >= limit or len(chunk) > max(0, limit - len(output)):
+            remaining = max(0, limit - len(output))
+            if remaining:
+                output.extend(chunk[:remaining])
+            if len(output) >= limit or len(chunk) > remaining:
                 limited.set()
 
     thread = threading.Thread(target=read, daemon=True)

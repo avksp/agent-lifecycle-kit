@@ -71,6 +71,22 @@ class PythonQualityRunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertTrue(result["outputLimited"])
 
+    def test_output_limit_accepts_below_cap_and_refuses_exact_and_overflow(self) -> None:
+        for size, limited in ((3000, False), (4096, True), (4097, True)):
+            with self.subTest(output_bytes=size):
+                result = _run_command(
+                    [sys.executable, "-c", f"import sys; sys.stdout.buffer.write(b'x' * {size})"],
+                    cwd=Path.cwd(),
+                    timeout_seconds=5,
+                    output_limit=4096,
+                    expected_exit_codes={0},
+                )
+                self.assertEqual(result["status"], "FAIL" if limited else "PASS")
+                self.assertEqual(result["outputLimited"], limited)
+                self.assertEqual(len(result["stdout"].encode()), min(size, 4096))
+                if not limited:
+                    self.assertEqual(result["returncode"], 0)
+
     def test_runner_reports_invocation_failure_as_structured_result(self) -> None:
         result = _run_command(
             ["/path/that/does/not/exist"],
