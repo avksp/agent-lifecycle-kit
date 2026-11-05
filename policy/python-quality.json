@@ -1,6 +1,6 @@
 {
   "schemaVersion": "agent-python-quality-policy.v1",
-  "revision": 8,
+  "revision": 9,
   "toolchain": {
     "ruff": "0.17.3",
     "mypy": "2.4.0",
@@ -3354,7 +3354,14 @@
     "paths": [
       "tools/release/validate_docs_compat.py",
       "tools/release/validate_python_quality.py",
-      "tools/release/docs_compat_rules.py"
+      "tools/release/docs_compat_rules.py",
+      "tools/release/run_python_quality.py"
+    ]
+  },
+  "tests": {
+    "paths": [
+      "tests/release/test_python_quality_runner.py",
+      "tests/release/test_python_quality_validator.py"
     ]
   }
 }

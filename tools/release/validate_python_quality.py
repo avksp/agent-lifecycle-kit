@@ -10,7 +10,7 @@ import math
 import re
 from collections import Counter
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, TypeGuard
 
 if __package__:
     from .release_common import digest_value, write_json
@@ -120,6 +120,7 @@ def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
         "ruff",
         "mypy",
         "tooling",
+        "tests",
         "coverage",
         "limits",
         "productionPromotionClaimed",
@@ -180,6 +181,57 @@ def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
                     blockers.append({"code": "quality-tooling-baseline-forbidden", "baseline": key})
         if not isinstance(mypy, dict) or not _valid_scope(mypy.get("strictClean")):
             blockers.append({"code": "quality-strict-scope-invalid"})
+    blockers.extend(_test_scope_blockers(policy))
+    return blockers
+
+
+def _test_scope_blockers(policy: dict[str, Any]) -> list[dict[str, Any]]:
+    """Keep historical policies readable; require the current test gate floor."""
+    revision = policy.get("revision")
+    if type(revision) is not int or revision < 1:
+        return [{"code": "quality-policy-revision-invalid"}]
+    if "tests" not in policy and revision <= 8:
+        return []
+    tests = policy.get("tests")
+    if not _valid_test_scope(tests):
+        return [{"code": "quality-tests-policy-invalid"}]
+    ruff = policy.get("ruff")
+    if not isinstance(ruff, dict):
+        return [{"code": "quality-ruff-policy-invalid"}]
+    blockers = _test_scope_boundaries(policy, tests["paths"], ruff)
+    if ruff.get("correctnessSelectors") != ["E4", "E7", "E9", "F", "B"]:
+        blockers.append({"code": "quality-correctness-selectors-invalid"})
+    return blockers
+
+
+def _valid_test_scope(value: Any) -> TypeGuard[dict[str, Any]]:
+    if not isinstance(value, dict) or set(value) != {"paths"} or not _valid_scope(value.get("paths")):
+        return False
+    paths = value["paths"]
+    return bool(paths) and all(name.startswith("tests/") and not any(char in name for char in "*?[]") for name in paths)
+
+
+def _test_scope_boundaries(policy: dict[str, Any], selected: list[str], ruff: dict[str, Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    for section, key in (("tooling", "paths"), ("mypy", "strictClean")):
+        scope = policy.get(section)
+        paths = scope.get(key) if isinstance(scope, dict) else None
+        if isinstance(paths, list) and any(
+            isinstance(name, str) and name.startswith("tests/") and name not in selected for name in paths
+        ):
+            blockers.append({"code": "quality-tests-scope-escape", "scope": f"{section}.{key}"})
+    names = ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline")
+    baselines = {key: ruff.get(key) for key in names}
+    mypy = policy.get("mypy")
+    baselines["mypy.baseline"] = mypy.get("baseline") if isinstance(mypy, dict) else None
+    for key, values in baselines.items():
+        if isinstance(values, list) and any(
+            isinstance(item, dict)
+            and isinstance(item.get("path"), str)
+            and (_coverage_file_name(item["path"]) != item["path"] or item["path"].startswith("tests/"))
+            for item in values
+        ):
+            blockers.append({"code": "quality-tests-baseline-forbidden", "baseline": key})
     return blockers
 
 
@@ -192,6 +244,9 @@ def _valid_scope(value: Any) -> bool:
 
 
 def _scope_blockers(root: Path, policy_path: Path, policy: dict[str, Any], run: dict[str, Any]) -> list[dict[str, Any]]:
+    test_blockers = _test_scope_blockers(policy)
+    if test_blockers:
+        return test_blockers
     if "tooling" not in policy:
         return []  # Preserve immutable historical receipt interpretation.
     tooling = policy.get("tooling")

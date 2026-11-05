@@ -63,6 +63,84 @@ def _run_receipt() -> dict:
 
 
 class PythonQualityValidatorTests(unittest.TestCase):
+    def test_selected_test_scope_refuses_invalid_paths_and_baselines(self) -> None:
+        path = Path(__file__).resolve().parents[2] / "policy/python-quality.json"
+        policy = json.loads(path.read_text())
+        self.assertEqual(_validate_policy(policy), [])
+        selected = policy["tests"]["paths"][0]
+        invalid_scopes = (
+            None,
+            {},
+            {"paths": None},
+            {"paths": []},
+            {"paths": [selected, selected]},
+            {"paths": ["../outside.py"]},
+            {"paths": ["/outside.py"]},
+            {"paths": ["tests/../outside.py"]},
+            {"paths": ["tools/release/example.py"]},
+            {"paths": ["tests/*.py"]},
+            {"paths": [None]},
+        )
+        for scope in invalid_scopes:
+            with self.subTest(scope=scope):
+                invalid = copy.deepcopy(policy)
+                invalid["tests"] = scope
+                self.assertIn("quality-tests-policy-invalid", {row["code"] for row in _validate_policy(invalid)})
+        invalid = copy.deepcopy(policy)
+        del invalid["tests"]
+        self.assertIn("quality-tests-policy-invalid", {row["code"] for row in _validate_policy(invalid)})
+        outside = "tests/release/test_quality_outside_scope.py"
+        for section, key in (("tooling", "paths"), ("mypy", "strictClean")):
+            invalid = copy.deepcopy(policy)
+            invalid[section][key].append(outside)
+            self.assertIn("quality-tests-scope-escape", {row["code"] for row in _validate_policy(invalid)})
+        names = ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline")
+        baselines = [("ruff", name) for name in names] + [("mypy", "baseline")]
+        disguised = (
+            "./" + selected,
+            str(Path.cwd() / selected),
+            selected.replace("/", "\\"),
+            "tests/../" + selected,
+        )
+        for section, name in baselines:
+            for test_path in (selected, outside, *disguised):
+                invalid = copy.deepcopy(policy)
+                invalid[section][name].append(
+                    {"path": test_path, "code": "F821", "count": 1, "sourceDigest": "a" * 64}
+                )
+                self.assertIn("quality-tests-baseline-forbidden", {row["code"] for row in _validate_policy(invalid)})
+
+    def test_current_correctness_selectors_and_historical_scope_interpretation(self) -> None:
+        path = Path(__file__).resolve().parents[2] / "policy/python-quality.json"
+        policy = json.loads(path.read_text())
+        for selectors in (None, [], {}, "F", ["E4", "E7", "E9", "B"]):
+            with self.subTest(selectors=selectors):
+                invalid = copy.deepcopy(policy)
+                invalid["ruff"]["correctnessSelectors"] = selectors
+                self.assertIn(
+                    "quality-correctness-selectors-invalid", {row["code"] for row in _validate_policy(invalid)}
+                )
+        for revision in (None, "9", 9.0, True, 0, -1):
+            for declared in (True, False):
+                with self.subTest(invalid_revision=revision, tests_declared=declared):
+                    invalid = copy.deepcopy(policy)
+                    invalid["revision"] = revision
+                    if not declared:
+                        del invalid["tests"]
+                    self.assertIn("quality-policy-revision-invalid", {row["code"] for row in _validate_policy(invalid)})
+        legacy_opt_in = copy.deepcopy(policy)
+        legacy_opt_in["revision"] = 8
+        legacy_opt_in["ruff"]["correctnessSelectors"].remove("F")
+        self.assertIn(
+            "quality-correctness-selectors-invalid", {row["code"] for row in _validate_policy(legacy_opt_in)}
+        )
+        for revision in (7, 8):
+            with self.subTest(historical_revision=revision):
+                legacy = copy.deepcopy(policy)
+                legacy["revision"] = revision
+                del legacy["tests"]
+                self.assertEqual(_validate_policy(legacy), [])
+
     def test_selected_tool_scopes_refuse_invalid_paths_and_runtime_baseline_reuse(self) -> None:
         path = Path(__file__).resolve().parents[2] / "policy/python-quality.json"
         policy = json.loads(path.read_text())
