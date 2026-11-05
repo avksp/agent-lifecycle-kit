@@ -1,11 +1,12 @@
 # Performance and resource budgets
 
-Release 1.78 improves the cost of repeated local ALK commands while preserving
-the security, compatibility and evidence boundaries of the lifecycle. The
-figures collected by the performance harness describe one environment; they
-are not a universal speed promise.
+Use the performance harness to compare local ALK commands within the same
+source, policy, workload and environment. Measurements describe that environment;
+they are not a universal speed promise. Security, compatibility and lifecycle
+evidence remain mandatory. See [release history](../../CHANGELOG.md) for earlier
+optimizations and measured results.
 
-## Release 2.28: lifecycle and accounting baselines
+## Lifecycle and accounting baselines
 
 The collector also measures `workflow-status-small`, `workflow-status-growing`,
 `accounting-read-small` and `accounting-read-growing`. Workflow fixtures have
@@ -47,21 +48,20 @@ python3 tools/release/validate_performance_evidence.py \
 
 A self-comparison checks the comparison route and proves no speed gain.
 Changed source, environment, policy, workload or metric definitions returns
-`NO_RECOMMENDATION`; no comparison rows are published. The Windows fixture
-comparison measured a 13.08% median reduction in one six-sample experiment.
-Release 2.28 does not promise a universal 20% reduction. Security checks and the
-complete required CI matrix remain mandatory.
+`NO_RECOMMENDATION`; no comparison rows are published. Earlier Windows fixture results are recorded in the
+[release history](../../CHANGELOG.md#2280---2026-10-26). They do not establish a
+speed gain for a new source or environment. Security checks and the complete
+required CI matrix remain mandatory.
 
 
-## What Release 1.78 measures
+## Baseline operations and preserved contracts
 
 The revision-bound baseline records the source revision, dirty-tree state,
 platform, Python implementation, CPU count, warm-up, samples, bounded output
 and operation counters. The default operations are CLI `version`, the
 `tracked-release` neutrality scan and canonical digest calculation.
 
-The release also validates the properties that matter more than a wall-clock
-number:
+The checks also validate these properties:
 
 - Ed25519 output remains compatible with RFC 8032 vectors, accepted receipt
   fixtures and strict malformed-input handling.
@@ -84,11 +84,12 @@ them an explicit acceptance threshold. An incomplete, stale, mixed-environment
 or unbounded measurement cannot be turned into a passing result by reporting a
 better number.
 
-The only performance threshold in the 1.78 acceptance contract is the
-interleaved Ed25519 comparison: optimized public-key derivation, signing and
+The historical [Ed25519 acceptance contract](../../CHANGELOG.md#1780---2026-08-22)
+uses an interleaved reference comparison: optimized public-key derivation, signing and
 verification medians must each be no more than 20% of the frozen affine
 reference median. This comparison does not make a constant-time or
-side-channel-resistance claim.
+side-channel-resistance claim. Its historical threshold is not an extra
+acceptance gate for every later release; use the current frozen plan and policy.
 
 ## Resource ceilings
 
