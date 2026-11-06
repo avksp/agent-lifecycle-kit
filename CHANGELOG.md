@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.43.0 - 2026-11-06
+
+### Changed
+
+- Avoid constructing an unused final receipt in one authority-refusal test through the existing lean fixture option. Keep all seven isolated cases, authority mutations and read-only refusal assertions.
+- Retain positive receipt publication and validation coverage. Confirm complete snapshot equality and unchanged authority bytes and modes; only the unused generated registry output differs.
+- Add equivalent English and Russian guidance for measuring test preparation without bypassing runtime guards.
+- Observe a 15.93% lower median wall time for the selected local scenario across six predeclared interleaved comparison pairs. All six pairs improve; this is not a claim of whole-suite or CI-wide acceleration.
+- Preserve the full platform matrix, security, architecture, Python quality and lifecycle gates. Broader CI and lifecycle cost improvements remain open.
+
 ## 2.42.0 - 2026-11-06
 
 ### Changed

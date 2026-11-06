@@ -3769,7 +3769,7 @@ class InvalidAnnotationAuthorityRefusalTests(unittest.TestCase):
             "review-not-independent",
             "review-high-finding",
         ):
-            f = self.fixture()
+            f = self.fixture(finish=False)
             if mutation == "subject-digest":
                 f.annotation_report["subjectDigest"] = "0" * 64
             elif mutation == "subject-windows":
