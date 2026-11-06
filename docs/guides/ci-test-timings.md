@@ -98,3 +98,20 @@ selection to `run_unittest.py` if the promotion gate fails; retain its evidence.
 
 The result hooks follow the [Python unittest runner contract](https://docs.python.org/3.11/library/unittest.html#unittest.TextTestRunner).
 Artifact behavior follows [actions/upload-artifact](https://github.com/actions/upload-artifact).
+
+## Measure test preparation
+
+Start with timing reports for the exact tested source. Profile one slow case
+before changing its setup. Reuse an existing lean fixture builder only when
+the test does not consume the omitted outputs. Keep each negative case isolated.
+
+Check an unmodified positive fixture. Compare authority file bytes and modes,
+complete snapshot projections, and generated artifacts before and after the
+omitted setup. Name each expected output difference. Preserve positive receipt
+publication and validation tests, and every refusal assertion. Do not cache or
+skip runtime Git, filesystem or ledger guards to shorten test setup.
+
+Declare the comparable workload, sample order and acceptance thresholds before
+changing the candidate. Retain every observation and failed attempt. Report
+targeted wall time separately from full-suite, job, queue and token metrics.
+A local targeted measurement does not prove a CI-wide speedup.
