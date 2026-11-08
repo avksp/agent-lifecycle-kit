@@ -1,4 +1,4 @@
-name: windows-coordinator-claim-diagnostic
+name: windows-coordinator-context-diagnostic
 
 on:
   workflow_dispatch:
@@ -8,117 +8,218 @@ permissions:
 
 jobs:
   diagnostic:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/diag/windows-coordinator-claim-a1'
-    name: Windows 3.12 bounded coordinator diagnostic
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/diag/windows-coordinator-context-a1'
+    name: Windows 3.12 original context comparison
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
-          python-version: "3.12"
-      - name: Require admitted branch and exact source scope
+          python-version: "3.12.10"
+      - name: Require admitted source branch scope and native cutoff
         shell: python
         run: |
           import hashlib, json, os, subprocess
           from datetime import datetime, timezone
           from pathlib import Path
-          baseline = 'd21d81943a2b64ea613ee0097ef7e4bd2d296940'
-          assert os.environ['GITHUB_REF'] == 'refs/heads/diag/windows-coordinator-claim-a1'
-          assert datetime.now(timezone.utc) < datetime.fromisoformat('2026-11-08T13:29:22.768531+00:00')
+          folder = Path('work/ci/windows-coordinator-context')
+          folder.mkdir(parents=True, exist_ok=False)
+          baseline = '694b882ac6eac67ec64f2c6d1b26d3c93ba4ef06'
+          assert os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/diag/windows-coordinator-context-a1'
+          assert datetime.now(timezone.utc) < datetime.fromisoformat('2026-11-08T15:12:14.883055+00:00')
           def git(*args):
               return subprocess.check_output(['git', *args], text=True).strip()
           assert git('rev-parse', 'HEAD') == os.environ['GITHUB_SHA']
           subprocess.run(['git', 'merge-base', '--is-ancestor', baseline, 'HEAD'], check=True)
           changes = git('diff', '--name-only', baseline, 'HEAD').splitlines()
-          assert sorted(changes) == ['.github/workflows/matrix.yml', 'tests/accounting/test_declared_ledger.py']
-          paths = changes + ['src/agent_lifecycle/contracts/private_storage.py', 'src/agent_lifecycle/contracts/windows_security.py']
-          folder = Path('work/ci/windows-coordinator-diagnostic')
-          folder.mkdir(parents=True, exist_ok=False)
+          assert changes == ['.github/workflows/matrix.yml'], changes
+          expected = {'pyproject.toml': '4b96426f8dcef1691f52e97872ef12a036badb4eae2c24db6c9b0bdf3122b801', 'src/agent_lifecycle/contracts/private_storage.py': '356e80952d8cbad7450e0197f6dce4efcbdafda5c1d828c03412ce9117ae72c3', 'src/agent_lifecycle/contracts/windows_security.py': 'b84e63cf6fe1ded0adc65f723eb24bd593b765b349364aa3bc2506daf2301230', 'tests/accounting/test_declared_ledger.py': '65d6904ec8166d47ac665b4202572c672a2485d0d3e8b376ef77adfbb9ad914c', 'tools/ci/run_unittest.py': '055eb2501af84015d64b7c6ba294f90980dc8f6208c8e93ae967297c418ad17c', 'uv.lock': 'eb5a94bd0275a9ba18f0e89a5e785121fff45d2bf4543682ef03527b8b990680'}
+          for path, digest in expected.items():
+              assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest, path
           receipt = dict(baseline=baseline, head=git('rev-parse', 'HEAD'), tree=git('rev-parse', 'HEAD^{tree}'),
-                         files={p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths})
+                         files={p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in [*expected, '.github/workflows/matrix.yml']})
           (folder / 'source.json').write_text(json.dumps(receipt, indent=2), encoding='utf-8')
       - name: Restore versioned release test fixture
         run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
-      - name: Install package
-        run: python -m pip install --disable-pip-version-check -e .
-      - name: Observe only the selected simultaneous-claim case
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          version: "0.13.1"
+          enable-cache: false
+      - name: Install original frozen quality environment
+        run: uv sync --locked --group quality --python 3.12.10
+      - name: Compare original discovery prefix against named target
         shell: python
         run: |
-          import hashlib, json, os, platform, subprocess, sys, time
-          import agent_lifecycle
-          from datetime import datetime, timezone
+          import hashlib
+          import json
+          import os
+          import platform
           from pathlib import Path
-          folder = Path('work/ci/windows-coordinator-diagnostic')
-          library = Path(agent_lifecycle.__file__).resolve()
-          assert library.is_relative_to(Path('src').resolve()), library
-          case = 'tests.accounting.test_declared_ledger.CoordinatorDurabilityTests.test_concurrent_coordinator_claim_has_one_winner_and_no_double_charge'
-          argv = [sys.executable, '-m', 'unittest', case, '-v']
-          started = time.monotonic()
-          summary = dict(status='INCOMPLETE', attempts=[], maxAttempts=32, maxSeconds=600,
-                         maxSecondsPerAttempt=60, bugRepaired=False, rootCauseConfirmed=False,
-                         python=sys.version, executable=sys.executable, platform=platform.platform(),
-                         runner=os.environ.get('RUNNER_NAME'), image=os.environ.get('ImageVersion'),
-                         sha=os.environ['GITHUB_SHA'], librarySource=str(library.relative_to(Path.cwd())),
+          import subprocess
+          import sys
+          import time
+          from datetime import datetime, timezone
+
+          folder = Path("work/ci/windows-coordinator-context")
+          config_path = folder / "config.json"
+          config = {'expectedPredecessorExpectedFailures': [], 'expectedPredecessorSkips': [], 'kind': 'original-CI-discovery-prefix', 'originalArtifactPath': 'work/windows-coordinator-claim-repair-a1/context-planning-inputs/original-windows-timings/test-timings.json', 'originalArtifactSHA256': 'd3176024f58a41f553706f03f039de4e026e93abc59b5524dbe6ebca856d6e32', 'originalInventoryCount': 4327, 'originalInventoryIdHash': '60a968375eefccdd59b6a198cb86b96e89d475555fcfb7226f40b6897834c93d', 'originalPredecessorCount': 64, 'originalPrefixSeconds': 19.96550689999998, 'originalRunId': 42467557945, 'originalSource': 'd21d81943a2b64ea613ee0097ef7e4bd2d296940', 'originalTargetOutcome': 'failure', 'prefixIds': ['tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_absent_retained_task_stays_absent_and_overrun_is_preserved', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_closing_policy_event_replays_full_policy_without_clearing_sticky_gate', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_internal_policy_event_rebuild_round_trip', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_local_current_retired_window_data_and_original_late_settlement', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_local_original_owner_settlement_cancellation_and_refund_data', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_mutated_source_or_retained_task_entitlement_is_refused', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_run_window_counts_task_protection_once_inside_same_total', 'tests.accounting.test_closing_resources.ClosingResourceCandidateTests.test_wr04_activation_resource_binding_and_each_mismatch', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_claim_rechecks_existing_reservation_without_double_charge', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_claim_respects_retained_cap_and_exact_nested_task', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_dr01_signed_addition_does_not_include_old_unused_headroom', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_dr02_prior_overrun_is_not_rewritten_by_new_ceiling', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_dr03_task_cap_limits_same_single_run_attribution', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_dr04_retained_cap_and_absent_inactive_task_stay_distinct', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_dr06_dr18_missing_boolean_and_overflow_refuse', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_dr09_closeout_transfers_only_own_protected_window_balance', 'tests.accounting.test_closing_resources.ClosingResourceTests.test_operation_and_claim_input_shapes_match_locked_resource_contract', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_bucket_conservation_and_retained_task_are_fail_closed', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_closing_native_states_keep_spend_and_reservations_separate', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_closing_reconstruction_preserves_first_financial_refusal', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_current_window_data_join_uses_same_sql_effect_and_financial_rows', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_duplicate_or_relabelled_operation_cannot_increase_or_hide_window_cost', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_durable_record_joins_refuse_tampering_after_valid_rehash', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_fresh_cache_corruption_refuses_but_absent_cache_rebuilds_without_authority', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_late_old_spend_consumes_global_without_minting_window_allowance', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_missing_native_facts_and_corrupt_cache_keep_exact_refusals', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_native_operation_artifact_data_matches_sidecar_without_authority', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_persisted_digest_chain_and_projection_reconcile_without_grant', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_unknown_native_protection_is_never_zero', 'tests.accounting.test_closing_resources_recovery.ClosingRecoveryTests.test_unqualified_closing_projection_preserves_unknown_cumulative_spend', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_atomic_staging_crash_replays_only_exact_two_link_intermediate', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_backward_clock_before_staged_unlink_refuses_and_restarts', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_caller_future_timestamp_cannot_authorize_deletion', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_earlier_name_recreated_at_final_gate_refuses_done', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_expired_inherited_monotonic_deadline_is_never_renewed', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_finite_original_utc_deadline_rechecked_before_staging', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_inconsistent_runtime_clock_before_staging_refuses', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_later_obligation_cannot_recreate_earlier_original_before_done', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_recreation_after_unlink_refuses_done_and_keeps_obligation', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_self_hashed_lock_inventory_requires_exact_manifest_membership', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_staging_collision_never_overwrites_unrelated_destination', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_unavailable_runtime_clock_refuses_before_any_delete', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_raw_well_formed_other_plan_lock_refused_before_registration_or_unlink', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_retention_due_check_refuses_open_not_due_and_financial_exception', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_retention_late_exception_writer_fenced_through_recheck_and_unlink', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_retention_partial_unlink_restart_is_idempotent_and_done_requires_all_files', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_retention_private_authority_rejects_modes_and_every_pinned_identity', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_retention_sql_collected_raw_pending_enumerates_every_attempt', 'tests.accounting.test_closing_resources_recovery.RawRetentionWitnessTests.test_same_attempt_operations_retain_all_raw_obligations_and_original_summary', 'tests.accounting.test_deadline_clock.DeadlineClockTests.test_dd01_dd03_exact_utc_and_nondecending_high_water', 'tests.accounting.test_deadline_clock.DeadlineClockTests.test_dd16_expired_work_still_settles_and_revokes_without_new_grant', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_authority_candidate_refuses_broken_intermediate_predecessor', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_clock_rollback_refuses_snapshot_without_mutation', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_immutable_bootstrap_record_rejects_erasure', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_initial_root_request_refuses_current_operator_before_artifact_read', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_lost_reply_after_commit_replays_original_rotation', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_missing_bootstrap_cannot_self_select_root', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_persisted_authority_candidate_is_read_only_and_not_a_grant', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_process_contenders_cannot_both_install_epoch', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_public_install_refuses_new_issuer_with_existing_root', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_public_signed_revocation_remains_a_safety_operation', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_signed_grant_data_join_is_transaction_bound_and_never_native_permission', 'tests.accounting.test_workflow_authority_store.WorkflowAuthorityStoreTests.test_signed_successor_replay_and_revocation_monotonicity', 'tests.accounting.test_declared_ledger.CoordinatorDurabilityTests.test_changed_source_after_claim_refuses_without_head_mutation', 'tests.accounting.test_declared_ledger.CoordinatorDurabilityTests.test_concurrent_coordinator_claim_has_one_winner_and_no_double_charge'], 'target': 'tests.accounting.test_declared_ledger.CoordinatorDurabilityTests.test_concurrent_coordinator_claim_has_one_winner_and_no_double_charge'}
+          config["runnerSHA256"] = '055eb2501af84015d64b7c6ba294f90980dc8f6208c8e93ae967297c418ad17c'
+          cutoff = datetime.fromisoformat('2026-11-08T15:12:14.883055+00:00')
+          python = Path(".venv/Scripts/python.exe").resolve()
+          child = folder / "child.py"
+          child.write_text('\nimport argparse\nimport hashlib\nimport importlib.util\nimport json\nfrom pathlib import Path\nimport platform\nimport sys\nimport time\nimport unittest\n\narm, config_name, report_name, detail_name = sys.argv[1:]\nconfig = json.loads(Path(config_name).read_text(encoding="utf-8"))\nroot = Path.cwd().resolve()\nsys.path[:0] = [str(root / "src"), str(root), str(root / "tools/ci")]\nimport agent_lifecycle\nassert Path(agent_lifecycle.__file__).resolve().is_relative_to(root / "src")\nassert platform.python_version() == "3.12.10"\nrunner_path = root / "tools/ci/run_unittest.py"\nassert hashlib.sha256(runner_path.read_bytes()).hexdigest() == config["runnerSHA256"]\nspec = importlib.util.spec_from_file_location("original_alk_ci_timing", runner_path)\ntiming = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(timing)\nloader = unittest.TestLoader()\nstarted = time.perf_counter()\ntarget = config["target"]\nremoved = []\nif arm == "A":\n    suite = loader.discover("tests", pattern="test*.py", top_level_dir=".")\n    def remove_new_diagnostics(node):\n        kept = []\n        for item in node:\n            if isinstance(item, unittest.TestSuite):\n                remove_new_diagnostics(item)\n                kept.append(item)\n            elif (type(item).__module__ == "tests.accounting.test_declared_ledger"\n                  and type(item).__qualname__ == "CoordinatorDiagnosticTests"):\n                removed.append(item.id())\n            else:\n                kept.append(item)\n        node._tests[:] = kept\n    remove_new_diagnostics(suite)\n    assert len(removed) == 5\n    ids = [entry["id"] for entry in timing.inventory(suite)]\n    identity = hashlib.sha256(json.dumps(ids, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()\n    assert len(ids) == config["originalInventoryCount"]\n    assert identity == config["originalInventoryIdHash"], (identity, config["originalInventoryIdHash"])\n    assert ids[:65] == config["prefixIds"]\n    class StopAfterTarget(timing.TimedResult):\n        def stopTest(self, test):\n            super().stopTest(test)\n            if test.id() == target:\n                self.stop()\n    timing.TimedResult = StopAfterTarget\nelse:\n    assert arm == "B"\n    suite = loader.loadTestsFromName(target)\n    ids = [entry["id"] for entry in timing.inventory(suite)]\n    assert ids == [target]\n    identity = hashlib.sha256(json.dumps(ids, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()\ndetails = {\n    "arm": arm, "python": platform.python_version(),\n    "librarySource": str(Path(agent_lifecycle.__file__).resolve().relative_to(root)),\n    "inventoryCount": len(ids), "inventoryIdHash": identity,\n    "removedDiagnosticIds": removed, "rawRunnerStatusUnmodified": True,\n    "rawRunnerReport": report_name,\n}\nwith Path(detail_name).open("x", encoding="utf-8") as stream:\n    json.dump(details, stream, indent=2)\nargs = argparse.Namespace(start="tests", top=".", pattern="test*.py", worker_roster=None)\nwith Path(report_name).open("x+", encoding="utf-8") as report:\n    code = timing.run(args, report, prepared=(loader, suite, started))\nraise SystemExit(code)\n', encoding="utf-8")
+          config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+          assert platform.python_version() == "3.12.10"
+          assert subprocess.check_output([str(python), "-c", "import platform; print(platform.python_version())"], text=True).strip() == "3.12.10"
+          summary = dict(status="INCOMPLETE", pairs=[], attempts=[],
+                         maxPairs=4, maxProcesses=8, maxSelectedCases=264, maxTargetExposures=8,
+                         maxSamplingSeconds=600, maxProcessSeconds=120,
+                         bugRepaired=False, rootCauseConfirmed=False, fullSuitePassClaimed=False,
+                         originalBugStatus="OPEN", sha=os.environ["GITHUB_SHA"],
+                         python=platform.python_version(), executable=str(python),
+                         platform=platform.platform(), image=os.environ.get("ImageVersion"),
+                         runner=os.environ.get("RUNNER_NAME"),
+                         uv=subprocess.check_output(["uv", "--version"], text=True).strip(),
                          startedAt=datetime.now(timezone.utc).isoformat())
+          assert summary["uv"] == "uv 0.13.1", summary["uv"]
+          sampling_start = time.monotonic()
+          env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1",
+                 "PYTHONPATH": os.pathsep.join(str(Path(p).resolve()) for p in ["src", ".", "tools/ci"])}
+          def save_summary():
+              summary["elapsedSeconds"] = time.monotonic() - sampling_start
+              summary["finishedAt"] = datetime.now(timezone.utc).isoformat()
+              (folder / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+          def preserve(path, raw, cap):
+              info = dict(bytes=len(raw), sha256=hashlib.sha256(raw).hexdigest(), truncated=len(raw) > cap)
+              path.write_bytes(raw[:cap])
+              info["storedSHA256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+              return info
+          def assess(item, report, detail, stderr):
+              expected = config["prefixIds"] if item["arm"] == "A" else [config["target"]]
+              cases = report.get("cases", [])
+              actual = [case.get("id") for case in cases]
+              item["executedIds"] = actual
+              item["testsRun"] = report.get("testsRun")
+              item["rawRunnerStatus"] = report.get("status")
+              item["rawCoverageComplete"] = report.get("coverage", {}).get("complete")
+              item["targetEvents"] = [event for event in report.get("events", []) if event.get("id") == config["target"]]
+              item["predecessorNonSuccessEvents"] = [
+                  event for event in report.get("events", [])
+                  if event.get("id") != config["target"]
+                  and event.get("outcome") not in ("success", "subtest:success")
+              ]
+              if (actual != expected or report.get("testsRun") != len(expected)
+                      or not all(case.get("completed") is True for case in cases)
+                      or report.get("loaderErrors") or report.get("interrupted")
+                      or report.get("skips") or report.get("unexpectedSuccesses")
+                      or report.get("expectedFailures") or item["predecessorNonSuccessEvents"]
+                      or len(item["targetEvents"]) != 1):
+                  return "INCOMPLETE_CONTEXT_OR_EXECUTION_MISMATCH"
+              target_outcome = item["targetEvents"][0]["outcome"]
+              if target_outcome in ("failure", "error"):
+                  text = stderr.decode("utf-8", errors="replace")
+                  matched = all(marker in text for marker in (
+                      "private-storage-unsafe", "Existing private directory is unsafe",
+                      "FileExistsError", "authority output already exists",
+                  ))
+                  return "OBSERVED_MATCHED_ORIGINAL_TARGET_FAILURE" if matched else "OBSERVED_DIFFERENT_TARGET_FAILURE"
+              if target_outcome != "success" or report.get("failures") or report.get("errors"):
+                  return "INCOMPLETE_TARGET_OUTCOME"
+              if item["arm"] == "A":
+                  not_started = report.get("coverage", {}).get("notStarted", [])
+                  if (detail.get("inventoryCount") != 4327 or len(detail.get("removedDiagnosticIds", [])) != 5
+                          or detail.get("inventoryIdHash") != config["originalInventoryIdHash"]
+                          or report.get("status") != "FAIL" or item["exitCode"] != 1
+                          or report.get("coverage", {}).get("complete") is not False
+                          or len(not_started) != 4262
+                          or any(entry.get("reason") != "unaccounted" for entry in not_started)
+                          or report.get("coverage", {}).get("unexpectedIds")):
+                      return "INCOMPLETE_UNEXPECTED_RAW_PREFIX_STATUS"
+                  return "SELECTED_PREFIX_PASS_RAW_FULL_SUITE_INCOMPLETE"
+              return "SELECTED_TARGET_PASS" if (report.get("status") == "PASS" and item["exitCode"] == 0
+                                                and report.get("coverage", {}).get("complete") is True) else "INCOMPLETE_TARGET_REPORT"
           exit_code = 0
-          for index in range(1, 33):
-              remaining = 600 - (time.monotonic() - started)
-              if remaining <= 0:
-                  summary['status'] = 'INCOMPLETE_AGGREGATE_TIMEOUT'
-                  exit_code = 124
+          save_summary()
+          for pair_index in range(1, 5):
+              pair = dict(pair=pair_index, order=["A", "B"] if pair_index % 2 else ["B", "A"], attempts=[])
+              summary["pairs"].append(pair)
+              for arm in pair["order"]:
+                  remaining = min(600 - (time.monotonic() - sampling_start),
+                                  (cutoff - datetime.now(timezone.utc)).total_seconds())
+                  if remaining <= 0:
+                      summary["status"] = "INCOMPLETE_AGGREGATE_OR_AUTHORIZATION_TIMEOUT"
+                      exit_code = 124
+                      break
+                  label = f"{pair_index:02}-{arm}"
+                  report_path = folder / (label + ".timings.json")
+                  detail_path = folder / (label + ".detail.json")
+                  argv = [str(python), str(child), arm, str(config_path), str(report_path), str(detail_path)]
+                  item = dict(pair=pair_index, arm=arm, label=label, argv=argv, timeout=False)
+                  before = time.monotonic()
+                  process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                             env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+                  try:
+                      stdout, stderr = process.communicate(timeout=min(120, remaining))
+                  except subprocess.TimeoutExpired:
+                      item["timeout"] = True
+                      cleanup = subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                                               capture_output=True, timeout=10)
+                      item["cleanupReturnCode"] = cleanup.returncode
+                      stdout, stderr = process.communicate(timeout=5)
+                  item.update(exitCode=process.returncode, elapsedSeconds=time.monotonic() - before)
+                  item["stdout"] = preserve(folder / (label + ".stdout"), stdout, 2097152)
+                  item["stderr"] = preserve(folder / (label + ".stderr"), stderr, 2097152)
+                  for kind, path in [("report", report_path), ("detail", detail_path)]:
+                      if path.exists():
+                          raw = path.read_bytes()
+                          item[kind] = preserve(path, raw, 8388608)
+                      else:
+                          item[kind] = dict(missing=True)
+                  if item["timeout"]:
+                      item["assessment"] = "INCOMPLETE_PROCESS_TIMEOUT"
+                  elif any(item[kind].get("truncated") or item[kind].get("missing") for kind in ["stdout", "stderr", "report", "detail"]):
+                      item["assessment"] = "INCOMPLETE_MISSING_OR_TRUNCATED_OUTPUT"
+                  else:
+                      try:
+                          report = json.loads(report_path.read_text(encoding="utf-8"))
+                          detail = json.loads(detail_path.read_text(encoding="utf-8"))
+                          item["assessment"] = assess(item, report, detail, stderr)
+                      except (ValueError, TypeError, KeyError) as exc:
+                          item["assessment"] = "INCOMPLETE_INVALID_REPORT"
+                          item["reportErrorType"] = type(exc).__name__
+                  pair["attempts"].append(label)
+                  summary["attempts"].append(item)
+                  print(json.dumps(dict(label=label, exitCode=item["exitCode"], assessment=item["assessment"],
+                                        elapsedSeconds=item["elapsedSeconds"])), flush=True)
+                  save_summary()
+              assessments = [item["assessment"] for item in summary["attempts"] if item["pair"] == pair_index]
+              if len(assessments) != 2 or any(value.startswith("INCOMPLETE") for value in assessments):
+                  summary["status"] = "INCOMPLETE_COMPARISON"
+                  exit_code = exit_code or 2
                   break
-              before = time.monotonic()
-              process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                         env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'},
-                                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-              item = dict(iteration=index, argv=argv, timeout=False)
-              try:
-                  stdout, stderr = process.communicate(timeout=min(60, remaining))
-              except subprocess.TimeoutExpired:
-                  item['timeout'] = True
-                  cleanup = subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
-                                           capture_output=True, timeout=10)
-                  item['cleanupReturnCode'] = cleanup.returncode
-                  stdout, stderr = process.communicate(timeout=5)
-              item.update(exitCode=process.returncode, elapsedSeconds=time.monotonic() - before)
-              for name, raw in [('stdout', stdout), ('stderr', stderr)]:
-                  (folder / f'{index:02}.{name}').write_bytes(raw[:1048576])
-                  item[name + 'Bytes'] = len(raw)
-                  item[name + 'SHA256'] = hashlib.sha256(raw).hexdigest()
-                  item[name + 'Truncated'] = len(raw) > 1048576
-              summary['attempts'].append(item)
-              if item['timeout']:
-                  summary['status'] = 'INCOMPLETE_ATTEMPT_TIMEOUT'
-                  exit_code = 124
-              elif item['stdoutTruncated'] or item['stderrTruncated']:
-                  summary['status'] = 'INCOMPLETE_OUTPUT_LIMIT'
-                  exit_code = 125
-              elif process.returncode:
-                  summary['status'] = 'OBSERVED_TEST_FAILURE'
+              if any(value.startswith("OBSERVED_") for value in assessments):
+                  summary["status"] = ("OBSERVED_MATCHED_ORIGINAL_TARGET_FAILURE" if any(
+                      value == "OBSERVED_MATCHED_ORIGINAL_TARGET_FAILURE" for value in assessments)
+                      else "OBSERVED_DIFFERENT_TARGET_FAILURE")
                   exit_code = 1
-              else:
-                  summary['status'] = 'INCONCLUSIVE_NO_RECURRENCE'
-              summary['elapsedSeconds'] = time.monotonic() - started
-              (folder / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
-              print(json.dumps(dict(iteration=index, exitCode=process.returncode,
-                                    elapsedSeconds=item['elapsedSeconds'], status=summary['status'])), flush=True)
-              if exit_code:
-                  print(stderr.decode('utf-8', errors='backslashreplace')[-262144:], flush=True)
                   break
-          summary['finishedAt'] = datetime.now(timezone.utc).isoformat()
-          (folder / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+              summary["status"] = "INCONCLUSIVE_NO_RECURRENCE"
+          save_summary()
+          assert len(summary["attempts"]) <= 8
+          assert sum(item.get("testsRun", 0) for item in summary["attempts"]) <= 264
           raise SystemExit(exit_code)
-      - name: Preserve source-bound diagnostics including failures
+      - name: Preserve raw context data including incomplete full-suite statuses
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: windows-coordinator-diagnostic-${{ github.run_id }}
-          path: work/ci/windows-coordinator-diagnostic/
+          name: windows-coordinator-context-${{ github.run_id }}
+          path: work/ci/windows-coordinator-context/
           if-no-files-found: error
           retention-days: 30
