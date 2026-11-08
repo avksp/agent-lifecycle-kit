@@ -18,7 +18,7 @@ import threading
 import time
 import uuid
 from collections.abc import Iterator
-from contextlib import contextmanager, suppress
+from contextlib import closing, contextmanager, suppress
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
@@ -495,7 +495,7 @@ class JournalStoreMixin(_JournalStoragePort):
         # schema. This creates only an in-memory template, not an automatic migration.
         if version not in (1, 2, 3, 4, 5, PROTECTED_STORAGE_SCHEMA_VERSION):
             raise JournalUnavailable("Unknown storage schema")
-        with sqlite3.connect(":memory:") as template:
+        with closing(sqlite3.connect(":memory:")) as template, template:
             for statement in BASE_STATEMENTS:
                 template.execute(statement)
             for table in ("events", "identities"):

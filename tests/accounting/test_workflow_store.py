@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import os
 import shutil
@@ -11,9 +12,11 @@ import sys
 import tempfile
 import threading
 import unittest
+import warnings
 from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.accounting.closing_resource_policy import classify_current_claim_data, derive_policy_candidate_data
 from agent_lifecycle.accounting.closing_resource_recovery import (
@@ -109,6 +112,101 @@ class WorkflowSchemaTests(unittest.TestCase):
             Journal._create_v4_schema(db)
             db.execute("COMMIT")
             Journal._validate_schema(db, 4)
+
+    def _assert_schema_template_lifetime(self, mismatch: bool) -> None:
+        real_connect = sqlite3.connect
+        templates = []
+        events = []
+        outcomes = []
+
+        class TrackedConnection(sqlite3.Connection):
+            close_calls = 0
+            probe_started = False
+
+            def execute(self, sql, parameters=()):
+                if (
+                    sql.startswith("SELECT type,name,sql FROM sqlite_master")
+                    and not self.probe_started
+                ):
+                    self.probe_started = True
+                    super().execute("CREATE TEMP TABLE lifetime_probe(value)")
+                    super().execute("INSERT INTO lifetime_probe VALUES(1)")
+                return super().execute(sql, parameters)
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                was_in_transaction = self.in_transaction
+                result = super().__exit__(exc_type, exc_value, traceback)
+                events.append("transaction")
+                table_exists = self.execute(
+                    "SELECT count(*) FROM sqlite_temp_master "
+                    "WHERE name='lifetime_probe'"
+                ).fetchone()[0]
+                count = (
+                    self.execute("SELECT count(*) FROM lifetime_probe").fetchone()[0]
+                    if table_exists else 0
+                )
+                outcomes.append((was_in_transaction, count))
+                return result
+
+            def close(self):
+                self.close_calls += 1
+                events.append("close")
+                return super().close()
+
+        def connect_template(*args, **kwargs):
+            self.assertEqual(args, (":memory:",))
+            connection = real_connect(*args, factory=TrackedConnection, **kwargs)
+            templates.append(connection)
+            return connection
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "schema.db"
+            self._v4(path)
+            gc.collect()
+            with closing(real_connect(path)) as caller, caller:
+                if mismatch:
+                    caller.execute("DROP TRIGGER protect_events_update")
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always", ResourceWarning)
+                    try:
+                        with patch(
+                            "agent_lifecycle.accounting.workflow_store.sqlite3.connect",
+                            connect_template,
+                        ):
+                            if mismatch:
+                                with self.assertRaisesRegex(
+                                    JournalUnavailable,
+                                    "Partial, altered or unknown storage schema",
+                                ):
+                                    Journal._validate_schema(caller, 4)
+                            else:
+                                Journal._validate_schema(caller, 4)
+                        self.assertEqual(len(templates), 1)
+                        self.assertEqual(templates[0].close_calls, 1)
+                        self.assertEqual(events, ["transaction", "close"])
+                        self.assertEqual(outcomes, [(True, 0 if mismatch else 1)])
+                        with self.assertRaises(sqlite3.ProgrammingError):
+                            templates[0].execute("SELECT 1")
+                        self.assertEqual(caller.execute("SELECT 1").fetchone(), (1,))
+                    finally:
+                        for connection in templates:
+                            if not connection.close_calls:
+                                connection.close()
+                        templates.clear()
+                        connection = None
+                        gc.collect()
+                    self.assertFalse([
+                        warning for warning in caught
+                        if issubclass(warning.category, ResourceWarning)
+                        and "unclosed database" in str(warning.message)
+                    ])
+
+    def test_schema_template_closes_after_commit(self) -> None:
+        self._assert_schema_template_lifetime(False)
+
+    def test_schema_template_closes_after_rollback(self) -> None:
+        self._assert_schema_template_lifetime(True)
+
 
     def test_fresh_v5_has_exact_closed_workflow_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / "new.db", WRITER) as journal:
