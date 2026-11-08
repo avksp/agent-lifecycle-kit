@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.43.0
+python -m pip install agent-lifecycle-kit==2.44.0
 ```
 
 ## Task evidence identity
@@ -1055,3 +1055,9 @@ through reviewed lifecycle steps and keep earlier costs and clocks.
 See [research workflow](../guides/research-workflow.md) and
 [wire contracts](research-evidence.md). This option validates evidence; it does
 not generate research, establish global optimality or meter every host call.
+
+## Choose stage bindings
+
+Optional local setup assigns an adapter, model and effort to each stage. Review a proposal before saving it; discovered configuration does not prove model access. An actual probe spends a model call and requires current ALK authorization. See [routing](model-routing.md), [project profiles](project-workflow-profile.md) and [deterministic recipes](../guides/deterministic-workflow-recipes.md).
+
+The current qualified Codex route observes auth.json link and target metadata. It does not read credentials. Missing or unobservable metadata produces UNAVAILABLE. Other authentication routes need separate qualification. A positive observation does not attest account identity or continuous authentication validity.

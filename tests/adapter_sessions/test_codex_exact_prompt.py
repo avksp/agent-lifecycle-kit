@@ -2097,6 +2097,12 @@ class ExactPromptPublicGateTests(unittest.TestCase):
             }
             with patch("agent_lifecycle.adapter_sessions.launch_preflight._managed_launch_blockers",
                        return_value=[]), patch(
+                'agent_lifecycle.adapter_sessions.unified_start.read_json_object',
+                side_effect=lambda path, **_: values[path],
+            ), patch(
+                'agent_lifecycle.adapter_sessions.unified_start.package_root',
+                return_value=root,
+            ), patch(
                        "agent_lifecycle.adapter_sessions.launch_preflight._identity",
                        return_value={"status": "PASS", "executableContentSha256": binary_sha}), patch(
                        "agent_lifecycle.adapter_sessions.launch_preflight.read_json_object",

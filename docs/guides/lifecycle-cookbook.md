@@ -43,6 +43,7 @@ contains terminology, assigning-controller role suitability and measurement limi
 | Opted-in risk-aware frozen task | [Run a risk-aware task](#run-a-risk-aware-task) |
 | v4 task transition | [Use the v4 task-local workflow](#use-the-v4-task-local-workflow) |
 | Recovery | [Recover a run without editing state](#recover-a-run-without-editing-state) |
+| Structured JSON or authorized local transitions | [Deterministic workflow recipes](#deterministic-workflow-recipes) |
 | New capability before freeze | [Bounded capability feasibility before freeze](#bounded-capability-feasibility-before-freeze) |
 
 ## Research and planning only
@@ -477,3 +478,77 @@ continue perform one native freshness check. Reuse unchanged research; retain
 failed work, unknown usage and original clocks when correcting a refusal.
 `STOP` or `SPLIT` needs a revised reviewed plan. The record cannot waive the
 frozen quality floor or grant execution permission.
+
+<!-- deterministic-workflow-recipes:begin -->
+<a id="deterministic-workflow-recipes"></a>
+
+## Deterministic workflow recipes
+
+Use the CLI for structured files and already authorized local transitions.
+These operations do not need a model call. The calling agent still uses its
+own context and tokens. This guide makes no token or cost saving claim.
+
+## Create one canonical artifact
+
+Create `advisory.json` as a JSON object, for example:
+
+```json
+{"z": 2, "a": 1}
+```
+
+Run from the project root. Use a new output path:
+
+```sh
+agent-lifecycle task artifact-create --kind json --input advisory.json --out work/advisory.canonical.json --repository-root .
+```
+
+The command writes canonical JSON. It refuses missing or invalid input,
+duplicate keys, sensitive content, unsafe paths and existing output files.
+It does not review the content or grant execution authority.
+
+## Inspect the retained artifact
+
+```sh
+agent-lifecycle task artifact-inspect --input work/advisory.canonical.json --max-display-bytes 4096
+```
+
+Use the returned original path and digest to identify the artifact. The display
+can be redacted or truncated. Do not use the display as a replacement authority
+file. See [safe artifact authoring](../reference/safe-artifact-authoring.md).
+
+## Continue a bounded local chain
+
+First obtain the genuine reviewed plan, matching lock, native authorization,
+current state and a ready input bundle. The bundle uses the existing
+`agent-workflow-continuation-input-bundle.v1` contract. It must bind the same
+run, plan and source; do not copy another run's authority.
+
+Replace `REV` and `SOURCE_SHA` with the current full values. Select finite
+transition and I/O caps that fit the required inputs. This example allows four
+transitions and 65536 bytes; larger inputs require a separately chosen finite
+cap and must never be truncated to fit.
+
+```sh
+agent-lifecycle workflow continue \
+  --state work/run.state.json \
+  --manifest plans/feature/plan.manifest.json \
+  --lock plans/feature/plan.lock.json \
+  --expected-revision REV --source-revision SOURCE_SHA \
+  --reason "Apply authorized local steps" \
+  --input-bundle work/continuation-inputs.json \
+  --until-blocked --local-only --max-transitions 4 --max-io-bytes 65536 \
+  --apply --out work/continuation-receipt.json
+```
+
+The batch applies only existing validated transitions. `--local-only` stops
+before a model, host, worker, reviewer or operator action and does not consume
+a supplied authorization decision. Missing inputs, stale revisions, missing
+authority and exhausted caps stop the chain. Read the full receipt and its
+`stopReason`; a successful CLI exit alone does not mean the task is accepted.
+
+Keep the receipt, prior attempts, original deadline and expenses. Repair the
+named input or obtain the required external action before continuing. Never
+edit workflow state, invent an accepting review, or redispatch after an
+uncertain effect. See [workflow continuation](../reference/workflow-continuation.md)
+and the [lifecycle cookbook](lifecycle-cookbook.md).
+<!-- deterministic-workflow-recipes:end -->

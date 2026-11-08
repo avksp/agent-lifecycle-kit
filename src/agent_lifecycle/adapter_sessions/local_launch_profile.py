@@ -22,6 +22,7 @@ MAX_TIMEOUT_SECONDS = 300.0
 MAX_ARGV_ITEMS = 64
 MAX_ARG_BYTES = 4096
 EXECUTABLE_HASH_CHUNK_BYTES = 256 * 1024
+MAX_EXECUTABLE_IDENTITY_BYTES = 512 * 1024 * 1024
 SAFE_VERSION_PROBES = (("--version",), ("-V",), ("version",))
 PLANNING_SUPPORT_STATUSES = frozenset({"PLANNING_ONLY_QUALIFIED", "PLANNING_ONLY_UNSUPPORTED"})
 _DANGEROUS_PLANNING_FLAGS = frozenset(
@@ -111,6 +112,10 @@ def load_local_launch_profile(
     return LOCAL_PROFILE_ROOT / relative, profile, validation
 
 
+def _within_executable_identity_bound(limit: int | None, size: int) -> bool:
+    return limit is None or (type(limit) is int and 1 <= limit <= MAX_EXECUTABLE_IDENTITY_BYTES and size <= limit)
+
+
 def build_executable_identity(
     profile: dict[str, Any],
     *,
@@ -163,11 +168,7 @@ def build_executable_identity(
         before = resolved.stat()
         if not resolved.is_file():
             raise OSError("executable is not a regular file")
-        if max_executable_bytes is not None and (
-            type(max_executable_bytes) is not int
-            or not 1 <= max_executable_bytes <= 64 * 1024 * 1024
-            or before.st_size > max_executable_bytes
-        ):
+        if not _within_executable_identity_bound(max_executable_bytes, before.st_size):
             raise OSError("executable exceeds preflight bound")
         digest = hashlib.sha256()
         byte_count = 0
@@ -268,7 +269,7 @@ def local_profile_summary(profile: dict[str, Any]) -> dict[str, Any]:
         "status": profile.get("status"),
         "adapterId": profile.get("adapterId"),
         "executable": _executable_name(str(profile.get("executable", ""))),
-        "argvTemplate": list(profile.get("argvTemplate", [])),
+        "argvTemplate": _portable_argv(list(profile.get("argvTemplate", []))),
         "versionProbeArgs": list(profile.get("versionProbeArgs", [])),
         "allowedEnvironmentNames": sorted(_env_names(profile)),
         "timeoutSeconds": profile.get("timeoutSeconds"),
@@ -281,7 +282,7 @@ def local_profile_summary(profile: dict[str, Any]) -> dict[str, Any]:
             "schemaVersion": planning.get("schemaVersion"),
             "status": planning.get("status"),
             "planningSupportStatus": planning.get("planningSupportStatus"),
-            "argvTemplate": list(planning.get("argvTemplate", [])),
+            "argvTemplate": _portable_argv(list(planning.get("argvTemplate", []))),
             "inputTransport": planning.get("inputTransport"),
             "resultFormat": planning.get("resultFormat"),
             "containment": planning.get("containment"),
@@ -306,7 +307,7 @@ def local_receipt_argv(profile: dict[str, Any]) -> list[str]:
 
     executable = _executable_name(str(profile.get("executable", "")))
     template = profile.get("argvTemplate")
-    return [executable, *template] if isinstance(template, list) else [executable]
+    return _portable_argv([executable, *template]) if isinstance(template, list) else [executable]
 
 
 def planning_receipt_argv(profile: dict[str, Any]) -> list[str]:
@@ -315,7 +316,19 @@ def planning_receipt_argv(profile: dict[str, Any]) -> list[str]:
     executable = _executable_name(str(profile.get("executable", "")))
     planning = profile.get("planningOnly")
     template = planning.get("argvTemplate") if isinstance(planning, dict) else []
-    return [executable, *template] if isinstance(template, list) else [executable]
+    return _portable_argv([executable, *template]) if isinstance(template, list) else [executable]
+
+
+def _portable_argv(argv: list[str]) -> list[str]:
+    result = list(argv)
+    for index, token in enumerate(argv):
+        if token in {"--model", "-m", "--profile", "-p", "--provider", "--local-provider"} and index + 1 < len(argv):
+            result[index + 1] = "<local-value>"
+        elif token.startswith(("--model=", "--profile=", "--provider=")):
+            result[index] = token.split("=", 1)[0] + "=<local-value>"
+        elif "model_reasoning_effort" in token or token.startswith(("model=", "model_provider=")):
+            result[index] = "<local-config>"
+    return result
 
 
 def _valid_executable(value: Any) -> bool:

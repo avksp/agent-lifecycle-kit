@@ -83,7 +83,13 @@ def _load_frozen_source_context(
     opening_raw = _read_ref(root, policy["openingRef"], limit=MAX_SOURCE_USAGE_BYTES)
     prefix_raw = _read_ref(root, policy["sourceAuthoringRegistryRef"], limit=MAX_SOURCE_USAGE_BYTES)
     opening = load_json_object(opening_raw, label="frozen financial opening")
-    prefix = validate_source_registry_prefix_shape(load_json_object(prefix_raw, label="frozen source prefix"))
+    prefix_value = load_json_object(prefix_raw, label="frozen source prefix")
+    if policy["schemaVersion"] == "alk-source-usage-completion-policy.v2":
+        from agent_lifecycle.contracts.declared_source_schemas import validate_project_prefix
+
+        prefix = validate_project_prefix(prefix_value)
+    else:
+        prefix = validate_source_registry_prefix_shape(prefix_value)
     _require(
         prefix["openingHeadSha256"] == policy["openingRef"]["sha256"],
         "scoped-usage-opening-mismatch",
@@ -120,6 +126,10 @@ def _load_frozen_source_context(
         "prefixRaw": prefix_raw,
         "registryByteLimit": registry_byte_limit,
     }
+    if policy["schemaVersion"] == "alk-source-usage-completion-policy.v2":
+        from agent_lifecycle.accounting.declared_source_route import select_project_source
+
+        return select_project_source(selection, entries)
     _load_source_recovery(selection, entries, path)
     return selection
 
@@ -160,13 +170,20 @@ def load_frozen_source_policy(
 
 
 def _usage_context(selected: dict[str, Any]) -> UsageContext:
+    from agent_lifecycle.accounting.generic_source_usage import GenericSourceUsage
+
+    source = (
+        GenericSourceUsage(selected)
+        if selected["policy"]["schemaVersion"] == "alk-source-usage-completion-policy.v2"
+        else LegacySourceUsage(selected)
+    )
     return UsageContext(
         root=selected["root"],
         policy=selected["policy"],
         policy_digest=selected["policyDigest"],
         prefix=selected["prefix"],
         registry_byte_limit=selected["registryByteLimit"],
-        source=LegacySourceUsage(selected),
+        source=source,
         inputs=selected,
     )
 
@@ -503,6 +520,8 @@ def load_source_usage_context(
         "scoped-usage-policy-scope-mismatch",
         "task differs from current state or plan",
     )
+    if selected["policy"]["schemaVersion"] == "alk-source-usage-completion-policy.v2":
+        _usage_context(selected).source.read_current()
     policy = selected["policy"]
     applies = task_id in policy["taskIds"]
     if applies:

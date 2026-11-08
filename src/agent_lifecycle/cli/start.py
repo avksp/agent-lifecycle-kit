@@ -35,6 +35,8 @@ def dispatch_start(args: argparse.Namespace, remainder: list[str]) -> dict[str, 
     payload = start_lifecycle(
         adapter_id=args.adapter,
         mode=args.mode,
+        stage=getattr(args, "stage", None),
+        binding_id=getattr(args, "binding", None),
         task_file=Path(args.task_file) if args.task_file else None,
         task_text=args.task_text,
         resume_session_id=args.resume_session_id,

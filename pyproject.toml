@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-lifecycle-kit"
-version = "2.43.0"
+version = "2.44.0"
 description = "Provider-neutral lifecycle control layer that helps coding agents plan, execute, validate, and prove software tasks to completion."
 readme = "README.md"
 requires-python = ">=3.11,<3.16"
@@ -108,3 +108,11 @@ check_untyped_defs = true
 "share/agent-lifecycle-kit/integration/en" = ["docs/guides/ai-sdlc-integration.md"]
 "share/agent-lifecycle-kit/integration/ru" = ["docs/ru/guides/ai-sdlc-integration.md"]
 "share/agent-lifecycle-kit/integration" = ["tests/cli/fixtures/external-consumer-cases.json"]
+
+"share/agent-lifecycle-kit/workflow/guides" = ["docs/guides/deterministic-workflow-recipes.md", "docs/guides/lifecycle-cookbook.md"]
+
+"share/agent-lifecycle-kit/workflow/reference" = ["docs/reference/safe-artifact-authoring.md", "docs/reference/workflow-continuation.md", "docs/reference/model-routing.md", "docs/reference/project-workflow-profile.md"]
+
+"share/agent-lifecycle-kit/workflow/ru/guides" = ["docs/ru/guides/deterministic-workflow-recipes.md", "docs/ru/guides/lifecycle-cookbook.md"]
+
+"share/agent-lifecycle-kit/workflow/ru/reference" = ["docs/ru/reference/safe-artifact-authoring.md", "docs/ru/reference/workflow-continuation.md", "docs/ru/reference/model-routing.md", "docs/ru/reference/project-workflow-profile.md"]

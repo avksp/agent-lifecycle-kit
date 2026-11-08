@@ -54,15 +54,17 @@ from agent_lifecycle.adapter_sessions.start_routing import (
     _binding_string,
     _missing_frozen_bindings,
     _profile_plan_authority,
+    prepare_stage_start,
     strategy_projection_for_receipt,
 )
 from agent_lifecycle.adapter_sessions.task_intake import start_adapter_task
 from agent_lifecycle.adapter_sessions.workflow_bridge import resume_adapter_session
-from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.policy.execution_strategy import deferred_execution_strategy_summary
 from agent_lifecycle.policy.risk_execution import RISK_REQUESTS
 from agent_lifecycle.project.merge import build_effective_project_profile
 from agent_lifecycle.resources import builtin_profile_path
+from agent_lifecycle.workflow.artifacts import package_root
 
 START_MODES = ("auto", "research", "plan", "review", "implement")
 _NON_EXECUTING_MODES = frozenset({"auto", "research", "plan", "review"})
@@ -102,6 +104,7 @@ def _start_inspected_adapter_task(
     input_bytes: bytes,
     input_summary: dict[str, Any],
     request: dict[str, Any] | None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     planning_launch = launch and mode in _NON_EXECUTING_MODES
     intake_text: str | None = None
@@ -157,6 +160,7 @@ def _start_inspected_adapter_task(
         input_summary=input_summary,
         session_root=session_root,
         immutable_input_request=request,
+        stage_binding=stage_binding,
     )
 
 
@@ -193,6 +197,7 @@ def _start_lifecycle_core(
     project_profile_path: Path | None = None,
     strategy_out_path: Path | None = None,
     immutable_input_request: dict[str, Any] | None = None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Select one existing lifecycle action without creating new authority."""
     try:
@@ -208,20 +213,15 @@ def _start_lifecycle_core(
     risk_policy_path = risk_policy_path or builtin_profile_path("risk-execution-policy.v1.json")
     routing_profile_path = routing_profile_path or builtin_profile_path("model-routing-profile.v1.json")
     baseline_profile_path = baseline_profile_path or builtin_profile_path("lifecycle-baselines.v1.json")
-    if host_launch_profile_path is not None and not launch:
-        return _blocked(
-            adapter_id=adapter_id, mode=mode, input_summary=_empty_input(), code="start-launch-arguments-incomplete"
-        )
-    if any(value is not None for value in (route_id, requested_claim, input_request)) and (
-        not launch
-        or mode != "implement"
-        or not all(value is not None for value in (route_id, requested_claim, input_request))
-    ):
+    launch_error = _start_launch_argument_error(
+        host_launch_profile_path, launch, mode, route_id, requested_claim, input_request
+    )
+    if launch_error is not None:
         return _blocked(
             adapter_id=adapter_id,
             mode=mode,
             input_summary=_empty_input(),
-            code="start-exact-route-arguments-invalid",
+            code=launch_error,
         )
     has_task_source = task_file is not None or task_text is not None
     resumed = _resume_if_requested(
@@ -306,7 +306,26 @@ def _start_lifecycle_core(
         input_bytes=input_bytes,
         input_summary=input_summary,
         request=request,
+        stage_binding=stage_binding,
     )
+
+
+def _start_launch_argument_error(
+    profile_path: Path | None,
+    launch: bool,
+    mode: str,
+    route_id: str | None,
+    requested_claim: str | None,
+    input_request: Path | None,
+) -> str | None:
+    if profile_path is not None and not launch:
+        return "start-launch-arguments-incomplete"
+    route_values = (route_id, requested_claim, input_request)
+    if any(value is not None for value in route_values) and (
+        not launch or mode != "implement" or not all(value is not None for value in route_values)
+    ):
+        return "start-exact-route-arguments-invalid"
+    return None
 
 
 def _resume_if_requested(
@@ -350,6 +369,7 @@ def _finish_start(
     input_summary: dict[str, Any],
     session_root: Path | None,
     immutable_input_request: dict[str, Any] | None = None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         request = require_no_strong_protection(immutable_input_request, expected_protection="NONE")
@@ -381,6 +401,7 @@ def _finish_start(
         requested_claim=requested_claim,
         input_request=input_request,
         immutable_input_request=request,
+        stage_binding=stage_binding,
     )
 
 
@@ -641,6 +662,7 @@ def _launch_managed_receipt(
     requested_claim: str | None = None,
     input_request: Path | None = None,
     immutable_input_request: dict[str, Any] | None = None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if receipt.get("status") != "READY" or receipt.get("action") != "MANAGED_RUN":
         return _from_task_receipt(
@@ -656,12 +678,38 @@ def _launch_managed_receipt(
     risk_profile: dict[str, Any] | None = risk_profile_value if isinstance(risk_profile_value, dict) else None
     try:
         request = require_no_strong_protection(immutable_input_request, expected_protection="NONE")
+        bound_state_path = _binding_path(binding, "state")
+        if bound_state_path is None:
+            raise LifecycleError(
+                "stage-binding-native-input-required", "managed launch requires its current state root"
+            )
+        bound_state = read_json_object(bound_state_path, label="current workflow state")
+        project_root = package_root(bound_state_path, bound_state)
+        if stage_binding is not None:
+            from agent_lifecycle.adapter_sessions.stage_launch import seal_stage_launch
+
+            stage_state_path = _binding_path(binding, "state")
+            stage_task_id = _binding_string(binding, "task")
+            stage_source_revision = _binding_string(binding, "sourceRevision")
+            if stage_state_path is None or stage_task_id is None or stage_source_revision is None:
+                raise LifecycleError(
+                    "stage-binding-native-input-required",
+                    "managed stage launch requires current state, task and source bindings",
+                )
+            stage_binding = seal_stage_launch(
+                stage_binding,
+                state_path=stage_state_path,
+                task_id=stage_task_id,
+                source_revision=stage_source_revision,
+            )
         launch_receipt = launch_from_local_profile(
+            stage_binding=stage_binding,
             profile_path=profile_path,
             operation="managedTask",
             adapter_id=adapter_id,
             session_id=str(session.get("sessionId", "managed-start")),
             explicit_launch=True,
+            project_root=project_root,
             state_path=_binding_path(binding, "state"),
             manifest_path=_binding_path(binding, "manifest"),
             lock_path=_binding_path(binding, "lock"),
@@ -731,6 +779,7 @@ def _start_lifecycle_unprotected(
     project_root: Path | None = None,
     strategy_out_path: Path | None = None,
     immutable_input_request: dict[str, Any] | None = None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run the existing start path, optionally wrapped by a project profile."""
     try:
@@ -770,6 +819,7 @@ def _start_lifecycle_unprotected(
             project_profile_path=project_profile_path,
             strategy_out_path=strategy_out_path,
             immutable_input_request=request,
+            stage_binding=stage_binding,
         )
 
     overrides: dict[str, Any] = {}
@@ -824,6 +874,7 @@ def _start_lifecycle_unprotected(
         project_profile_path=project_profile_path,
         strategy_out_path=strategy_out_path,
         immutable_input_request=request,
+        stage_binding=stage_binding,
     )
     return _build_guided_action_receipt(
         base, effective=effective, profile_path=project_profile_path, project_root=project_root
@@ -889,8 +940,25 @@ def start_lifecycle(
     project_root: Path | None = None,
     strategy_out_path: Path | None = None,
     immutable_input_request: dict[str, Any] | None = None,
+    stage: str | None = None,
+    binding_id: str | None = None,
 ) -> dict[str, Any]:
     """Protect every public early refusal, including project-profile branches."""
+    arguments = dict(locals())
+    arguments.pop("stage")
+    arguments.pop("binding_id")
+    arguments, stage_binding = prepare_stage_start(arguments, stage=stage, binding_id=binding_id)
+    if stage_binding is not None and "preparationReceipt" in stage_binding:
+        return _finish_staged_no_start(
+            stage_binding["preparationReceipt"], input_request=input_request, project_root=project_root
+        )
+    adapter_id = arguments["adapter_id"]
+    host_model_profile_path = arguments["host_model_profile_path"]
+    host_launch_profile_path = arguments["host_launch_profile_path"]
+    if stage_binding is not None:
+        state_path, task_file, lock_path, descriptor_path = (
+            arguments[key] for key in ("state_path", "task_file", "lock_path", "descriptor_path")
+        )
     try:
         receipt = _start_lifecycle_unprotected(
             adapter_id=adapter_id,
@@ -925,6 +993,7 @@ def start_lifecycle(
             project_root=project_root,
             strategy_out_path=strategy_out_path,
             immutable_input_request=immutable_input_request,
+            stage_binding=stage_binding,
         )
     except (LifecycleError, OSError, ValueError) as exc:
         if isinstance(exc, LifecycleError) and exc.code in {
@@ -936,4 +1005,9 @@ def start_lifecycle(
             raise
         code = exc.code if isinstance(exc, LifecycleError) else "start-prelaunch-unavailable"
         receipt = _blocked(adapter_id=adapter_id or "", mode=mode, input_summary=_empty_input(), code=code)
-    return _finish_staged_no_start(receipt, input_request=input_request, project_root=project_root)
+    receipt = _finish_staged_no_start(receipt, input_request=input_request, project_root=project_root)
+    if stage_binding is not None:
+        from agent_lifecycle.adapter_sessions.stage_launch import portable_stage_start
+
+        return portable_stage_start(receipt, stage_binding)
+    return receipt

@@ -319,7 +319,13 @@ class StartCommandTests(unittest.TestCase):
             patch(
                 "agent_lifecycle.adapter_sessions.unified_start.start_adapter_task",
                 return_value=task_receipt,
-            ),
+            ), patch(
+            'agent_lifecycle.adapter_sessions.unified_start.read_json_object',
+            return_value={},
+        ), patch(
+            'agent_lifecycle.adapter_sessions.unified_start.package_root',
+            return_value=ROOT,
+        ),
             patch(
                 "agent_lifecycle.adapter_sessions.unified_start.load_local_launch_profile",
                 return_value=(Path(".alk/host-launch/codex.json"), {"adapterId": "codex"}, {"status": "PASS"}),

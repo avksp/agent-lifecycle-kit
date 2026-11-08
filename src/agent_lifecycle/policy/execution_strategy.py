@@ -10,6 +10,7 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.freeze import verify_plan_lock
 from agent_lifecycle.host_protocol.capabilities import validate_capability_manifest
+from agent_lifecycle.model_routing.stage_bindings import recompute_stage_binding, validate_neutral_stage_binding
 from agent_lifecycle.policy.adaptive_lifecycle import (
     build_adaptive_lifecycle_decision,
     small_model_packet_eligibility,
@@ -52,6 +53,7 @@ def resolve_execution_strategy(
     project_profile_path: str | None = None,
     repository_root: Path | None = None,
     source_usage_context: SourceUsageContext | None = None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Resolve one read-only strategy from existing authorities."""
 
@@ -130,6 +132,18 @@ def resolve_execution_strategy(
         packet=packet,
         adoption=adoption,
     )
+    checked_stage = recompute_stage_binding(
+        root=repository_root,
+        profile_path=project_profile_path,
+        proposed=stage_binding,
+        profile_digest=project_profile_digest,
+        host_profile=host_profile,
+        adapter_id=adapter_id,
+        route=risk["modelRoute"],
+    )
+    if checked_stage is not None:
+        body["stageBinding"] = checked_stage
+        adoption["stageBindingDigest"] = canonical_digest(checked_stage)
     strategy = {**body, "strategyDigest": canonical_digest(body)}
     validation = validate_execution_strategy(strategy)
     if validation["status"] != "PASS":
@@ -267,6 +281,8 @@ def execution_strategy_summary(strategy: dict[str, Any]) -> dict[str, Any]:
         }
     if strategy.get("projectProfileDigest") is not None:
         summary["projectProfileDigest"] = strategy["projectProfileDigest"]
+    if "stageBinding" in strategy:
+        summary["stageBinding"] = dict(strategy["stageBinding"])
     return summary
 
 
@@ -291,24 +307,14 @@ def validate_execution_strategy(strategy: dict[str, Any]) -> dict[str, Any]:
     """Validate quality, authority and digest invariants for a strategy."""
 
     blockers: list[dict[str, Any]] = []
+    _validate_stage_identity(strategy, blockers)
     if strategy.get("schemaVersion") != EXECUTION_STRATEGY_SCHEMA:
         blockers.append({"code": "strategy-schema-invalid"})
     if strategy.get("status") not in {"PASS", "BLOCKED"}:
         blockers.append({"code": "strategy-status-invalid"})
     quality = _object(strategy.get("quality"))
     floor = quality.get("qualityFloor")
-    selected = quality.get("selectedMode")
-    preserved = (
-        floor in {"light", "standard", "strict", "release"}
-        and selected
-        in {
-            "light",
-            "standard",
-            "strict",
-            "release",
-        }
-        and mode_index(selected) >= mode_index(floor)
-    )
+    preserved = _strategy_quality_floor_preserved(quality)
     if not preserved or quality.get("qualityFloorPreserved") is not True:
         blockers.append({"code": "strategy-quality-floor-lowered"})
     packet = _object(strategy.get("packet"))
@@ -347,6 +353,23 @@ def validate_execution_strategy(strategy: dict[str, Any]) -> dict[str, Any]:
         "productionPromotionClaimed": False,
     }
     return {**body, "validationDigest": canonical_digest(body)}
+
+
+def _validate_stage_identity(strategy: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    if "stageBinding" in strategy:
+        try:
+            validate_neutral_stage_binding(strategy["stageBinding"])
+        except LifecycleError:
+            blockers.append({"code": "strategy-stage-binding-invalid"})
+
+
+def _strategy_quality_floor_preserved(quality: dict[str, Any]) -> bool:
+    floor, selected = quality.get("qualityFloor"), quality.get("selectedMode")
+    return (
+        floor in {"light", "standard", "strict", "release"}
+        and selected in {"light", "standard", "strict", "release"}
+        and mode_index(selected) >= mode_index(floor)
+    )
 
 
 def _adaptive_decision(

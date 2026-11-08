@@ -188,3 +188,145 @@ Adapters remain responsible for mapping `attemptModelRoute.modelClass` to a
 host-local concrete model and for returning the usage receipt. If a host cannot
 execute or attest the selected route, it must fail closed instead of silently
 downgrading.
+
+## Stage execution bindings
+
+An optional local binding connects a stage's neutral model class to an exact
+adapter, host model profile, launch profile and reasoning effort. The existing
+resolver still checks risk, context, data policy, capabilities and independence.
+Each stage can list up to three approved bindings, including its primary route.
+Different stages can use different entries from a registry of up to 32 bindings.
+
+Start with discovery or provide a manual draft:
+
+```sh
+agent-lifecycle model setup --discover --scope project
+agent-lifecycle model setup --manual --input local-bindings.json --scope project
+```
+
+The manual input is a closed object with `projectProfile` and `registry` members.
+`projectProfile` is an ordinary project workflow profile. `registry` uses
+`agent-local-stage-bindings.v1` with a `bindings` object keyed by local IDs.
+Each entry contains:
+
+| Member | Content |
+| --- | --- |
+| `adapterId` | The existing adapter ID. |
+| `hostModelProfile` | Contained `path`, raw `sha256` and neutral `modelClass`. |
+| `launchProfile` | Contained `path` and raw `sha256` of the existing local launch profile. |
+| `hostParameters` | The exact `reasoningEffort`; no silent conversion. |
+| `parameterSupport` | `allowedEfforts` and an `evidence` path/hash for declared documented support. |
+| `qualificationEvidence` | The path/hash of the existing exact-version launch qualification receipt. |
+
+Linked files belong under `.alk/host-launch`. Model names stay in the existing
+host model profile. Parameter support is a declared local input, not proof that
+a model is available or suitable. Missing configuration returns `MISSING_INPUT`.
+Discovery checks known CLI identities with finite process/time/output limits.
+It does not install software, read credentials, log in or call models. When a
+host has no supported model listing, use manual input and retain the unverified
+status. A discovered CLI is not an available model.
+
+Both setup forms are read-only until explicit apply:
+
+```sh
+agent-lifecycle model setup --manual --input local-bindings.json --scope project --apply --expected-profile-digest CURRENT_RAW_SHA256
+```
+
+For first creation use `ABSENT` instead of the current raw file SHA256. Apply
+creates an immutable registry and commits the project profile pointer last;
+it refuses a changed profile, unsafe path or conflicting output. Use project
+scope; this setup does not write user-wide defaults.
+
+Inspect the selected stage and check a configured binding without a model call:
+
+```sh
+agent-lifecycle model explain --stage implementation --project-profile .alk/project-profile.json --request route-request.json
+agent-lifecycle model availability --binding primary --project-profile .alk/project-profile.json
+```
+
+Local views show model/effort and the reason for each accepted or rejected
+candidate. Use `--portable` to emit neutral classes, digests and reason codes
+without local names or argv. Preserve separate executable, configuration,
+authentication, probe and task-quality states. An unavailable value is not zero.
+The priority order is yours; ALK does not claim the cheapest or best model.
+
+### First probe and native execution
+
+Prepare a fresh ordinary local profile for the actual CLI, then run
+`agent-lifecycle host-launch preflight --profile LOCAL_PROFILE` once. Its
+canonical receipt binds that profile, executable and version. Reference that
+exact policy receipt in `qualificationEvidence`. It proves no model call,
+model availability or task quality.
+
+An explicit bounded probe can establish the first availability observation:
+
+```sh
+agent-lifecycle model availability --binding primary   --project-profile .alk/project-profile.json --probe   --authorization-receipt work/execution-authorization.json   --state work/run.state.json --manifest plans/feature/plan.manifest.json   --lock plans/feature/plan.lock.json --task WS-01   --operation-id PROBE_OPERATION --expected-revision REV --source-revision SOURCE_SHA   --max-invocations 1 --max-wall-seconds 60 --max-output-bytes 65536
+```
+
+Use actual current lineage and permission for the diagnostic. The first probe
+may lack a previous positive availability observation; all native authorization,
+profile, risk, source and original-deadline checks still apply. It cannot accept
+a task or replace the active implementation binding. Ordinary automatic selection
+needs its required fresh evidence. A separate managed task and independent
+acceptance establish the supported task scenario.
+
+Fallback occurs only before attempt adoption, for proved pre-dispatch
+unavailability and an already approved eligible reserve. Active attempts keep
+their binding. An unknown spawn, timeout or lost response requires reconciliation
+or a block, with no blind second dispatch. Code and test failures use remediation.
+Keep all attempts, original deadlines and expenses. One CLI invocation can contain
+several provider requests; missing token, request or invoice data stays unavailable.
+
+Native support follows exact local qualification. The initial binding consumer
+uses the ordinary Codex route. Other hosts remain unqualified until their own
+proof; the separate `codex-exact-prompt-v1` route refuses this opt-in. The running
+coordinator does not change model. See [project workflow profiles](project-workflow-profile.md)
+and [the SDLC boundary](../architecture/sdlc-boundary.md).
+
+### Adopt before launch
+
+Binding selection and attempt adoption are separate operations. For a frozen
+implementation task, use `start --strategy-out PATH` with the current stage,
+project profile and full workflow bindings to prepare the selected strategy.
+Preparation creates its artifact, with no host call or execution permission.
+Then use the existing `workflow task-start --strategy PATH` and its required
+trusted policy/profile inputs. The native transition recomputes and stores only
+the neutral binding/configuration identity. After adoption, `start --launch`
+can use that same stored identity. It refuses an unbound or different active
+attempt; changing local configuration does not silently change the attempt.
+Use the returned exact preparation command when adoption is missing. The
+read-only managed workflow projection does not start an attempt.
+
+Unknown, expired or changed primary observations block selection and request an explicit bounded probe; they do not prove unavailability for fallback. A positive probe requires a complete successful Codex JSONL model response, including an agent message and terminal completion. Exit 0, help or version output is insufficient. Backend identity and effort remain unattested.
+
+## Declared source completion when complete host usage is unavailable
+
+A model-backed attempt needs a usage receipt before `workflow task-result`.
+A successful model response or availability probe does not replace that receipt.
+The default usage contract still requires the host evidence selected by the plan.
+
+A reviewed frozen plan can explicitly select `SOURCE_AUTHORING_LIMITED` with
+`alk-source-usage-completion-policy.v2` and `PROJECT_DECLARED_SOURCE`. This optional
+route uses an original declared carry, a frozen source prefix, and a separate
+admission for each task attempt. The source must preserve prior declared units,
+known partials, unknown intervals and original timestamps. A service booking is
+not a measured token count or an invoice amount. An incomplete financial Journal
+still refuses financial reservations; this route does not change that rule.
+
+The existing v2 usage receipt reports all seven whole-host metrics as `null` with
+`UNAVAILABLE` states. Its attestation is `alk-declared` / `UNAVAILABLE`. Actual cap
+conformance stays `UNAVAILABLE`; financial closure stays `OPEN_UNAVAILABLE`.
+Independent review, typed audit, task acceptance and finalization remain required.
+Native task completion under this limited contract does not settle financial costs.
+A requested hard cap that cannot be observed still blocks.
+
+Use `workflow source-usage-prepare` to prepare the declared source data. Opening
+requires carry and explicit actor/task/role bindings; admission and receipt phases
+check the current frozen plan, authorization, source, attempt and financial frontier.
+The current financial head is selected by the frozen policy, never by a receipt.
+Keep source snapshots private and preserve their exact bytes as opaque `.raw` files.
+The producer writes new structured artifacts as canonical JSON. Changes to the
+source, prefix, actor, binding or frontier require a refusal or explicit recovery.
+This mode is never enabled automatically after a missing or failed v1 receipt.
+

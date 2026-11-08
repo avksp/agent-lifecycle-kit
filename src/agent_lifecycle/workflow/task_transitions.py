@@ -506,6 +506,7 @@ def _mark_task_accepted(
     task["lastReason"] = reason
     task.pop("attemptStartedAt", None)
     task.pop("attemptDeadlineAt", None)
+    task.pop("attemptModelRoute", None)
     task["remediationFindingIds"] = []
     unlock_ready_tasks(state)
     if has_current_workflow_semantics(state):

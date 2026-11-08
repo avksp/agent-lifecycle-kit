@@ -9,7 +9,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.43.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.44.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -103,7 +103,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.43.0
+python -m pip install agent-lifecycle-kit==2.44.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -114,7 +114,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.43.0
+python -m pip install agent-lifecycle-kit==2.44.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -212,7 +212,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.43.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.44.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -350,3 +350,7 @@ ALK сохраняет накопленные расходы задачи/зап
 требуют 76 процентов совокупного покрытия и покрытия строк и сохраняют прежнюю
 семантику старых policies. [Пилот чтения](../guides/controlled-technical-english.md) и ограничения хостов
 сохраняются; измерения не доказывают экономию токенов или принудительный контроль хоста.
+
+## Выбор маршрутов по этапам
+
+Необязательная локальная настройка задаёт адаптер, модель и effort для каждого этапа. Проверьте предложение перед сохранением; найденная конфигурация ещё не подтверждает доступ к модели. Фактическая проба расходует модельный вызов и требует действующего разрешения ALK. См. [маршруты](../reference/model-routing.md), [профиль проекта](../reference/project-workflow-profile.md) и [детерминированные рецепты](deterministic-workflow-recipes.md).

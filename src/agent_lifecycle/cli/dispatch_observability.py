@@ -443,6 +443,10 @@ def _dispatch_goal(args: argparse.Namespace) -> dict[str, Any] | str:
 
 
 def _dispatch_model(args: argparse.Namespace) -> dict[str, Any]:
+    if args.model_command in {"setup", "explain", "availability"}:
+        from agent_lifecycle.cli.model_setup import dispatch_model_setup
+
+        return dispatch_model_setup(args)
     if args.model_command == "profile-check":
         profile = read_json_object(Path(args.profile), label="model profile")
         if args.type == "routing":

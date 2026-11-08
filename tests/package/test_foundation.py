@@ -64,6 +64,20 @@ class FoundationTests(unittest.TestCase):
             "docs/ru/guides/ai-sdlc-integration.md",
             "tests/cli/fixtures/external-consumer-cases.json",
         })
+        expected.update({
+            'docs/guides/deterministic-workflow-recipes.md',
+            'docs/guides/lifecycle-cookbook.md',
+            'docs/reference/safe-artifact-authoring.md',
+            'docs/reference/workflow-continuation.md',
+            'docs/reference/model-routing.md',
+            'docs/reference/project-workflow-profile.md',
+            'docs/ru/guides/deterministic-workflow-recipes.md',
+            'docs/ru/guides/lifecycle-cookbook.md',
+            'docs/ru/reference/safe-artifact-authoring.md',
+            'docs/ru/reference/workflow-continuation.md',
+            'docs/ru/reference/model-routing.md',
+            'docs/ru/reference/project-workflow-profile.md',
+        })
         self.assertEqual(declared, expected)
         package_data = pyproject["tool"]["setuptools"]["package-data"]["agent_lifecycle"]
         self.assertIn("data/profiles/**/*.json", package_data)

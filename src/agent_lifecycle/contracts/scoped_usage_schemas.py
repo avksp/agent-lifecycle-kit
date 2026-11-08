@@ -213,6 +213,10 @@ def validate_source_ref_shape(value: Any) -> dict[str, Any]:
 
 
 def validate_source_usage_policy_shape(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict) and value.get("schemaVersion") == "alk-source-usage-completion-policy.v2":
+        from agent_lifecycle.contracts.declared_source_schemas import validate_project_policy
+
+        return validate_project_policy(value)
     _bounded(value)
     policy = _closed(value, _POLICY_KEYS, "source usage policy")
     _require(

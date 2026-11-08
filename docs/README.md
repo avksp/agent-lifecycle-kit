@@ -71,7 +71,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.43.0` from
+  `python -m pip install agent-lifecycle-kit==2.44.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -257,3 +257,7 @@ reuse the existing bare-token families. [Quality controls](architecture/system-a
 require both combined and statement coverage of 76 percent and retain legacy
 policy interpretation. The existing [reading pilot](guides/controlled-technical-english.md) and host limits
 remain; measurements do not establish token savings or host enforcement.
+
+## Choose stage bindings
+
+Optional local setup assigns an adapter, model and effort to each stage. Review a proposal before saving it; discovered configuration does not prove model access. An actual probe spends a model call and requires current ALK authorization. See [routing](reference/model-routing.md), [project profiles](reference/project-workflow-profile.md) and [deterministic recipes](guides/deterministic-workflow-recipes.md).
