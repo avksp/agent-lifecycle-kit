@@ -1,19 +1,329 @@
 """Lower-layer imports and preserved private legacy archive read guarantees."""
 
-from pathlib import Path
-from types import SimpleNamespace
+import itertools
+import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
-from contextlib import ExitStack
-from unittest.mock import patch
+from contextlib import ExitStack, suppress
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from agent_lifecycle.accounting import declared_ledger_legacy as legacy
 from agent_lifecycle.contracts import LifecycleError
 from tests.contracts.test_private_storage import unsafe_private_access
 from tests.release import test_parallel_unittest as fixture_controls
+
+
+class _StorageFailureDiagnostics:
+    """Keep bounded failure metadata without changing the observed operation."""
+
+    def __init__(self, root, *, max_records=32, trace_bytes=4096, report_bytes=16384):
+        self.root = root
+        self.max_records = self._bound(max_records, 32, 0, 32)
+        self.trace_bytes = self._bound(trace_bytes, 4096, 2, 4096)
+        self.report_bytes = self._bound(report_bytes, 16384, 256, 16384)
+        self.records = []
+        self.dropped = 0
+        self.unavailable = False
+        self.lock = threading.Lock()
+
+    @staticmethod
+    def _bound(value, default, minimum, maximum):
+        return max(minimum, min(value, maximum)) if type(value) is int else default
+
+    @staticmethod
+    def _integer(value):
+        return value if type(value) is int and value.bit_length() <= 64 else None
+
+    @staticmethod
+    def _text(value, limit):
+        return value[:limit] if type(value) is str else None
+
+    @classmethod
+    def error_number(cls, error, name):
+        value = getattr(error, name, None)
+        if value is None:
+            details = getattr(error, "details", None)
+            value = details.get(name) if isinstance(details, dict) else None
+        return cls._integer(value)
+
+    def observe(self, *args, **kwargs):
+        completed = False
+        # Diagnostic failures cannot replace the operation's ordinary outcome.
+        with suppress(Exception):
+            self.record(*args, **kwargs)
+            completed = True
+        if not completed:
+            self.unavailable = True
+
+    def record(self, stage, path, *, info=None, error=None):
+        relative = "<outside-test-root>"
+        with suppress(ValueError):
+            relative = path.relative_to(self.root).as_posix()[:512]
+        locations, scanned = [], 0
+        tb = error.__traceback__ if isinstance(error, BaseException) else None
+        while tb is not None and scanned < 64:
+            code = tb.tb_frame.f_code
+            locations.append({
+                "file": code.co_filename.replace("\\", "/").rsplit("/", 1)[-1][:128],
+                "line": self._integer(tb.tb_lineno), "function": code.co_name[:64],
+            })
+            scanned += 1
+            tb = tb.tb_next
+        locations = locations[-16:]
+        while locations and len(json.dumps(locations).encode()) > self.trace_bytes:
+            locations.pop(0)
+        record = {
+            "stage": self._text(stage, 64),
+            "thread": self._text(threading.current_thread().name, 64), "path": relative,
+            "mode": self._integer(getattr(info, "st_mode", None)),
+            "attributes": self._integer(getattr(info, "st_file_attributes", None)),
+            "device": self._integer(getattr(info, "st_dev", None)),
+            "inode": self._integer(getattr(info, "st_ino", None)),
+            "errorType": type(error).__name__[:64] if error is not None else None,
+            "code": self._text(getattr(error, "code", None), 128),
+            "errno": self.error_number(error, "errno"),
+            "winerror": self.error_number(error, "winerror"),
+            "traceLocations": locations, "traceFramesScanned": scanned,
+            "traceFramesDropped": scanned - len(locations),
+            "traceTruncated": tb is not None or scanned > len(locations),
+        }
+        with self.lock:
+            if len(self.records) < self.max_records:
+                self.records.append(record)
+            else:
+                self.dropped += 1
+
+    def fingerprint(self, original):
+        def observed(path, *args, **kwargs):
+            try:
+                return original(path, *args, **kwargs)
+            except (OSError, LifecycleError) as error:
+                self.observe("fingerprint-refused", path, error=error)
+                raise
+        return observed
+
+    def mode(self, original):
+        def observed(path, info, *args, **kwargs):
+            result = original(path, info, *args, **kwargs)
+            if result is False:
+                self.observe("mode-refused", path, info=info)
+            return result
+        return observed
+
+    def snapshot(self, outcomes=()):
+        omitted = max(0, len(outcomes) - 2) if type(outcomes) in (list, tuple) else None
+        selected = list(itertools.islice(outcomes, 2))
+        outcomes = [{
+            "type": type(value).__name__[:64],
+            "code": self._text(getattr(value, "code", None), 128),
+            "errno": self.error_number(value, "errno"),
+            "winerror": self.error_number(value, "winerror"),
+        } for value in selected]
+        with self.lock:
+            return {
+                "outcomes": outcomes, "outcomesOmitted": omitted,
+                "privateStorageDiagnostics": list(self.records),
+                "droppedRecords": self.dropped, "diagnosticsUnavailable": self.unavailable,
+            }
+
+    def render(self, outcomes=()):
+        rendered = '{"diagnosticsUnavailable":true}'
+        with suppress(Exception):
+            payload = self.snapshot(outcomes)
+            payload.update(renderOmittedRecords=0, renderOmittedOutcomes=0)
+            while True:
+                candidate = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+                if len(candidate.encode()) <= self.report_bytes:
+                    rendered = candidate
+                    break
+                if payload["privateStorageDiagnostics"]:
+                    payload["privateStorageDiagnostics"].pop(0)
+                    payload["renderOmittedRecords"] += 1
+                elif payload["outcomes"]:
+                    payload["outcomes"].pop()
+                    payload["renderOmittedOutcomes"] += 1
+                else:
+                    break
+        return rendered
+
+
+class CoordinatorDiagnosticTests(unittest.TestCase):
+    def test_original_os_error_identity_and_single_call_are_preserved(self):
+        root = Path('diagnostic-fixture')
+        probe = _StorageFailureDiagnostics(root)
+        error = OSError(13, 'synthetic diagnostic refusal')
+        error.winerror = 32
+        original = Mock(side_effect=error)
+        with self.assertRaises(OSError) as caught:
+            probe.fingerprint(original)(root / 'private')
+        self.assertIs(caught.exception, error)
+        original.assert_called_once_with(root / 'private')
+        event = probe.snapshot()['privateStorageDiagnostics'][0]
+        self.assertEqual((event['path'], event['errno']), ('private', 13))
+        self.assertEqual(event['winerror'], 32)
+        self.assertTrue(event['traceLocations'])
+
+    def test_original_lifecycle_refusal_identity_is_preserved(self):
+        root = Path('diagnostic-fixture')
+        probe = _StorageFailureDiagnostics(root)
+        error = LifecycleError('synthetic-refusal', 'fixture only')
+        original = Mock(side_effect=error)
+        with self.assertRaises(LifecycleError) as caught:
+            probe.fingerprint(original)(root / 'private')
+        self.assertIs(caught.exception, error)
+        original.assert_called_once_with(root / 'private')
+        event = probe.snapshot()['privateStorageDiagnostics'][0]
+        self.assertEqual(event['code'], 'synthetic-refusal')
+        self.assertIsNone(event['winerror'])
+
+    def test_reparse_refusal_stays_false_without_security_inspection(self):
+        from agent_lifecycle.contracts import private_storage
+        root = Path('diagnostic-fixture')
+        path = root / 'private'
+        probe = _StorageFailureDiagnostics(root)
+        info = SimpleNamespace(
+            st_mode=stat.S_IFDIR | 0o700, st_file_attributes=0x400,
+            st_dev=11, st_ino=12,
+        )
+        observed = probe.mode(private_storage.private_mode)
+        with (
+            patch.object(os, 'name', 'nt'),
+            patch.object(private_storage, 'private_fingerprint') as security,
+        ):
+            self.assertIs(observed(path, info, (0o700,)), False)
+        security.assert_not_called()
+        event = probe.snapshot()['privateStorageDiagnostics'][0]
+        self.assertEqual(event['attributes'], 0x400)
+        self.assertEqual(event['traceLocations'], [])
+
+    def test_nested_native_codes_preserve_identity_and_safe_metadata(self):
+        root = Path('diagnostic-fixture')
+        probe = _StorageFailureDiagnostics(root)
+        error = LifecycleError(
+            'synthetic-refusal', 'fixture only',
+            {'winerror': 32, 'errno': 13, 'sddl': 'not-exported'},
+        )
+        original = Mock(side_effect=error)
+        with self.assertRaises(LifecycleError) as caught:
+            probe.fingerprint(original)(root / 'private')
+        self.assertIs(caught.exception, error)
+        original.assert_called_once_with(root / 'private')
+        snapshot = probe.snapshot([error])
+        event = snapshot['privateStorageDiagnostics'][0]
+        self.assertEqual((event['winerror'], event['errno']), (32, 13))
+        self.assertEqual(snapshot['outcomes'][0]['winerror'], 32)
+        self.assertNotIn('not-exported', json.dumps(snapshot))
+        error.winerror = 0
+        self.assertEqual(probe.error_number(error, 'winerror'), 0)
+        error.winerror = 'not-a-numeric-native-status'
+        self.assertIsNone(probe.error_number(error, 'winerror'))
+
+    def test_record_and_trace_caps_keep_explicit_dropped_counts(self):
+        root = Path('diagnostic-fixture')
+        probe = _StorageFailureDiagnostics(root, max_records=2, trace_bytes=128)
+        for _ in range(3):
+            try:
+                raise OSError(13, 'synthetic bounded refusal')
+            except OSError as error:
+                probe.record('fixture', root / 'private', error=error)
+        snapshot = probe.snapshot()
+        self.assertEqual(len(snapshot['privateStorageDiagnostics']), 2)
+        self.assertEqual(snapshot['droppedRecords'], 1)
+        for event in snapshot['privateStorageDiagnostics']:
+            self.assertLessEqual(
+                len(json.dumps(event['traceLocations']).encode()), 128,
+            )
+            self.assertGreaterEqual(event['traceFramesDropped'], 0)
+
+
+    def test_collection_failure_preserves_original_exception_and_false(self):
+        root = Path("diagnostic-fixture")
+        probe = _StorageFailureDiagnostics(root)
+        error = OSError(13, "original failure")
+        original = Mock(side_effect=error)
+        with patch.object(probe, "record", side_effect=ValueError("collector failed")):
+            with self.assertRaises(OSError) as caught:
+                probe.fingerprint(original)(root / "private")
+            mode = Mock(return_value=False)
+            self.assertIs(probe.mode(mode)(root / "private", None), False)
+        self.assertIs(caught.exception, error)
+        original.assert_called_once_with(root / "private")
+        mode.assert_called_once_with(root / "private", None)
+        self.assertTrue(probe.snapshot()["diagnosticsUnavailable"])
+        sentinel = object()
+        success = Mock(return_value=sentinel)
+        self.assertIs(probe.fingerprint(success)(root), sentinel)
+        success.assert_called_once_with(root)
+
+    def test_failed_snapshot_has_bounded_fallback_without_swallowing_control(self):
+        probe = _StorageFailureDiagnostics(Path("diagnostic-fixture"))
+        with patch.object(probe, "snapshot", side_effect=ValueError("not exported")):
+            self.assertEqual(json.loads(probe.render()), {"diagnosticsUnavailable": True})
+        with (
+            patch.object(probe, "snapshot", side_effect=KeyboardInterrupt),
+            self.assertRaises(KeyboardInterrupt),
+        ):
+            probe.render()
+        with (
+            patch.object(probe, "record", side_effect=SystemExit(7)),
+            self.assertRaises(SystemExit) as caught,
+        ):
+            probe.observe("fixture", probe.root)
+        self.assertEqual(caught.exception.code, 7)
+
+    def test_frames_do_not_load_source_and_invalid_bounds_are_clamped(self):
+        import linecache
+        root = Path("diagnostic-fixture")
+        probe = _StorageFailureDiagnostics(root, max_records=-1, trace_bytes=0, report_bytes=0)
+        self.assertEqual((probe.max_records, probe.trace_bytes, probe.report_bytes), (0, 2, 256))
+        probe = _StorageFailureDiagnostics(root, trace_bytes=0)
+        error = OSError(13, "source must not be read")
+        original = Mock(side_effect=error)
+        with (
+            patch.object(linecache, "getlines", side_effect=AssertionError("source lookup")),
+            self.assertRaises(OSError) as caught,
+        ):
+            probe.fingerprint(original)(root / "private")
+        self.assertIs(caught.exception, error)
+        event = probe.snapshot()["privateStorageDiagnostics"][0]
+        self.assertEqual(event["traceLocations"], [])
+        self.assertTrue(event["traceTruncated"])
+        self.assertGreater(event["traceFramesScanned"], 0)
+
+    def test_render_bounds_scalars_outcomes_records_and_excludes_raw_details(self):
+        root = Path("diagnostic-fixture")
+        probe = _StorageFailureDiagnostics(root)
+        error = LifecycleError("x" * 10000, "SECRET_MESSAGE", {
+            "errno": 0, "winerror": 2 ** 200, "sddl": "SECRET_SDDL", "locals": "SECRET_LOCALS",
+        })
+        info = SimpleNamespace(st_mode=object(), st_file_attributes=True, st_dev=0, st_ino=2 ** 200)
+        for _ in range(40):
+            probe.record("fixture", root / ("p" * 2000), info=info, error=error)
+        snapshot = probe.snapshot([error] * 10)
+        self.assertEqual((len(snapshot["outcomes"]), snapshot["outcomesOmitted"]), (2, 8))
+        self.assertEqual((len(snapshot["privateStorageDiagnostics"]), snapshot["droppedRecords"]), (32, 8))
+        item = snapshot["privateStorageDiagnostics"][0]
+        self.assertEqual((item["device"], item["errno"]), (0, 0))
+        self.assertIsNone(item["mode"])
+        self.assertIsNone(item["attributes"])
+        self.assertIsNone(item["inode"])
+        self.assertIsNone(item["winerror"])
+        self.assertLessEqual(len(item["code"]), 128)
+        self.assertLessEqual(len(item["path"]), 512)
+        rendered = probe.render([error] * 10)
+        self.assertLessEqual(len(rendered.encode()), 16384)
+        self.assertGreater(json.loads(rendered)["renderOmittedRecords"], 0)
+        for secret in ("SECRET_MESSAGE", "SECRET_SDDL", "SECRET_LOCALS"):
+            self.assertNotIn(secret, rendered)
+
+
 
 
 class DeclaredLedgerTests(unittest.TestCase):
@@ -307,6 +617,7 @@ class CoordinatorDurabilityTests(unittest.TestCase):
         from concurrent.futures import ThreadPoolExecutor
         root, ledger, relative, value = self.fixture()
         ledger.advance_coordinator_cost_head(root, source_path=ledger._R11_COORDINATOR_SEED)
+        diagnostics = _StorageFailureDiagnostics(root)
         gate = threading.Barrier(2, timeout=15)
         local = threading.local()
         original = ledger._r11_coordinator_transition
@@ -319,8 +630,9 @@ class CoordinatorDurabilityTests(unittest.TestCase):
             try:
                 return ledger.advance_coordinator_cost_head(root, source_path=relative)
             except (OSError, LifecycleError) as exc:
+                diagnostics.observe('advance-refused', head, error=exc)
                 return exc
-        from agent_lifecycle.contracts import authority_io
+        from agent_lifecycle.contracts import authority_io, private_storage
         direct_replace = Path.replace
         canonical_replace = authority_io._Directory.replace_child
         head = root / ledger._R11_COORDINATOR_HEAD
@@ -329,6 +641,16 @@ class CoordinatorDurabilityTests(unittest.TestCase):
                 raise PermissionError(13, 'The process cannot access the file because it is being used by another process')
             return direct_replace(source, target)
         with ExitStack() as stack:
+            stack.enter_context(patch.object(
+                private_storage, 'private_fingerprint',
+                new=diagnostics.fingerprint(
+                    private_storage.private_fingerprint,
+                ),
+            ))
+            stack.enter_context(patch.object(
+                private_storage, 'private_mode',
+                new=diagnostics.mode(private_storage.private_mode),
+            ))
             if sharing_violation:
                 stack.enter_context(patch.object(Path, 'replace', autospec=True, side_effect=refuse_path_replace))
                 canonical = stack.enter_context(patch.object(
@@ -339,7 +661,10 @@ class CoordinatorDurabilityTests(unittest.TestCase):
                 outcomes = list(pool.map(advance, range(2)))
             if sharing_violation and any(isinstance(v, dict) for v in outcomes):
                 self.assertEqual(canonical.call_count, 1)
-        self.assertEqual(sum(isinstance(v, dict) for v in outcomes), 1, outcomes)
+        self.assertEqual(
+            sum(isinstance(v, dict) for v in outcomes), 1,
+            diagnostics.render(outcomes),
+        )
         self.assertEqual(sum(isinstance(v, Exception) for v in outcomes), 1, outcomes)
         self.assertFalse(head.with_suffix('.pending.json').exists())
         self.assertFalse(head.with_suffix('.next.json').exists())
