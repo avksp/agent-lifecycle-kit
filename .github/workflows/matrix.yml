@@ -1,4 +1,4 @@
-name: release-matrix-contract
+name: windows-coordinator-claim-diagnostic
 
 on:
   workflow_dispatch:
@@ -7,14 +7,11 @@ permissions:
   contents: read
 
 jobs:
-  contract:
-    name: ${{ matrix.os }} / py${{ matrix.python }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+  diagnostic:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/diag/windows-coordinator-claim-a1'
+    name: Windows 3.12 bounded coordinator diagnostic
+    runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
@@ -24,14 +21,104 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: ${{ matrix.python }}
-      - name: Set up pinned uv
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        with:
-          version: "0.13.1"
+          python-version: "3.12"
+      - name: Require admitted branch and exact source scope
+        shell: python
+        run: |
+          import hashlib, json, os, subprocess
+          from datetime import datetime, timezone
+          from pathlib import Path
+          baseline = 'd21d81943a2b64ea613ee0097ef7e4bd2d296940'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/diag/windows-coordinator-claim-a1'
+          assert datetime.now(timezone.utc) < datetime.fromisoformat('2026-11-08T13:29:22.768531+00:00')
+          def git(*args):
+              return subprocess.check_output(['git', *args], text=True).strip()
+          assert git('rev-parse', 'HEAD') == os.environ['GITHUB_SHA']
+          subprocess.run(['git', 'merge-base', '--is-ancestor', baseline, 'HEAD'], check=True)
+          changes = git('diff', '--name-only', baseline, 'HEAD').splitlines()
+          assert sorted(changes) == ['.github/workflows/matrix.yml', 'tests/accounting/test_declared_ledger.py']
+          paths = changes + ['src/agent_lifecycle/contracts/private_storage.py', 'src/agent_lifecycle/contracts/windows_security.py']
+          folder = Path('work/ci/windows-coordinator-diagnostic')
+          folder.mkdir(parents=True, exist_ok=False)
+          receipt = dict(baseline=baseline, head=git('rev-parse', 'HEAD'), tree=git('rev-parse', 'HEAD^{tree}'),
+                         files={p: hashlib.sha256(Path(p).read_bytes()).hexdigest() for p in paths})
+          (folder / 'source.json').write_text(json.dumps(receipt, indent=2), encoding='utf-8')
       - name: Restore versioned release test fixture
         run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
       - name: Install package
-        run: python -m pip install -e .
-      - name: Run conformance and lifecycle tests
-        run: uv run --frozen --group quality --python ${{ matrix.python }} python -m unittest discover -s tests -t . -v
+        run: python -m pip install --disable-pip-version-check -e .
+      - name: Observe only the selected simultaneous-claim case
+        shell: python
+        run: |
+          import hashlib, json, os, platform, subprocess, sys, time
+          import agent_lifecycle
+          from datetime import datetime, timezone
+          from pathlib import Path
+          folder = Path('work/ci/windows-coordinator-diagnostic')
+          library = Path(agent_lifecycle.__file__).resolve()
+          assert library.is_relative_to(Path('src').resolve()), library
+          case = 'tests.accounting.test_declared_ledger.CoordinatorDurabilityTests.test_concurrent_coordinator_claim_has_one_winner_and_no_double_charge'
+          argv = [sys.executable, '-m', 'unittest', case, '-v']
+          started = time.monotonic()
+          summary = dict(status='INCOMPLETE', attempts=[], maxAttempts=32, maxSeconds=600,
+                         maxSecondsPerAttempt=60, bugRepaired=False, rootCauseConfirmed=False,
+                         python=sys.version, executable=sys.executable, platform=platform.platform(),
+                         runner=os.environ.get('RUNNER_NAME'), image=os.environ.get('ImageVersion'),
+                         sha=os.environ['GITHUB_SHA'], librarySource=str(library.relative_to(Path.cwd())),
+                         startedAt=datetime.now(timezone.utc).isoformat())
+          exit_code = 0
+          for index in range(1, 33):
+              remaining = 600 - (time.monotonic() - started)
+              if remaining <= 0:
+                  summary['status'] = 'INCOMPLETE_AGGREGATE_TIMEOUT'
+                  exit_code = 124
+                  break
+              before = time.monotonic()
+              process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'},
+                                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+              item = dict(iteration=index, argv=argv, timeout=False)
+              try:
+                  stdout, stderr = process.communicate(timeout=min(60, remaining))
+              except subprocess.TimeoutExpired:
+                  item['timeout'] = True
+                  cleanup = subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                                           capture_output=True, timeout=10)
+                  item['cleanupReturnCode'] = cleanup.returncode
+                  stdout, stderr = process.communicate(timeout=5)
+              item.update(exitCode=process.returncode, elapsedSeconds=time.monotonic() - before)
+              for name, raw in [('stdout', stdout), ('stderr', stderr)]:
+                  (folder / f'{index:02}.{name}').write_bytes(raw[:1048576])
+                  item[name + 'Bytes'] = len(raw)
+                  item[name + 'SHA256'] = hashlib.sha256(raw).hexdigest()
+                  item[name + 'Truncated'] = len(raw) > 1048576
+              summary['attempts'].append(item)
+              if item['timeout']:
+                  summary['status'] = 'INCOMPLETE_ATTEMPT_TIMEOUT'
+                  exit_code = 124
+              elif item['stdoutTruncated'] or item['stderrTruncated']:
+                  summary['status'] = 'INCOMPLETE_OUTPUT_LIMIT'
+                  exit_code = 125
+              elif process.returncode:
+                  summary['status'] = 'OBSERVED_TEST_FAILURE'
+                  exit_code = 1
+              else:
+                  summary['status'] = 'INCONCLUSIVE_NO_RECURRENCE'
+              summary['elapsedSeconds'] = time.monotonic() - started
+              (folder / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+              print(json.dumps(dict(iteration=index, exitCode=process.returncode,
+                                    elapsedSeconds=item['elapsedSeconds'], status=summary['status'])), flush=True)
+              if exit_code:
+                  print(stderr.decode('utf-8', errors='backslashreplace')[-262144:], flush=True)
+                  break
+          summary['finishedAt'] = datetime.now(timezone.utc).isoformat()
+          (folder / 'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          raise SystemExit(exit_code)
+      - name: Preserve source-bound diagnostics including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: windows-coordinator-diagnostic-${{ github.run_id }}
+          path: work/ci/windows-coordinator-diagnostic/
+          if-no-files-found: error
+          retention-days: 30
