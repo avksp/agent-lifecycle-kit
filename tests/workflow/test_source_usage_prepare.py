@@ -252,7 +252,7 @@ def canonical_complete_task(f: GenericFixture, task_id: str, operation: str, *, 
         ],
     )
     result_path = artifact_path(task, "result", 1)
-    usage_path = str(Path(result_path).with_name("usage.json"))
+    usage_path = Path(result_path).with_name("usage.json").as_posix()
     write_data(f.root, result_path, result)
     prepare_source_receipt(**args, window=window, out=usage_path)
     commit_task_result(
@@ -313,7 +313,7 @@ def canonical_complete_task(f: GenericFixture, task_id: str, operation: str, *, 
         evidence_paths=[evidence_entry["artifactPath"]],
     )
     assert report["status"] == "PASS", report["blockers"]
-    audit_path = str(Path(result_path).with_name("implementation-audit.json"))
+    audit_path = Path(result_path).with_name("implementation-audit.json").as_posix()
     write_data(f.root, audit_path, report)
     apply_task_review_outcome(
         f.state_path,

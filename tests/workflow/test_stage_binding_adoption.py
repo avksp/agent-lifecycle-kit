@@ -109,7 +109,7 @@ def adopt(state_path: Path, output: Path, **overrides: object) -> dict:
 class StageBindingAdoptionTests(unittest.TestCase):
     def test_actual_cli_preparation_normalized_profile_and_subsequent_launch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+            root = Path(tmp).resolve()
             state_path, output, _, _ = fixture(root)
             before = state_path.read_bytes()
             argv = [
@@ -119,7 +119,7 @@ class StageBindingAdoptionTests(unittest.TestCase):
                 "--file",
                 "tasks/strategy/plan.manifest.json",
                 "--state",
-                str(state_path),
+                state_path.relative_to(root).as_posix(),
                 "--lock",
                 "tasks/strategy/plan.lock.json",
                 "--task",
@@ -137,7 +137,7 @@ class StageBindingAdoptionTests(unittest.TestCase):
                 "--project-profile",
                 ".alk/project-profile.json",
                 "--strategy-out",
-                str(output),
+                output.relative_to(root).as_posix(),
             ]
             previous = Path.cwd()
             try:
