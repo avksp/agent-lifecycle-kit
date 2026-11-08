@@ -31,6 +31,14 @@ class _StorageFailureDiagnostics:
         self.dropped = 0
         self.lock = threading.Lock()
 
+    @staticmethod
+    def error_number(error, name):
+        value = getattr(error, name, None)
+        if value is None:
+            details = getattr(error, 'details', None)
+            value = details.get(name) if isinstance(details, dict) else None
+        return value if type(value) is int else None
+
     def record(self, stage, path, *, info=None, error=None):
         try:
             relative = path.relative_to(self.root).as_posix()[:512]
@@ -57,8 +65,8 @@ class _StorageFailureDiagnostics:
             'inode': getattr(info, 'st_ino', None),
             'errorType': type(error).__name__ if error else None,
             'code': str(getattr(error, 'code', ''))[:256] or None,
-            'errno': getattr(error, 'errno', None),
-            'winerror': getattr(error, 'winerror', None),
+            'errno': self.error_number(error, 'errno'),
+            'winerror': self.error_number(error, 'winerror'),
             'traceLocations': locations,
             'traceFramesDropped': len(frames) - len(locations),
         }
@@ -92,8 +100,8 @@ class _StorageFailureDiagnostics:
                     {
                         'type': type(value).__name__,
                         'code': getattr(value, 'code', None),
-                        'errno': getattr(value, 'errno', None),
-                        'winerror': getattr(value, 'winerror', None),
+                        'errno': self.error_number(value, 'errno'),
+                        'winerror': self.error_number(value, 'winerror'),
                     }
                     for value in outcomes
                 ],
@@ -150,6 +158,28 @@ class CoordinatorDiagnosticTests(unittest.TestCase):
         event = probe.snapshot()['privateStorageDiagnostics'][0]
         self.assertEqual(event['attributes'], 0x400)
         self.assertEqual(event['traceLocations'], [])
+
+    def test_nested_native_codes_preserve_identity_and_safe_metadata(self):
+        root = Path('diagnostic-fixture')
+        probe = _StorageFailureDiagnostics(root)
+        error = LifecycleError(
+            'synthetic-refusal', 'fixture only',
+            {'winerror': 32, 'errno': 13, 'sddl': 'not-exported'},
+        )
+        original = Mock(side_effect=error)
+        with self.assertRaises(LifecycleError) as caught:
+            probe.fingerprint(original)(root / 'private')
+        self.assertIs(caught.exception, error)
+        original.assert_called_once_with(root / 'private')
+        snapshot = probe.snapshot([error])
+        event = snapshot['privateStorageDiagnostics'][0]
+        self.assertEqual((event['winerror'], event['errno']), (32, 13))
+        self.assertEqual(snapshot['outcomes'][0]['winerror'], 32)
+        self.assertNotIn('not-exported', json.dumps(snapshot))
+        error.winerror = 0
+        self.assertEqual(probe.error_number(error, 'winerror'), 0)
+        error.winerror = 'not-a-numeric-native-status'
+        self.assertIsNone(probe.error_number(error, 'winerror'))
 
     def test_record_and_trace_caps_keep_explicit_dropped_counts(self):
         root = Path('diagnostic-fixture')
