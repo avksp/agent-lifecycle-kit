@@ -7,6 +7,7 @@ import os
 import re
 import secrets
 import stat
+from collections.abc import Callable
 from contextlib import ExitStack
 from dataclasses import dataclass
 from pathlib import Path
@@ -597,44 +598,76 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
     head = _r11_coordinator_head_value(
         source_path, source_raw, value, hashlib.sha256(previous_raw).hexdigest() if previous_raw is not None else None
     )
-    # Direct existing authority directory; avoid changing permissions of prior artifacts.
+
+    def recheck() -> None:
+        _require(
+            _r11_coordinator_head_bytes(primary) == previous_raw
+            and read_authority_bytes(primary / source_path, root=primary, max_bytes=131_072) == source_raw,
+            "r11-opening-stale",
+            "source/head changed after update claim",
+        )
+
+    return publish_declared_head(
+        root=primary,
+        path=path,
+        previous_raw=previous_raw,
+        next_raw=canonical_bytes(head),
+        archive_name="coordinator-cost-head-history",
+        recheck=recheck,
+        observe=lambda ownership: _read_coordinator_cost_head(project_root, owned_claim=ownership),
+    )
+
+
+def publish_declared_head(
+    *,
+    root: Path,
+    path: Path,
+    previous_raw: bytes | None,
+    next_raw: bytes,
+    archive_name: str,
+    recheck: Callable[[], None],
+    observe: Callable[[tuple[bytes, int]], dict[str, Any]],
+) -> dict[str, Any]:
+    """Shared full-hold durable CAS publication; uncertainty retains its claim.
+
+    Semantic seed/ancestry checks belong to the registered reader. Recheck runs
+    under the exclusive pending claim before any head bytes change.
+    """
+    path.relative_to(root)
+    normalize_authority_path(path.relative_to(root).as_posix())
+    _require(
+        "/" not in archive_name and archive_name not in {".", ".."},
+        "declared-ledger-path-invalid",
+        "invalid archive directory",
+    )
     pending = path.with_suffix(".pending.json")
     temporary = path.with_suffix(".next.json")
 
     def exclusive(target: Path, raw: bytes) -> None:
-        if os.name == "nt":
-            create_authority_bytes(target, raw, root=primary, private=True)
-            return
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(raw)
-            stream.flush()
-            os.fsync(stream.fileno())
+        create_authority_bytes(target, raw, root=root, private=True)
 
-    # Refuse unsupported durability before creating a sticky claim.
     _sync_directory(path.parent)
-    claim = canonical_bytes({"head": head, "ownerNonce": secrets.token_hex(16)})
-    create_authority_bytes(pending, claim, root=primary, private=True)
+    claim = canonical_bytes({"head": _r11_json(next_raw, limit=131_072), "ownerNonce": secrets.token_hex(16)})
+    create_authority_bytes(pending, claim, root=root, private=True)
     with ExitStack() as guards:
-        descriptor = guards.enter_context(hold_authority_read_fd(pending, root=primary))
+        descriptor = guards.enter_context(hold_authority_read_fd(pending, root=root))
         ownership = (claim, descriptor)
         try:
             _require(
-                _r11_coordinator_claim_matches(primary, pending, ownership),
+                _r11_coordinator_claim_matches(root, pending, ownership),
                 "r11-opening-pending",
                 "coordinator claim ownership changed",
             )
             _sync_directory(path.parent)
-            if (
-                _r11_coordinator_head_bytes(primary) != previous_raw
-                or read_authority_bytes(primary / source_path, root=primary, max_bytes=131_072) != source_raw
-            ):
+            try:
+                recheck()
+            except LifecycleError:
                 guards.close()
                 pending.unlink()
                 _sync_directory(path.parent)
-                raise LifecycleError("r11-opening-stale", "source/head changed after update claim")
+                raise
             if previous_raw is not None:
-                archive = path.parent / "coordinator-cost-head-history"
+                archive = path.parent / archive_name
                 if os.name == "nt":
                     from agent_lifecycle.contracts.private_storage import ensure_private_directory
 
@@ -645,21 +678,20 @@ def advance_coordinator_cost_head(project_root: Path, *, source_path: str) -> di
                 archived = archive / (hashlib.sha256(previous_raw).hexdigest() + ".json")
                 if archived.exists():
                     _require(
-                        read_authority_bytes(archived, root=primary, max_bytes=131_072) == previous_raw,
+                        read_authority_bytes(archived, root=root, max_bytes=131_072) == previous_raw,
                         "r11-opening-origin",
                         "previous head archive differs",
                     )
                 else:
                     exclusive(archived, previous_raw)
                 _sync_directory(archive)
-            exclusive(temporary, canonical_bytes(head))
+            exclusive(temporary, next_raw)
             _sync_directory(path.parent)
-            replace_authority_bytes(path, canonical_bytes(head), root=primary)
+            replace_authority_bytes(path, next_raw, root=root)
             temporary.unlink()
             _sync_directory(path.parent)
-            result = _read_coordinator_cost_head(project_root, owned_claim=ownership)
+            result = observe(ownership)
         except BaseException:
-            # Close normally so an unrelated publication error keeps its type.
             guards.close()
             raise
     pending.unlink()

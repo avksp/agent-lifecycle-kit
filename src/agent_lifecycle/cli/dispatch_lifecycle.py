@@ -129,6 +129,8 @@ def _dispatch_workflow_initialization(args: argparse.Namespace) -> dict[str, Any
 
 
 def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
+    if args.workflow_command == "source-usage-prepare":
+        return _dispatch_source_usage_prepare(args)
     if args.workflow_command in {"adopt-plan", "finalize", "continue"}:
         refusal = operator_claim_refusal(getattr(args, "requested_claim", None))
         if refusal is not None:
@@ -241,6 +243,52 @@ def _dispatch_workflow(args: argparse.Namespace) -> dict[str, Any]:
         maybe_emit_workflow_progress_hook(args, command="workflow finalize", state_path=state_path)
         return payload
     return _dispatch_workflow_task(args, state_path)
+
+
+def _dispatch_source_usage_prepare(args: argparse.Namespace) -> dict[str, Any]:
+    from agent_lifecycle.workflow.source_usage_prepare import (
+        prepare_source_admission,
+        prepare_source_opening,
+        prepare_source_receipt,
+    )
+
+    if args.phase == "opening":
+        _require_args(args, ["input", "owner_bindings", "opening_out", "out"], mode="source opening")
+        return prepare_source_opening(
+            Path.cwd(),
+            carry_path=args.input,
+            owner_bindings_path=args.owner_bindings,
+            opening_out=args.opening_out,
+            source_root=args.out,
+        )
+    names = [
+        "state",
+        "manifest",
+        "lock",
+        "task",
+        "operation_id",
+        "expected_revision",
+        "source_revision",
+        "actor_id",
+        "out",
+    ]
+    _require_args(
+        args, names + (["expected_head_sha256"] if args.phase == "admission" else ["window"]), mode="source producer"
+    )
+    values = dict(
+        state_path=Path(args.state).absolute(),
+        manifest_path=Path(args.manifest).absolute(),
+        lock_path=Path(args.lock).absolute(),
+        task_id=args.task,
+        operation_id=args.operation_id,
+        expected_revision=args.expected_revision,
+        source_revision=args.source_revision,
+        actor_id=args.actor_id,
+        out=args.out,
+    )
+    if args.phase == "admission":
+        return prepare_source_admission(**values, expected_head_sha256=args.expected_head_sha256)
+    return prepare_source_receipt(**values, window=args.window)
 
 
 def _dispatch_workflow_task(args: argparse.Namespace, state_path: Path) -> dict[str, Any]:

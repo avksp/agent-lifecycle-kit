@@ -7,6 +7,15 @@ from tests.policy.test_execution_strategy import ExecutionStrategyTests
 
 
 class ExecutionStrategyProjectProfileTests(ExecutionStrategyTests):
+    def test_stage_references_are_local_defaults_and_preserve_existing_risk_floor(self) -> None:
+        from agent_lifecycle.project.merge import build_effective_project_profile
+
+        profile = {"schemaVersion": "agent-project-workflow-profile.v1", "profileId": "stage", "defaultAdapter": "codex", "defaultMode": "auto", "defaultRisk": "auto", "policies": {"executionBindings": ".alk/host-launch/registry.json"}, "stages": {"audit": {"executionBindingRefs": ["primary", "reserve"]}}, "productionPromotionClaimed": False}
+        effective = build_effective_project_profile(profile)
+        self.assertEqual(effective["stages"]["audit"]["executionBindingRefs"], ["primary", "reserve"])
+        self.assertFalse(effective["authority"]["planBound"])
+        self.assertFalse(effective["productionPromotionClaimed"])
+
     def test_strategy_and_summary_carry_project_profile_digest(self) -> None:
         strategy = self._resolve(
             project_profile_digest="d" * 64,

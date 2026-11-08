@@ -19,6 +19,17 @@ def _run_cli(argv: list[str]) -> tuple[int, dict[str, object]]:
 
 
 class StartProjectProfileTests(unittest.TestCase):
+    def test_explicit_stage_without_opt_in_refuses_before_intake(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            previous = Path.cwd()
+            os.chdir(directory)
+            try:
+                code, result = _run_cli(["start", "--adapter", "codex", "--text", "Inspect", "--stage", "intake"])
+            finally:
+                os.chdir(previous)
+        self.assertNotEqual(code, 0)
+        self.assertEqual(result["code"], "stage-binding-opt-in-required")
+
     def test_start_discovers_profile_and_returns_guided_receipt_without_adapter_flag(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -339,6 +339,7 @@ def _plan_authority(plan: dict[str, Any] | None, lock: dict[str, Any] | None) ->
     tier = _first_string(
         plan.get("tierResolution", {}).get("tier") if isinstance(plan.get("tierResolution"), dict) else None,
         plan.get("tier"),
+        plan.get("specification", {}).get("tier") if isinstance(plan.get("specification"), dict) else None,
     )
     if tier is not None and tier not in RISK_TIERS:
         raise LifecycleError("project-profile-plan-tier-invalid", "plan tier is unsupported", {"tier": tier})

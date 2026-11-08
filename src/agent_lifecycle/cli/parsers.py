@@ -461,10 +461,12 @@ def _add_goal_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPar
 
 
 def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    from agent_lifecycle.cli.model_setup import add_model_setup_parsers
     from agent_lifecycle.resources import builtin_profile_path
 
     model = subparsers.add_parser("model", help="model routing commands")
     model_sub = model.add_subparsers(dest="model_command", required=True)
+    add_model_setup_parsers(model_sub)
     model_route = model_sub.add_parser("route")
     model_route.add_argument("--request", required=True)
     model_route.add_argument("--profile", default=builtin_profile_path("model-routing-profile.v1.json"))

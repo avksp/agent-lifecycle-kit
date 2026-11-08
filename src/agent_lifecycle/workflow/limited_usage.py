@@ -34,7 +34,7 @@ from agent_lifecycle.accounting.usage_types import (
 from agent_lifecycle.accounting.usage_types import (
     source_reference as _ref,
 )
-from agent_lifecycle.contracts import canonical_digest, load_json_object
+from agent_lifecycle.contracts import canonical_bytes, canonical_digest, load_json_object
 from agent_lifecycle.contracts.authority_io import create_authority_bytes, read_authority_bytes
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.scoped_usage_schemas import (
@@ -85,7 +85,20 @@ def current_source_snapshot(selection: UsageContext) -> dict[str, Any]:
         "scoped-usage-frontier-stale",
         "financial frontier changed during validation",
     )
-    return {"current": current, "projection": projection, "projectionBytes": _projection_bytes(projection)}
+    raw = _selected_registry_bytes(selection, projection)
+    return {"current": current, "projection": projection, "projectionBytes": raw}
+
+
+def _selected_registry_bytes(selection: UsageContext, projection: dict[str, Any]) -> bytes:
+    if selection.policy.get("schemaVersion") == "alk-source-usage-completion-policy.v2":
+        raw = canonical_bytes(projection) + b"\n"
+        _require(
+            len(raw) <= selection.inputs["registryByteLimit"],
+            "scoped-usage-registry-too-large",
+            "current registry exceeds its selected byte limit",
+        )
+        return raw
+    return _projection_bytes(projection)
 
 
 def require_snapshot_current(selection: UsageContext, snapshot: dict[str, Any]) -> None:
@@ -211,12 +224,7 @@ def validate_limited_source_usage(
         "scoped-usage-policy-mismatch",
         "receipt selects different frozen source inputs",
     )
-    _require(
-        (receipt["actorId"], "coordinator")
-        in {(owner["actorId"], owner["role"]) for owner in selection.prefix["ownerBindings"]},
-        "scoped-usage-current-identity-mismatch",
-        "actor is not the frozen source coordinator",
-    )
+    _require_receipt_actor(selection, task, receipt)
     snapshot = current_source_snapshot(selection)
     current, projection = snapshot["current"], snapshot["projection"]
     _require(
@@ -252,17 +260,7 @@ def validate_limited_source_usage(
         "historical conflict pool is ineligible",
     )
     binding = pools[0]["binding"]
-    expected = {
-        **lineage,
-        "semanticOperationId": receipt["operationId"],
-        "sourceUsagePolicyDigest": selection.policy_digest,
-        "actorId": receipt["actorId"],
-    }
-    _require(
-        all(binding[key] == value for key, value in expected.items()),
-        "scoped-usage-current-identity-mismatch",
-        "original admission belongs to another actor or attempt",
-    )
+    _require_original_binding(selection, state, task, receipt, binding, lineage, pools[0])
     primary = Path(current["primaryCheckout"])
     original_refs = projection["records"]
     known_refs = [row["sourceRef"] for row in original_refs] + selection.prefix["historicalSourceRefs"]
@@ -301,6 +299,55 @@ def validate_limited_source_usage(
             "observedSnapshot": "DECLARED_FRONTIER_NOT_PROVIDER_ATOMIC",
         },
     }
+
+
+def _require_receipt_actor(selection: UsageContext, task: dict[str, Any], receipt: dict[str, Any]) -> None:
+    if selection.policy.get("schemaVersion") == "alk-source-usage-completion-policy.v2":
+        from agent_lifecycle.accounting.declared_source_route import project_owner
+
+        actor, _ = project_owner(selection.inputs, task["id"])
+        _require(
+            receipt["actorId"] == actor, "scoped-usage-current-identity-mismatch", "actor differs from frozen owner"
+        )
+    else:
+        _require(
+            (receipt["actorId"], "coordinator")
+            in {(owner["actorId"], owner["role"]) for owner in selection.prefix["ownerBindings"]},
+            "scoped-usage-current-identity-mismatch",
+            "actor is not the frozen source coordinator",
+        )
+
+
+def _require_original_binding(
+    selection: UsageContext,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    receipt: dict[str, Any],
+    binding: dict[str, Any],
+    lineage: dict[str, Any],
+    pool: dict[str, Any],
+) -> None:
+    if selection.policy.get("schemaVersion") == "alk-source-usage-completion-policy.v2":
+        from agent_lifecycle.accounting.declared_source_route import project_binding, project_token_hold
+
+        _require(
+            pool.get("declaredTokenHold") == project_token_hold(task),
+            "scoped-usage-current-admission-unbound",
+            "original window does not retain the full persisted token hold",
+        )
+        expected = project_binding(selection.inputs, state, task, binding["originalWindowId"])
+    else:
+        expected = {
+            **lineage,
+            "semanticOperationId": receipt["operationId"],
+            "sourceUsagePolicyDigest": selection.policy_digest,
+            "actorId": receipt["actorId"],
+        }
+    _require(
+        all(binding[key] == value for key, value in expected.items()),
+        "scoped-usage-current-identity-mismatch",
+        "original admission belongs to another actor or attempt",
+    )
 
 
 def refresh_committed_source_assurance(
@@ -358,7 +405,7 @@ def refresh_committed_source_assurance(
         "committed observation is not an original current-ledger ancestor",
     )
     _require(
-        receipt["currentRegistryRef"] == _registry_ref(task, _projection_bytes(original_registry)),
+        receipt["currentRegistryRef"] == _registry_ref(task, _selected_registry_bytes(selection, original_registry)),
         "scoped-usage-ref-invalid",
         "original registry does not use its deterministic artifact path",
     )
@@ -472,7 +519,12 @@ def aggregate_source_usage_assurance(
 
 def require_source_operation_unused(selection: UsageContext, binding: dict[str, Any]) -> dict[str, Any]:
     """Read-only prepublication check; never grants financial or execution authority."""
-    binding = validate_source_window_binding(binding)
+    if selection.policy.get("schemaVersion") == "alk-source-usage-completion-policy.v2":
+        from agent_lifecycle.contracts.declared_source_schemas import validate_project_binding
+
+        binding = validate_project_binding(binding)
+    else:
+        binding = validate_source_window_binding(binding)
     names = ("runId", "packageId", "taskId", "attempt", "semanticOperationId")
     identity = {name: binding[name] for name in names}
     snapshot = current_source_snapshot(selection)

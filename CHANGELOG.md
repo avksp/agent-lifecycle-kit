@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.44.0 - 2026-11-07
+
+### Added
+
+- Configure adapters, models and reasoning effort per workflow stage with optional local bindings. Review discovery or manual proposals and understand why an approved route is selected.
+- Check local configuration separately from explicitly authorized live availability. Follow user priorities for safe fallback before execution; preserve uncertain dispatches for reconciliation.
+- Use a generic declared project source for limited native model-task accounting. Retain earlier bookings, original windows, raw origins and unavailable metrics through independent acceptance and finalization; financial closure remains unavailable.
+- Add equivalent English and Russian recipes for deterministic artifact operations and bounded lifecycle continuation.
+
+### Fixed
+
+- Preserve accepted model-route history while clearing active attempt fields. Keep ordinary managed launch bound to the same adopted strategy and project root.
+- Validate JSONL response evidence strictly and retain neutral proof without exposing local model parameters.
+- Harden source-window identity, serialized data limits, profile snapshots, approved host parameters and project containment.
+
 ## 2.43.0 - 2026-11-06
 
 ### Changed

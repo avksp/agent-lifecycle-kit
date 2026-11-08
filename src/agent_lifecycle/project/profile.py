@@ -18,6 +18,7 @@ from agent_lifecycle.contracts.project_profile_schemas import (
     STAGE_SETTING_KEYS,
 )
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS
+from agent_lifecycle.model_routing.stage_bindings import local_reference, validate_binding_refs
 from agent_lifecycle.policy.thread_bridge import (
     build_default_thread_bridge_policy,
     normalize_thread_bridge_policy,
@@ -80,7 +81,9 @@ def load_project_profile(path: Path, *, project_root: Path | None = None) -> dic
     try:
         size = candidate.stat().st_size
     except OSError as exc:
-        raise LifecycleError("project-profile-read-failed", "project profile cannot be read", {"path": str(path)}) from exc
+        raise LifecycleError(
+            "project-profile-read-failed", "project profile cannot be read", {"path": str(path)}
+        ) from exc
     if size > MAX_PROFILE_BYTES:
         raise LifecycleError(
             "project-profile-too-large",
@@ -90,7 +93,9 @@ def load_project_profile(path: Path, *, project_root: Path | None = None) -> dic
     try:
         payload = load_json_object(candidate.read_bytes(), label="project profile")
     except OSError as exc:
-        raise LifecycleError("project-profile-read-failed", "project profile cannot be read", {"path": str(path)}) from exc
+        raise LifecycleError(
+            "project-profile-read-failed", "project profile cannot be read", {"path": str(path)}
+        ) from exc
     return normalize_project_profile(payload, project_root=root, profile_path=candidate)
 
 
@@ -134,9 +139,7 @@ def normalize_project_profile(
     normalized.setdefault("policies", {})
     normalized.setdefault("stages", {})
     if "principles" in normalized:
-        normalized["principles"] = _validate_principles_reference(
-            normalized["principles"], project_root=project_root
-        )
+        normalized["principles"] = _validate_principles_reference(normalized["principles"], project_root=project_root)
     normalized["threadBridge"] = normalize_thread_bridge_policy(normalized.get("threadBridge"))
     normalized.setdefault("productionPromotionClaimed", False)
     return normalized
@@ -150,12 +153,16 @@ def validate_project_profile(
 ) -> dict[str, Any]:
     """Validate portable fields, stage bounds and repository-relative references."""
 
+    # Retain the public keyword for compatibility; validation is rooted at project_root.
+    _ = profile_path
     if not isinstance(profile, dict):
         raise LifecycleError("invalid-project-profile", "project profile must be an object")
     _reject_forbidden_keys(profile)
     unknown = sorted(set(profile) - _PROFILE_KEYS)
     if unknown:
-        raise LifecycleError("project-profile-field-unsupported", "project profile contains unsupported fields", {"fields": unknown})
+        raise LifecycleError(
+            "project-profile-field-unsupported", "project profile contains unsupported fields", {"fields": unknown}
+        )
     if profile.get("schemaVersion") != PROJECT_PROFILE_SCHEMA:
         raise LifecycleError("invalid-project-profile", "unsupported project profile schemaVersion")
     profile_id = _required_string(profile, "profileId")
@@ -176,23 +183,36 @@ def validate_project_profile(
         raise LifecycleError("project-profile-policies-invalid", "policies must be an object")
     unknown_policies = sorted(set(policies) - _POLICY_REFERENCE_KEYS)
     if unknown_policies:
-        raise LifecycleError("project-profile-policy-field-unsupported", "unsupported policy reference", {"fields": unknown_policies})
+        raise LifecycleError(
+            "project-profile-policy-field-unsupported", "unsupported policy reference", {"fields": unknown_policies}
+        )
     non_empty_references = 0
     for key in PROFILE_POLICY_KEYS:
         value = policies.get(key)
         if value is None:
             continue
         non_empty_references += 1
-        _validate_reference(value, field=f"policies.{key}", project_root=project_root, allow_alk=key == "hostModelProfile")
+        _validate_reference(
+            value,
+            field=f"policies.{key}",
+            project_root=project_root,
+            allow_alk=key in {"hostModelProfile", "executionBindings"},
+        )
+        if key == "executionBindings":
+            local_reference({"path": value, "sha256": "0" * 64})
     if non_empty_references > MAX_POLICY_REFERENCES:
-        raise LifecycleError("project-profile-policy-limit", "too many policy references", {"limit": MAX_POLICY_REFERENCES})
+        raise LifecycleError(
+            "project-profile-policy-limit", "too many policy references", {"limit": MAX_POLICY_REFERENCES}
+        )
 
     stages = profile.get("stages", {})
     if not isinstance(stages, dict):
         raise LifecycleError("project-profile-stages-invalid", "stages must be an object")
     unknown_stages = sorted(set(stages) - set(PROJECT_PROFILE_STAGES))
     if unknown_stages:
-        raise LifecycleError("project-profile-stage-unsupported", "stage name is not canonical", {"stages": unknown_stages})
+        raise LifecycleError(
+            "project-profile-stage-unsupported", "stage name is not canonical", {"stages": unknown_stages}
+        )
     if len(stages) > len(PROJECT_PROFILE_STAGES):
         raise LifecycleError("project-profile-stage-limit", "too many stage settings")
     for stage, settings in stages.items():
@@ -236,15 +256,21 @@ def _validate_stage_settings(stage: str, settings: Any, *, project_root: Path | 
         raise LifecycleError("project-profile-stage-invalid", "stage settings must be an object", {"stage": stage})
     unknown = sorted(set(settings) - set(STAGE_SETTING_KEYS))
     if unknown:
-        raise LifecycleError("project-profile-stage-field-unsupported", "unsupported stage setting", {"stage": stage, "fields": unknown})
+        raise LifecycleError(
+            "project-profile-stage-field-unsupported", "unsupported stage setting", {"stage": stage, "fields": unknown}
+        )
     if len(settings) > MAX_STAGE_SETTINGS:
-        raise LifecycleError("project-profile-stage-limit", "stage settings exceed the configured limit", {"stage": stage})
+        raise LifecycleError(
+            "project-profile-stage-limit", "stage settings exceed the configured limit", {"stage": stage}
+        )
     if "mode" in settings:
         _require_value_enum(settings["mode"], "mode", PROJECT_PROFILE_MODES, stage=stage)
     if "risk" in settings:
         _require_value_enum(settings["risk"], "risk", PROJECT_PROFILE_RISKS, stage=stage)
     if "modelClass" in settings:
         _require_value_enum(settings["modelClass"], "modelClass", PROJECT_PROFILE_MODEL_CLASSES, stage=stage)
+    if "executionBindingRefs" in settings:
+        validate_binding_refs(settings["executionBindingRefs"])
     if "reviewMesh" in settings:
         _require_value_enum(settings["reviewMesh"], "reviewMesh", _REVIEW_MESH_VALUES, stage=stage)
     _bounded_int(settings, "minReviewers", minimum=0, maximum=16, stage=stage)
@@ -252,7 +278,9 @@ def _validate_stage_settings(stage: str, settings: Any, *, project_root: Path | 
     _bounded_int(settings, "maxInvocations", minimum=1, maximum=100, stage=stage)
     _bounded_int(settings, "maxWallSeconds", minimum=1, maximum=86400, stage=stage)
     if "guidanceRef" in settings:
-        _validate_reference(settings["guidanceRef"], field=f"stages.{stage}.guidanceRef", project_root=project_root, allow_alk=False)
+        _validate_reference(
+            settings["guidanceRef"], field=f"stages.{stage}.guidanceRef", project_root=project_root, allow_alk=False
+        )
 
 
 def _validate_reference(value: Any, *, field: str, project_root: Path | None, allow_alk: bool) -> str:
@@ -273,7 +301,9 @@ def _validate_reference(value: Any, *, field: str, project_root: Path | None, al
         candidate = root.joinpath(PurePosixPath(normalized))
         resolved = candidate.resolve(strict=False)
         if not _is_relative_to(resolved, root):
-            raise LifecycleError("project-profile-reference-escape", f"{field} escapes the project root", {"field": field})
+            raise LifecycleError(
+                "project-profile-reference-escape", f"{field} escapes the project root", {"field": field}
+            )
         _reject_symlink_components(root, candidate, field=field)
     return normalized
 
@@ -288,8 +318,14 @@ def _validate_principles_reference(value: Any, *, project_root: Path | None) -> 
         )
     path = _validate_reference(value.get("path"), field="principles.path", project_root=project_root, allow_alk=False)
     digest = value.get("digest")
-    if not isinstance(digest, str) or len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
-        raise LifecycleError("project-profile-principles-digest-invalid", "principles.digest must be a lowercase SHA-256 digest")
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
+        raise LifecycleError(
+            "project-profile-principles-digest-invalid", "principles.digest must be a lowercase SHA-256 digest"
+        )
     return {"path": path, "digest": digest, "sourceOfTruth": False}
 
 
@@ -311,9 +347,13 @@ def _reject_symlink_components(root: Path, candidate: Path, *, field: str) -> No
         if current.resolve(strict=False) == root_resolved:
             break
         if current.is_symlink():
-            raise LifecycleError("project-profile-reference-symlink", f"{field} contains a symlink component", {"field": field})
+            raise LifecycleError(
+                "project-profile-reference-symlink", f"{field} contains a symlink component", {"field": field}
+            )
         if current.parent == current:
-            raise LifecycleError("project-profile-reference-escape", f"{field} escapes the project root", {"field": field})
+            raise LifecycleError(
+                "project-profile-reference-escape", f"{field} escapes the project root", {"field": field}
+            )
         current = current.parent
 
 
@@ -331,7 +371,9 @@ def _reject_forbidden_keys(value: Any) -> None:
             if isinstance(key, str):
                 compact = "".join(character for character in key.lower() if character.isalnum())
                 if compact in _FORBIDDEN_KEYS:
-                    raise LifecycleError("project-profile-sensitive-field", "project profile contains a sensitive field", {"field": key})
+                    raise LifecycleError(
+                        "project-profile-sensitive-field", "project profile contains a sensitive field", {"field": key}
+                    )
             _reject_forbidden_keys(nested)
     elif isinstance(value, list):
         for nested in value:

@@ -12,6 +12,7 @@ from agent_lifecycle.contracts.ownership_paths import require_manifest_authority
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.freeze import verify_plan_lock_envelope
 from agent_lifecycle.host_protocol.capabilities import validate_capability_manifest
+from agent_lifecycle.model_routing.stage_bindings import availability_probe_only
 from agent_lifecycle.policy.execution_strategy import (
     POLICY_INPUT_IDENTITY_SCHEMA,
     PROJECT_PROFILE_ABSENT_DIGEST,
@@ -76,6 +77,7 @@ def start_task(
         manifest, lock, verification = _current_plan_envelope(root, state)
         if verification.get("manifestHash") != state["planDigest"] or lock.get("manifestHash") != state["planDigest"]:
             raise LifecycleError("a5-context-invalid", "Current plan identity is not verified")
+        availability_probe_only(manifest, task_id)
         registry = None
         if "immutableInput" in manifest:
             registry = read_json_object(
@@ -258,6 +260,7 @@ def _load_task_execution_strategy(
         capability_manifest_path=inputs["capabilityManifestPath"],
         project_profile_path=inputs["projectProfilePath"],
         repository_root=root,
+        stage_binding=strategy.get("stageBinding"),
         source_usage_context=load_source_usage_context(
             root,
             manifest,
@@ -486,6 +489,8 @@ def _apply_task_execution_strategy(
         "modelRoute": dict(route),
     }
     source_usage = source_decisions.get("sourceUsagePolicy")
+    if "stageBinding" in strategy:
+        task["executionStrategy"]["stageBinding"] = dict(strategy["stageBinding"])
     if source_usage is not None:
         task["executionStrategy"]["sourceUsagePolicyDigest"] = source_usage
         task["executionStrategy"]["usageMode"] = strategy["usageEvidence"].get("usageMode")

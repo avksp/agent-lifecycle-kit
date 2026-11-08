@@ -38,6 +38,14 @@ class UnifiedStartContractTests(unittest.TestCase):
         for code in ['codex-exact-start-uncertain', 'local-launch-start-uncertain']:
             error = LifecycleError(code, 'possible child start', {'costStatus': 'UNAVAILABLE'})
             with self.subTest(code=code), patch.object(
+                unified_start,
+                'read_json_object',
+                return_value={},
+            ), patch.object(
+                unified_start,
+                'package_root',
+                return_value=Path.cwd(),
+            ), patch.object(
                     unified_start, 'launch_from_local_profile', side_effect=error):
                 with self.assertRaises(LifecycleError) as raised:
                     unified_start._launch_managed_receipt(adapter_id='codex', mode='implement',

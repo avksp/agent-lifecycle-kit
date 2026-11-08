@@ -31,6 +31,7 @@ def add_workflow_task_parsers(
 ) -> None:
     """Register task, snapshot, validation and budget transition parsers."""
 
+    add_source_usage_prepare_parser(workflow_sub)
     workflow_task = workflow_sub.add_parser("task-start")
     workflow_task.add_argument("--state", required=True)
     workflow_task.add_argument("--task", required=True)
@@ -90,6 +91,28 @@ def add_workflow_task_parsers(
     workflow_budget.add_argument("--reason", required=True)
     workflow_budget_policy = workflow_sub.add_parser("budget-policy-check")
     workflow_budget_policy.add_argument("--policy", required=True)
+
+
+def add_source_usage_prepare_parser(workflow_sub: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = workflow_sub.add_parser("source-usage-prepare")
+    parser.add_argument("--phase", required=True, choices=["opening", "admission", "receipt"])
+    for name in (
+        "input",
+        "owner-bindings",
+        "opening-out",
+        "out",
+        "state",
+        "manifest",
+        "lock",
+        "task",
+        "operation-id",
+        "source-revision",
+        "actor-id",
+        "expected-head-sha256",
+        "window",
+    ):
+        parser.add_argument("--" + name)
+    parser.add_argument("--expected-revision", type=int)
 
 
 __all__ = ["add_strategy_adoption_args", "add_workflow_task_parsers"]

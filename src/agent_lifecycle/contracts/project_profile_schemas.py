@@ -48,6 +48,7 @@ PROFILE_POLICY_KEYS = (
     "riskPolicy",
     "baselineProfile",
     "hostModelProfile",
+    "executionBindings",
 )
 
 STAGE_SETTING_KEYS = (
@@ -60,6 +61,7 @@ STAGE_SETTING_KEYS = (
     "maxInvocations",
     "maxWallSeconds",
     "guidanceRef",
+    "executionBindingRefs",
 )
 
 _DIGEST = {"type": "string", "minLength": 64, "maxLength": 64}
@@ -87,6 +89,13 @@ _STAGE_SETTINGS = {
         "mode": {"enum": list(PROJECT_PROFILE_MODES)},
         "risk": {"enum": list(PROJECT_PROFILE_RISKS)},
         "modelClass": {"enum": list(PROJECT_PROFILE_MODEL_CLASSES)},
+        "executionBindingRefs": {
+            "type": "array",
+            "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": True,
+        },
         "reviewMesh": {"enum": ["off", *REVIEW_MESH_MODE_IDS]},
         "minReviewers": {"type": "integer", "minimum": 0, "maximum": 16},
         "maxAttempts": {"type": "integer", "minimum": 1, "maximum": 10},

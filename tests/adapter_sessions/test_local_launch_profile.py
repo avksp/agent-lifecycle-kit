@@ -5,7 +5,7 @@ import sys
 import tempfile
 import time
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 from agent_lifecycle.adapter_sessions import launch_preflight, managed_process
 from agent_lifecycle.adapter_sessions.immutable_input import current_managed_invocation
 from agent_lifecycle.adapter_sessions.local_launch_profile import (
+    MAX_EXECUTABLE_IDENTITY_BYTES,
     build_executable_identity,
     load_local_launch_profile,
     render_local_launch_argv,
@@ -28,6 +29,30 @@ FIXTURES = ROOT / "tests/adapter_sessions/fixtures/local_launch_profiles"
 
 
 class LocalLaunchProfileTests(unittest.TestCase):
+    def test_bounded_identity_accepts_current_cli_capacity_and_retains_ceiling(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            executable = Path(tmp) / "codex"
+            executable.write_bytes(b"binary")
+            profile = {"executable": str(executable)}
+            for limit in (64 * 1024 * 1024, MAX_EXECUTABLE_IDENTITY_BYTES):
+                with self.subTest(limit=limit):
+                    identity = build_executable_identity(profile, max_executable_bytes=limit)
+                    self.assertEqual(identity["status"], "PASS")
+                    self.assertEqual(identity["executableBytes"], 6)
+            for limit in (True, 0, 1, MAX_EXECUTABLE_IDENTITY_BYTES + 1):
+                with self.subTest(refused_limit=limit):
+                    identity = build_executable_identity(profile, max_executable_bytes=limit, strict=False)
+                    self.assertEqual(identity["status"], "UNAVAILABLE")
+                    self.assertIsNone(identity["executableContentSha256"])
+
+    def test_receipt_profile_projection_redacts_local_model_and_effort(self) -> None:
+        from agent_lifecycle.adapter_sessions.local_launch_profile import local_profile_summary, local_receipt_argv
+
+        profile = {"executable": "codex", "argvTemplate": ["exec", "--model", "private-model", "--config", 'model_reasoning_effort="private-effort"']}
+        for projection in (local_profile_summary(profile), local_receipt_argv(profile)):
+            self.assertNotIn("private-model", json.dumps(projection))
+            self.assertNotIn("private-effort", json.dumps(projection))
+
     def test_managed_receipt_uses_observed_no_start(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             context = _launch_context(Path(tmp), Mock(return_value={
@@ -73,16 +98,15 @@ class LocalLaunchProfileTests(unittest.TestCase):
                     launch_preflight, 'verify_fresh_task_gate'), patch.object(
                     launch_preflight, 'claim_attempt_start'), patch.object(
                     launch_preflight, 'record_uncertain_attempt') as uncertain, patch.object(
-                    launch_preflight, 'cleanup_prestart_raw') as cleanup:
-                with self.assertRaises(LifecycleError) as raised:
-                    _exact_launch(context, prepared, time.monotonic_ns() + 5_000_000_000)
+                    launch_preflight, 'cleanup_prestart_raw') as cleanup, self.assertRaises(LifecycleError) as raised:
+                _exact_launch(context, prepared, time.monotonic_ns() + 5_000_000_000)
             self.assertEqual(raised.exception.code, 'codex-exact-start-uncertain')
             uncertain.assert_called_once()
             cleanup.assert_not_called()
             self.assertEqual(raw.read_bytes(), b'private input')
 
     def test_original_deadline_uses_earlier_run_or_attempt_without_rounding_up(self) -> None:
-        observed = datetime(2026, 10, 5, tzinfo=timezone.utc)
+        observed = datetime(2026, 10, 5, tzinfo=UTC)
         for run_left, attempt_left in [(1.25, 9.0), (9.0, 1.25)]:
             state = {'runDeadlineAt': (observed + timedelta(seconds=run_left)).isoformat()}
             task = {'attemptDeadlineAt': (observed + timedelta(seconds=attempt_left)).isoformat()}
@@ -93,7 +117,7 @@ class LocalLaunchProfileTests(unittest.TestCase):
                 self.assertEqual(launch_preflight._original_attempt_deadline(state, task), 1_250_000_100)
 
     def test_original_deadline_refuses_missing_stale_or_non_utc_authority(self) -> None:
-        future = (datetime.now(timezone.utc) + timedelta(seconds=5)).isoformat()
+        future = (datetime.now(UTC) + timedelta(seconds=5)).isoformat()
         for deadline in [None, 'invalid', '2020-01-01T00:00:00Z', '2099-01-01T00:00:00', '2099-01-01T00:00:00+03:00']:
             with self.subTest(deadline=deadline), self.assertRaises(LifecycleError) as raised:
                 launch_preflight._original_attempt_deadline(
@@ -113,7 +137,7 @@ class LocalLaunchProfileTests(unittest.TestCase):
             prepared = _prepared_launch(root)
             prepared['argv'] = [sys.executable, '-c', 'import sys,time;sys.stdin.read();time.sleep(3)']
             bound = _bound_launch_context(context, root)
-            end = (datetime.now(timezone.utc) + timedelta(seconds=0.3)).isoformat()
+            end = (datetime.now(UTC) + timedelta(seconds=0.3)).isoformat()
             deadline = launch_preflight._original_attempt_deadline(
                 {'runDeadlineAt': end}, {'attemptDeadlineAt': end})
             started = time.monotonic()
@@ -189,7 +213,7 @@ class LocalLaunchProfileTests(unittest.TestCase):
             context, args, _ = _bound_launch_context(context, root)
             state = json.loads(args['state_path'].read_text())
             # Start the deadline fixture after unrelated Git/bootstrap setup.
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             task = state['tasks'][0]
             task['attemptDeadlineAt'] = (now + timedelta(seconds=30)).isoformat()
             state['runDeadlineAt'] = (now + timedelta(seconds=60)).isoformat()
@@ -383,7 +407,7 @@ class R1054OwnedCleanupTests(unittest.TestCase):
         for dispatched in (False,True):
             with self.subTest(dispatched=dispatched), tempfile.TemporaryDirectory() as tmp:
                 root=Path(tmp);context=_launch_context(root,run_process);context.profile['executable']=sys.executable
-                context,args,current=_bound_launch_context(context,root);state=json.loads(args['state_path'].read_text());now=datetime.now(timezone.utc)
+                context,args,current=_bound_launch_context(context,root);state=json.loads(args['state_path'].read_text());now=datetime.now(UTC)
                 state['tasks'][0]['attemptDeadlineAt']=(now+timedelta(seconds=30)).isoformat();state['runDeadlineAt']=(now+timedelta(seconds=60)).isoformat();args['state_path'].write_text(json.dumps(state))
                 prepared=_prepared_launch(root);raw=root/'sealed.raw';raw.write_bytes(b'owned private input');prepared['startReceiptPath'].write_text('{"stdinStatus":"PENDING"}')
                 if dispatched:prepared['startReceiptPath'].with_name('attempt-result-dispatched.json').write_text('{"status":"START_UNCERTAIN"}')

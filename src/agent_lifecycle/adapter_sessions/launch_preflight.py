@@ -82,6 +82,7 @@ from agent_lifecycle.adapter_sessions.qualification import (
     shipped_profile_digest,
     write_qualification_receipt,
 )
+from agent_lifecycle.adapter_sessions.stage_launch import guarded_stage_context, stage_launch_receipt
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.preparation_policy import PreparationAdmission
 from agent_lifecycle.freeze import verify_plan_package_integrity
@@ -280,6 +281,7 @@ def launch_from_local_profile(
     immutable_input_request: dict[str, Any] | None = None,
     immutable_input_context: dict[str, Any] | None = None,
     preparation: PreparationAdmission | None = None,
+    stage_binding: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Select one local launch operation after loading and validating its profile."""
 
@@ -342,17 +344,9 @@ def launch_from_local_profile(
         )
     try:
         request = require_no_strong_protection(immutable_input_request, expected_protection="NONE")
-        if operation not in {"preflight", "planningTask", "managedTask"}:
-            raise LifecycleError("a5-context-invalid", "Unknown launch operation")
-        if operation == "preflight" and (
-            immutable_input_context is not None
-            or task_text is not None
-            or task_id is not None
-            or state_path is not None
-            or manifest_path is not None
-            or lock_path is not None
-        ):
-            raise LifecycleError("a5-context-invalid", "Version-only preflight cannot carry a task context")
+        _validate_operation_context(
+            operation, (immutable_input_context, task_text, task_id, state_path, manifest_path, lock_path)
+        )
     except LifecycleError as exc:
         blockers = _no_start_cleanup_blockers(context.root, input_request, [{"code": exc.code, "message": exc.message}])
         if operation == "planningTask":
@@ -375,7 +369,16 @@ def launch_from_local_profile(
         task_text,
         immutable_input_context,
     )
-    return _dispatch_local_profile_operation(
+    if stage_binding is not None:
+        context = guarded_stage_context(
+            context,
+            stage_binding,
+            operation=operation,
+            route_id=route_id,
+            requested_claim=requested_claim,
+            input_request=input_request,
+        )
+    receipt = _dispatch_local_profile_operation(
         context,
         operation,
         session_id,
@@ -398,6 +401,14 @@ def launch_from_local_profile(
         task_text,
         preparation,
     )
+    return stage_launch_receipt(receipt, stage_binding) if stage_binding is not None else receipt
+
+
+def _validate_operation_context(operation: str, task_context: tuple[Any, ...]) -> None:
+    if operation not in {"preflight", "planningTask", "managedTask"}:
+        raise LifecycleError("a5-context-invalid", "Unknown launch operation")
+    if operation == "preflight" and any(value is not None for value in task_context):
+        raise LifecycleError("a5-context-invalid", "Version-only preflight cannot carry a task context")
 
 
 def _load_context(
@@ -1034,7 +1045,12 @@ def _run_managed_process(
         validate_current_invocation(immutable_input_context, immutable_input_request, current_context=current)
         state = read_json_object(state_path, label="workflow state")
         validate_task_risk_profile(
-            state, _state_task(state, task_id), risk_profile, operation_id=operation_id, source_revision=source_revision
+            state,
+            _state_task(state, task_id),
+            risk_profile,
+            operation_id=operation_id,
+            source_revision=source_revision,
+            repository_root=context.root,
         )
         argv = render_local_launch_argv(context.profile, bindings)
     except (LifecycleError, OSError, ValueError) as caught:
@@ -1122,5 +1138,12 @@ def _managed_authority(
         immutable_input_request,
         current_context=current,
     )
-    validate_task_risk_profile(state, task, risk_profile, operation_id=operation_id, source_revision=source_revision)
+    validate_task_risk_profile(
+        state,
+        task,
+        risk_profile,
+        operation_id=operation_id,
+        source_revision=source_revision,
+        repository_root=context.root,
+    )
     return manifest, state, task, current, a5_inputs

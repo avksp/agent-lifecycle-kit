@@ -32,6 +32,14 @@ def _add_operator_claim_argument(parser: argparse.ArgumentParser) -> None:
 def _add_start_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     start = subparsers.add_parser("start", help="start or resume an ALK lifecycle action")
     start.add_argument("--adapter")
+    start.add_argument(
+        "--stage",
+        choices=["intake", "research", "planning", "review", "implementation", "audit", "finalization"],
+        help="lifecycle stage; audit/finalization require review mode",
+    )
+    start.add_argument(
+        "--binding", help="pin an approved member of the project stage order, intersected with frozen floors"
+    )
     action = start.add_mutually_exclusive_group(required=True)
     action.add_argument("--file", "--task-file", dest="task_file")
     action.add_argument("--text", "--task-text", dest="task_text")

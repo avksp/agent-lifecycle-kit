@@ -220,3 +220,61 @@ reference](cli.md).
 
 For durable project context and controlled changes between plan revisions, see
 [Project principles and plan deltas](project-principles-and-plan-deltas.md).
+
+## Bind a stage to local execution profiles
+
+Set optional `policies.executionBindings` to the contained local registry and
+give each opted-in stage an ordered `executionBindingRefs` list. For example,
+the local settings can include:
+
+```json
+{
+  "policies": {"executionBindings": ".alk/host-launch/stage-bindings-RAW_SHA256.json"},
+  "stages": {"implementation": {"executionBindingRefs": ["primary", "reserve"]}}
+}
+```
+
+This is a fragment, not a complete project profile. `model setup --manual --input`
+validates the full project-profile/registry pair; explicit `--apply` saves it with
+a checked current profile digest. See [model routing](model-routing.md#stage-execution-bindings)
+for its input members, discovery, availability and first-probe sequence.
+
+`start --stage implementation` selects that stage. Optional `--binding primary`
+can pin a member of the approved list; it cannot introduce another model or
+weaken the frozen risk, quality, data or independence floor. Without an opt-in
+list, existing explicit/default behavior remains available. Keep the registry,
+host model names, effort, IDs and launch argv local; portable receipts use digests.
+
+Select before adopting an attempt. A changed profile does not change an active
+attempt or the current coordinator model. Uncertain dispatch requires reconciliation,
+not switching to a reserve. Audit/finalization stage settings still require their
+independent lifecycle gates. User-wide defaults are not changed by project setup.
+
+A local proposal does not adopt an attempt. Prepare it with the existing
+`start --strategy-out` route, then apply `workflow task-start --strategy` with
+its complete current inputs. The later launch checks the exact stored binding
+identity. This keeps native task authorization separate from local preferences.
+
+## Probe-only task purpose and source accounting
+
+A project profile selects eligible bindings. It does not select a source-only
+accounting exception or change the frozen task purpose. A generic declared source
+policy belongs to the reviewed plan's `runtimePolicy.sourceUsageCompletion`.
+
+A frozen task may declare `executionPolicy.availabilityProbeOnly: true`. For that
+exact authorized, dependency-ready task, `start --strategy-out` can prepare its
+strategy before a positive availability observation exists. This preparation starts
+no model and does not adopt the task. It requires an explicit approved binding;
+`--launch` is not allowed on this preparation path. Canonical `workflow task-start`
+independently checks the strategy and matching risk inputs. A v2 risk profile alone
+remains insufficient.
+
+The later explicit `model availability --probe` must use the persisted binding,
+operation and attempt. A probe-only task cannot use ordinary managed dispatch, even
+after the probe succeeds. The following ordinary task needs fresh availability
+before strategy preparation. Changing a local profile or a caller's purpose field
+cannot rewrite an active attempt or grant this exception.
+
+See [model routing](model-routing.md#declared-source-completion-when-complete-host-usage-is-unavailable)
+for the optional declared source receipt and its limits.
+
