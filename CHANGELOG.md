@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.44.1 - 2026-11-09
+
+- Close the owned in-memory SQLite schema template after commit or rollback, while keeping caller-owned connections open.
+- Retain bounded, source-free failure diagnostics in concurrent coordinator-claim tests without weakening their assertions or safety checks.
+- Synchronize installation guides and publication metadata for the patch release.
+
 ## 2.44.0 - 2026-11-07
 
 ### Added
