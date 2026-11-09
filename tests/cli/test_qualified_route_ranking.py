@@ -88,7 +88,8 @@ class QualifiedRouteRankingCliTests(unittest.TestCase):
         self.assertEqual([row["metricTotal"] for row in report["ranking"]], [600, 1200])
         self.assertIs(report["productionPromotionClaimed"], False)
         original = (self.cwd / "report.json").read_bytes()
-        self.assertEqual(original, result.stdout)
+        # Windows text stdout uses CRLF; preserve the complete JSON bytes.
+        self.assertEqual(original, result.stdout.replace(b"\r\n", b"\n"))
         repeated = self.call("--request", "request.json", "--out", "report.json")
         self.assertNotEqual(repeated.returncode, 0)
         self.assertEqual(json.loads(repeated.stdout)["code"], "output-already-exists")
