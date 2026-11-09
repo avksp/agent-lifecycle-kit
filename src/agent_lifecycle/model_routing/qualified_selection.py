@@ -209,21 +209,63 @@ def _closed(value: Any, allowed: set[str], required: set[str] | None = None) -> 
 def _bounded_tree(value: Any) -> None:
     pending = [(value, 1)]
     nodes = 0
+    primitive_bytes = 0
     while pending:
         item, depth = pending.pop()
         nodes += 1
         if nodes > 12_000 or depth > 16:
             _invalid()
         if isinstance(item, dict):
-            if any(not isinstance(key, str) for key in item):
-                _invalid()
+            _pending_bound(nodes, len(pending), len(item))
+            for key in item:
+                if not isinstance(key, str):
+                    _invalid()
+                primitive_bytes += _primitive_size(key)
             pending.extend((child, depth + 1) for child in item.values())
         elif isinstance(item, list):
+            _pending_bound(nodes, len(pending), len(item))
             pending.extend((child, depth + 1) for child in item)
-        elif type(item) not in (str, int, bool, type(None)):
+        else:
+            primitive_bytes += _primitive_size(item)
+        if primitive_bytes > MAX_INPUT_BYTES:
             _invalid()
-    if len(canonical_bytes(value)) > MAX_INPUT_BYTES:
+    try:
+        encoded_size = len(canonical_bytes(value))
+    except LifecycleError as exc:
+        if exc.code == "json-output-invalid":
+            _invalid()
+        raise
+    if encoded_size > MAX_INPUT_BYTES:
         _invalid()
+
+
+def _pending_bound(nodes: int, pending: int, children: int) -> None:
+    if nodes + pending + children > 12_000:
+        _invalid()
+
+
+def _primitive_size(value: Any) -> int:
+    if type(value) is str:
+        if len(value) > MAX_INPUT_BYTES:
+            _invalid()
+        try:
+            return len(value.encode("utf-8")) + 2
+        except UnicodeError:
+            _invalid()
+    elif type(value) is int:
+        # More than four bits per admitted byte cannot fit decimal JSON.
+        # Retain runtime-supported integers within the input byte boundary.
+        if value.bit_length() > MAX_INPUT_BYTES * 4:
+            _invalid()
+        try:
+            return len(str(value))
+        except ValueError:
+            _invalid()
+    elif type(value) in (bool, type(None)):
+        return len(str(value))
+    else:
+        _invalid()
+    return 0
 
 
 def _digest(value: Any) -> bool:
@@ -246,6 +288,7 @@ def _validate_request_shape(request: dict[str, Any]) -> None:
     _closed(request["modelRequest"], _REQUEST_KEYS)
     _closed(request["routingProfile"], _PROFILE_KEYS)
     _request_options_shape(request["modelRequest"])
+    _routing_profile_types(request["routingProfile"])
     if request["metric"] not in ("tokens", "elapsedMilliseconds"):
         _invalid()
     if not _integer(request["maxAgeSeconds"]) or not 1 <= request["maxAgeSeconds"] <= 604_800:
@@ -297,6 +340,123 @@ def _request_options_shape(request: dict[str, Any]) -> None:
     for field in ("riskFlags", "userPolicy"):
         if any(type(value) is not bool for value in request.get(field, {}).values()):
             _invalid()
+    _model_request_types(request)
+
+
+def _typed_fields(
+    payload: dict[str, Any],
+    fields: tuple[str, ...],
+    expected: type,
+    *,
+    nullable: bool = False,
+) -> None:
+    """Check JSON types only; delegated owners retain enum and policy rules."""
+    for field in fields:
+        if field not in payload:
+            continue
+        value = payload[field]
+        if nullable and value is None:
+            continue
+        if type(value) is not expected:
+            _invalid()
+
+
+def _string_list_types(payload: dict[str, Any], fields: tuple[str, ...]) -> None:
+    _typed_fields(payload, fields, list)
+    for field in fields:
+        if field in payload and any(type(item) is not str for item in payload[field]):
+            _invalid()
+
+
+def _mapping_value_types(payload: dict[str, Any], expected: type) -> None:
+    if any(type(value) is not expected for value in payload.values()):
+        _invalid()
+
+
+def _model_request_types(request: dict[str, Any]) -> None:
+    _typed_fields(
+        request,
+        (
+            "schemaVersion",
+            "operationId",
+            "phase",
+            "sddTier",
+            "targetContextWindow",
+            "routingPolicy",
+            "budgetClass",
+        ),
+        str,
+    )
+    _typed_fields(request, ("lifecycleMode", "qualityFloor"), str, nullable=True)
+    _typed_fields(request, ("maxBillableTokens",), int, nullable=True)
+    _string_list_types(request, ("capabilityRequirements",))
+    signals = request.get("failureSignals", {})
+    _typed_fields(
+        signals,
+        (
+            "failureClass",
+            "confidence",
+            "validationStatus",
+            "flakeStatus",
+            "previousModelClass",
+            "classificationDigest",
+        ),
+        str,
+        nullable=True,
+    )
+    _typed_fields(signals, ("retryCount", "remediationLoops"), int)
+    _string_list_types(signals, ("evidenceIds",))
+
+
+def _routing_profile_types(profile: dict[str, Any]) -> None:
+    _typed_fields(profile, ("schemaVersion", "profileId"), str)
+    _string_list_types(profile, ("classes", "criticalReviewPhases"))
+    _typed_fields(profile, ("phaseRules", "tokenBudgets", "policyPresets"), dict)
+    _mapping_value_types(profile.get("phaseRules", {}), str)
+    _mapping_value_types(profile.get("policyPresets", {}), dict)
+    budgets = profile.get("tokenBudgets", {})
+    _mapping_value_types(budgets, dict)
+    for values in budgets.values():
+        _mapping_value_types(values, int)
+    _typed_fields(profile, ("progressiveEscalation",), dict, nullable=True)
+    progressive = profile.get("progressiveEscalation")
+    if progressive is not None:
+        _typed_fields(progressive, ("enabled",), bool)
+        _string_list_types(progressive, ("ladder", "failureClasses", "evidenceTriggers"))
+
+
+def _host_profile_types(profile: dict[str, Any]) -> None:
+    _typed_fields(profile, ("schemaVersion", "profileId", "host", "budgetModeDefault"), str)
+    _typed_fields(profile, ("fallbackPolicies", "redactionPolicy"), dict)
+    fallbacks = profile.get("fallbackPolicies", {})
+    _string_list_types(fallbacks, tuple(fallbacks))
+    _typed_fields(profile.get("redactionPolicy", {}), ("providerModel",), str)
+
+
+def _binding_types(binding: dict[str, Any]) -> None:
+    _typed_fields(
+        binding,
+        (
+            "providerModel",
+            "contextWindow",
+            "jsonReliability",
+            "toolUse",
+            "usageAccounting",
+            "dataPolicy",
+            "calibrationStatus",
+        ),
+        str,
+    )
+    _typed_fields(binding, ("reviewStrategy",), str, nullable=True)
+    _string_list_types(
+        binding,
+        (
+            "capabilities",
+            "allowedForTiers",
+            "allowedForPhases",
+            "disallowedForRisks",
+        ),
+    )
 
 
 def _candidate_shape(candidate: Any) -> None:
@@ -311,10 +471,12 @@ def _candidate_shape(candidate: Any) -> None:
     if not _digest(candidate["hostBindingDigest"]):
         _invalid()
     _closed(candidate["hostProfile"], _HOST_KEYS)
+    _host_profile_types(candidate["hostProfile"])
     bindings = candidate["hostProfile"].get("bindings", {})
     _closed(bindings, ALLOWED_MODEL_CLASSES - {"no-model"})
     for binding in bindings.values():
         _closed(binding, _BINDING_KEYS)
+        _binding_types(binding)
     receipts = candidate["receipts"]
     if not isinstance(receipts, list) or len(receipts) > 64:
         _invalid()
@@ -384,6 +546,21 @@ def _structured_shape(value: Any) -> None:
             "measurementDigest",
         },
     )
+    _typed_fields(
+        value,
+        (
+            "schemaVersion",
+            "operationId",
+            "mode",
+            "selectionDigest",
+            "requiredSchemaDigest",
+            "validationDigest",
+            "measurementDigest",
+        ),
+        str,
+    )
+    _typed_fields(value, ("valid", "evidenceComplete"), bool)
+    _typed_fields(value, ("repairAttempts", "maxRepairAttempts"), int)
     if "fixtureResults" in value:
         _closed(value["fixtureResults"], {"positive", "boundary", "malformed"})
 

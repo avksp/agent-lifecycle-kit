@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from agent_lifecycle.benchmarks import build_benchmark_run_receipt
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.model_routing.profiles import FAILURE_CLASSES
 from agent_lifecycle.model_routing.qualified_selection import rank_qualified_routes
 
 NOW = datetime(2026, 11, 9, 18, 0, tzinfo=UTC)
@@ -149,6 +150,178 @@ def build_unit_request(*, observed: datetime = NOW) -> dict:
         request["candidates"].append(candidate)
     refresh_unit_receipts(request)
     return request
+
+
+def build_type_boundary_request() -> dict:
+    """Valid UNIT_ONLY envelope with optional delegated fields made explicit."""
+    request = build_unit_request()
+    request["modelRequest"].update(
+        budgetClass="normal",
+        maxBillableTokens=10000,
+        lifecycleMode="standard",
+        qualityFloor="standard",
+        failureSignals={
+            "failureClass": "edge-case",
+            "confidence": "HIGH",
+            "validationStatus": "PASS",
+            "flakeStatus": "stable-pass",
+            "previousModelClass": "standard-code",
+            "classificationDigest": "a" * 64,
+            "retryCount": 0,
+            "remediationLoops": 0,
+            "evidenceIds": ["UNIT_ONLY"],
+        },
+    )
+    request["routingProfile"].update(
+        phaseRules={"task-implementation": "standard-code"},
+        tokenBudgets={"S1": {"normal": 10000}},
+        policyPresets={"balanced": {}},
+        progressiveEscalation={
+            "enabled": True,
+            "ladder": [
+                "no-model",
+                "local-small-packet",
+                "standard-implementation",
+                "stronger-review",
+                "optional-cross-check",
+            ],
+            "failureClasses": sorted(FAILURE_CLASSES),
+            "evidenceTriggers": ["UNIT_ONLY"],
+        },
+    )
+    for candidate in request["candidates"]:
+        profile = candidate["hostProfile"]
+        profile.update(
+            schemaVersion="agent-host-model-selection-profile.v1",
+            budgetModeDefault="subscription",
+            fallbackPolicies={"standard-code": []},
+            redactionPolicy={"providerModel": "hash"},
+        )
+        profile["bindings"]["standard-code"].update(
+            allowedForPhases=["task-implementation"],
+            disallowedForRisks=[],
+            reviewStrategy="large-context-or-sliced-review",
+        )
+    structured = {
+        "schemaVersion": "agent-structured-result-measurement.v1",
+        "operationId": "UNIT_ONLY",
+        "mode": "SCHEMA_ENFORCED",
+        "valid": True,
+        "repairAttempts": 0,
+        "maxRepairAttempts": 2,
+        "selectionDigest": "a" * 64,
+        "requiredSchemaDigest": "b" * 64,
+        "validationDigest": "c" * 64,
+        "fixtureResults": {"positive": True, "boundary": True, "malformed": True},
+        "evidenceComplete": True,
+    }
+    structured["measurementDigest"] = canonical_digest(structured)
+    request["candidates"][0]["receipts"][0]["measurements"]["structuredResult"] = structured
+    refresh_unit_receipts(request, bindings=True)
+    return request
+
+
+def replace_unit_value(request: dict, path: tuple, value: object) -> None:
+    parent = request
+    for key in path[:-1]:
+        parent = parent[key]
+    parent[path[-1]] = value
+
+
+TYPE_HOST = ("candidates", 0, "hostProfile")
+TYPE_BINDING = (*TYPE_HOST, "bindings", "standard-code")
+TYPE_STRUCTURED = ("candidates", 0, "receipts", 0, "measurements", "structuredResult")
+TYPE_SCALAR_PATHS = (
+    *(
+        (*TYPE_STRUCTURED, field)
+        for field in (
+            "schemaVersion",
+            "operationId",
+            "mode",
+            "valid",
+            "repairAttempts",
+            "maxRepairAttempts",
+            "selectionDigest",
+            "requiredSchemaDigest",
+            "validationDigest",
+            "evidenceComplete",
+            "measurementDigest",
+        )
+    ),
+    *(
+        ("modelRequest", field)
+        for field in (
+            "schemaVersion",
+            "operationId",
+            "phase",
+            "sddTier",
+            "targetContextWindow",
+            "routingPolicy",
+            "budgetClass",
+            "maxBillableTokens",
+            "lifecycleMode",
+            "qualityFloor",
+        )
+    ),
+    *(
+        ("modelRequest", "failureSignals", field)
+        for field in (
+            "failureClass",
+            "confidence",
+            "validationStatus",
+            "flakeStatus",
+            "previousModelClass",
+            "classificationDigest",
+            "retryCount",
+            "remediationLoops",
+        )
+    ),
+    ("routingProfile", "schemaVersion"),
+    ("routingProfile", "profileId"),
+    ("routingProfile", "phaseRules", "task-implementation"),
+    ("routingProfile", "tokenBudgets", "S1", "normal"),
+    ("routingProfile", "progressiveEscalation", "enabled"),
+    *((*TYPE_HOST, field) for field in ("schemaVersion", "profileId", "host", "budgetModeDefault")),
+    (*TYPE_HOST, "redactionPolicy", "providerModel"),
+    *(
+        (*TYPE_BINDING, field)
+        for field in (
+            "providerModel",
+            "contextWindow",
+            "jsonReliability",
+            "toolUse",
+            "usageAccounting",
+            "dataPolicy",
+            "calibrationStatus",
+            "reviewStrategy",
+        )
+    ),
+)
+TYPE_LIST_PATHS = (
+    ("modelRequest", "capabilityRequirements"),
+    ("modelRequest", "failureSignals", "evidenceIds"),
+    ("routingProfile", "classes"),
+    ("routingProfile", "criticalReviewPhases"),
+    *(("routingProfile", "progressiveEscalation", field) for field in ("ladder", "failureClasses", "evidenceTriggers")),
+    *(
+        (*TYPE_BINDING, field)
+        for field in ("capabilities", "allowedForTiers", "allowedForPhases", "disallowedForRisks")
+    ),
+    (*TYPE_HOST, "fallbackPolicies", "standard-code"),
+)
+TYPE_OBJECT_PATHS = (
+    ("modelRequest",),
+    ("routingProfile",),
+    *(("modelRequest", field) for field in ("riskFlags", "userPolicy", "failureSignals")),
+    *(("routingProfile", field) for field in ("phaseRules", "tokenBudgets", "policyPresets", "progressiveEscalation")),
+    ("routingProfile", "tokenBudgets", "S1"),
+    ("routingProfile", "policyPresets", "balanced"),
+    TYPE_HOST,
+    (*TYPE_HOST, "bindings"),
+    TYPE_BINDING,
+    (*TYPE_HOST, "fallbackPolicies"),
+    (*TYPE_HOST, "redactionPolicy"),
+)
 
 
 class QualifiedSelectionTests(unittest.TestCase):
@@ -360,6 +533,78 @@ class QualifiedSelectionTests(unittest.TestCase):
         request["candidates"][0]["receipts"][0]["measurements"]["acceptedTaskTotal"]["unexpected"] = 1
         with self.assertRaises(LifecycleError):
             rank_qualified_routes(request, now=NOW)
+
+    def assertInvalidType(self, request: dict) -> None:
+        with self.assertRaises(LifecycleError) as raised:
+            rank_qualified_routes(request, now=NOW)
+        self.assertIs(type(raised.exception), LifecycleError)
+        self.assertEqual(raised.exception.code, "invalid-qualified-ranking-request")
+
+    def test_t11_delegated_scalar_types_are_bounded_errors(self) -> None:
+        for path in TYPE_SCALAR_PATHS:
+            for value in ([], {}):
+                with self.subTest(path=path, value=value):
+                    request = build_type_boundary_request()
+                    replace_unit_value(request, path, value)
+                    self.assertInvalidType(request)
+
+    def test_t11_delegated_list_container_and_element_types(self) -> None:
+        for path in TYPE_LIST_PATHS:
+            for value in ({}, [[]], [{}]):
+                with self.subTest(path=path, value=value):
+                    request = build_type_boundary_request()
+                    replace_unit_value(request, path, value)
+                    self.assertInvalidType(request)
+
+    def test_t11_delegated_object_container_types(self) -> None:
+        for path in TYPE_OBJECT_PATHS:
+            with self.subTest(path=path):
+                request = build_type_boundary_request()
+                replace_unit_value(request, path, [])
+                self.assertInvalidType(request)
+
+    def test_t11_valid_types_preserve_delegated_policy_errors(self) -> None:
+        self.assertEqual(rank_qualified_routes(build_type_boundary_request(), now=NOW)["status"], "RECOMMENDED")
+        request = build_type_boundary_request()
+        replace_unit_value(request, (*TYPE_BINDING, "jsonReliability"), "unsupported")
+        self.assertRefusal(request, "ROUTE_FLOOR_NOT_MET")
+        cases = (
+            (("modelRequest", "targetContextWindow"), "unsupported", "invalid-model-route-request"),
+            (("modelRequest", "failureSignals", "failureClass"), "unsupported", "invalid-model-route-request"),
+            (("routingProfile", "classes"), ["no-model", "unsupported"], "invalid-model-routing-profile"),
+            ((*TYPE_BINDING, "jsonReliability"), "unknown-enum", "invalid-host-model-profile"),
+        )
+        for path, value, code in cases:
+            with self.subTest(path=path):
+                request = build_type_boundary_request()
+                replace_unit_value(request, path, value)
+                with self.assertRaises(LifecycleError) as raised:
+                    rank_qualified_routes(request, now=NOW)
+                self.assertEqual(raised.exception.code, code)
+
+    def test_t11_primitive_encoding_is_bounded_before_serialization(self) -> None:
+        request = build_unit_request()
+        request["modelRequest"]["maxBillableTokens"] = 1 << 5000
+        self.assertEqual(rank_qualified_routes(request, now=NOW)["status"], "RECOMMENDED")
+        request = build_unit_request()
+        request["modelRequest"]["maxBillableTokens"] = 1 << 20000
+        with patch(
+            "agent_lifecycle.model_routing.qualified_selection.canonical_bytes", side_effect=AssertionError("serialize")
+        ):
+            self.assertInvalidType(request)
+        # A reduced byte cap exercises the real API with a small allocation.
+        request = {"schemaVersion": SCHEMA, "unexpected": "x" * 129}
+        with (
+            patch("agent_lifecycle.model_routing.qualified_selection.MAX_INPUT_BYTES", 128),
+            patch(
+                "agent_lifecycle.model_routing.qualified_selection.canonical_bytes",
+                side_effect=AssertionError("serialize"),
+            ),
+        ):
+            self.assertInvalidType(request)
+        request = build_unit_request()
+        request["modelRequest"]["operationId"] = "\ud800"
+        self.assertInvalidType(request)
 
     def test_t12_pure_inputs_unchanged_no_io_or_launch(self) -> None:
         request = build_unit_request()

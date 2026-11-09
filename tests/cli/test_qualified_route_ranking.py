@@ -15,7 +15,11 @@ import unittest
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tests.model_routing.test_qualified_selection import build_unit_request
+from tests.model_routing.test_qualified_selection import (
+    build_type_boundary_request,
+    build_unit_request,
+    replace_unit_value,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "agent-qualified-route-ranking-request.v1"
@@ -113,6 +117,25 @@ class QualifiedRouteRankingCliTests(unittest.TestCase):
         self.assertNotEqual(self.call("--request", "request.json", "--out", "link.json").returncode, 0)
         self.assertNotEqual(self.call("--request", "request.json", "--out", "../escaped.json").returncode, 0)
         self.assertEqual(json.loads((self.cwd / "request.json").read_bytes())["schemaVersion"], SCHEMA)
+
+    def test_t11_nested_type_errors_are_typed_redacted_and_do_not_write(self) -> None:
+        paths = (
+            ("modelRequest", "targetContextWindow"),
+            ("modelRequest", "failureSignals", "confidence"),
+            ("candidates", 0, "hostProfile", "bindings", "standard-code", "calibrationStatus"),
+        )
+        for index, path in enumerate(paths):
+            with self.subTest(path=path):
+                request = build_type_boundary_request()
+                replace_unit_value(request, path, [] if index == 0 else {})
+                self.write_request(request)
+                before = (self.cwd / "request.json").read_bytes()
+                result = self.call("--request", "request.json", "--out", "forbidden.json")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(json.loads(result.stdout)["code"], "invalid-qualified-ranking-request")
+                self.assertFalse((self.cwd / "forbidden.json").exists())
+                self.assertEqual((self.cwd / "request.json").read_bytes(), before)
+                self.assertNotIn(b"UNIT_ONLY-private", result.stdout + result.stderr)
 
     def test_t14_suggestion_stays_data_and_t15_missing_real_evidence_refuses(self) -> None:
         request = build_unit_request(observed=datetime.now(UTC))
