@@ -15,10 +15,20 @@ from agent_lifecycle.benchmarks import (
     validate_benchmark_run_receipt,
 )
 from agent_lifecycle.benchmarks.contracts import load_suite
-from agent_lifecycle.contracts import LifecycleError, read_json_object, write_json_create
+from agent_lifecycle.contracts import (
+    LifecycleError,
+    canonical_bytes,
+    load_json_object,
+    read_json_object,
+    write_json_create,
+)
+from agent_lifecycle.contracts.authority_io import create_authority_bytes, read_authority_bytes
+from agent_lifecycle.model_routing.qualified_selection import MAX_INPUT_BYTES, rank_qualified_routes
 
 
 def dispatch_benchmark(args: argparse.Namespace) -> dict[str, Any]:
+    if args.benchmark_command == "rank-qualified":
+        return _rank_qualified(args)
     if args.benchmark_command == "evaluate":
         payload = evaluate_reference_task(suite_path=Path(args.suite), artifact_path=Path(args.artifact))
     elif args.benchmark_command == "compare":
@@ -63,4 +73,29 @@ def dispatch_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             write_json_create(Path(args.out), payload)
         except FileExistsError as exc:
             raise LifecycleError("output-already-exists", "benchmark output already exists") from exc
+    return payload
+
+
+def _rank_qualified(args: argparse.Namespace) -> dict[str, Any]:
+    """Keep local sensitive input and create-only output within caller authority."""
+    try:
+        raw = read_authority_bytes(
+            Path(args.request),
+            max_bytes=MAX_INPUT_BYTES,
+            root=Path.cwd(),
+        )
+        request = load_json_object(raw, label="qualified route ranking request")
+        payload = rank_qualified_routes(request)
+        if args.out:
+            create_authority_bytes(
+                Path(args.out),
+                canonical_bytes(payload) + b"\n",
+                root=Path.cwd(),
+            )
+    except FileExistsError:
+        raise LifecycleError("output-already-exists", "ranking output already exists") from None
+    except LifecycleError as exc:
+        raise LifecycleError(exc.code, "qualified route ranking request refused") from None
+    except OSError:
+        raise LifecycleError("ranking-io-unavailable", "ranking input or output is unavailable") from None
     return payload
