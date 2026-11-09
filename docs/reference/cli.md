@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.44.1
+python -m pip install agent-lifecycle-kit==2.45.0
 ```
 
 ## Task evidence identity
@@ -1061,3 +1061,9 @@ not generate research, establish global optimality or meter every host call.
 Optional local setup assigns an adapter, model and effort to each stage. Review a proposal before saving it; discovered configuration does not prove model access. An actual probe spends a model call and requires current ALK authorization. See [routing](model-routing.md), [project profiles](project-workflow-profile.md) and [deterministic recipes](../guides/deterministic-workflow-recipes.md).
 
 The current qualified Codex route observes auth.json link and target metadata. It does not read credentials. Missing or unobservable metadata produces UNAVAILABLE. Other authentication routes need separate qualification. A positive observation does not attest account identity or continuous authentication validity.
+
+## Advisory ranking of qualified records
+
+`agent-lifecycle benchmark rank-qualified --request <local.json> [--out <new.json>]` reads a bounded local request. Manual is the default; set `enabled: true` only to request advice. It never launches a host or model, changes a profile or adopts a route.
+
+Use complete, fresh, independently accepted same-host benchmark records. Missing, partial, stale, untrusted or incomparable records return `NO_RECOMMENDATION`. Invalid input produces a bounded error. The explicit trust allowlist proves membership and integrity, not authentic collection. See [the input contract and examples](benchmark-qualification.md#qualified-evidence-ranking) and [routing policy boundaries](model-routing.md). Positive fixtures are `UNIT_ONLY`; live economics and savings remain unqualified.

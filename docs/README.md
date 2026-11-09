@@ -71,7 +71,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.44.1` from
+  `python -m pip install agent-lifecycle-kit==2.45.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)
@@ -116,6 +116,8 @@ updating existing plans and runtime output layouts.
 - [Python quality and contribution checks](guides/contributing-and-quality.md)
 - [CLI error contract](reference/cli-errors.md)
 - [Supported Python API](reference/python-api.md)
+
+For optional economic advice, read [qualified-record ranking](reference/benchmark-qualification.md#qualified-evidence-ranking). Missing or incomparable data returns `NO_RECOMMENDATION`; manual selection remains the default.
 
 ## English documentation
 

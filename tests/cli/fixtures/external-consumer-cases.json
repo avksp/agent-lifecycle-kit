@@ -13,7 +13,8 @@
     "2.42.0",
     "2.43.0",
     "2.44.0",
-    "2.44.1"
+    "2.44.1",
+    "2.45.0"
   ],
   "versionSchema": "agent-lifecycle-version.v1",
   "continuationSchema": "agent-workflow-continuation-receipt.v1",
