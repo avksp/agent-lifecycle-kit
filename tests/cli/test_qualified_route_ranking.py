@@ -56,22 +56,44 @@ class QualifiedRouteRankingCliTests(unittest.TestCase):
     def write_request(self, request: dict) -> None:
         (self.cwd / "request.json").write_text(json.dumps(request), encoding="utf-8")
 
-    def test_t01_actual_manual_omitted_off_and_create_only_output(self) -> None:
+    def test_t01_actual_manual_omitted_off_never_writes(self) -> None:
+        existing = self.cwd / "existing.json"
+        existing.write_bytes(b"preserve existing output\n")
         for enabled in (None, False):
             request = {"schemaVersion": SCHEMA}
             if enabled is not None:
                 request["enabled"] = enabled
             self.write_request(request)
-            result = self.call("--request", "request.json")
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(json.loads(result.stdout)["reasonCodes"], ["MANUAL_DEFAULT"])
-            self.assertEqual(sorted(path.name for path in self.cwd.iterdir()), ["request.json"])
-        output = self.call("--request", "request.json", "--out", "report.json")
-        self.assertEqual(output.returncode, 0, output.stderr)
+            before = (self.cwd / "request.json").read_bytes()
+            for output in (None, "report.json", "existing.json", "missing/report.json"):
+                with self.subTest(enabled=enabled, output=output):
+                    arguments = () if output is None else ("--out", output)
+                    result = self.call("--request", "request.json", *arguments)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(json.loads(result.stdout)["reasonCodes"], ["MANUAL_DEFAULT"])
+                    self.assertEqual(sorted(path.name for path in self.cwd.iterdir()), ["existing.json", "request.json"])
+                    self.assertEqual(existing.read_bytes(), b"preserve existing output\n")
+                    self.assertEqual((self.cwd / "request.json").read_bytes(), before)
+
+    def test_t03_canonical_structured_result_keeps_create_only_output(self) -> None:
+        request = build_type_boundary_request(observed=datetime.now(UTC))
+        measurement = request["candidates"][0]["receipts"][0]["measurements"]["structuredResult"]
+        self.assertIs(measurement["productionPromotionClaimed"], False)
+        self.write_request(request)
+        before = (self.cwd / "request.json").read_bytes()
+        result = self.call("--request", "request.json", "--out", "report.json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["selectedCandidateId"], "cheap")
+        self.assertEqual([row["metricTotal"] for row in report["ranking"]], [600, 1200])
+        self.assertIs(report["productionPromotionClaimed"], False)
         original = (self.cwd / "report.json").read_bytes()
-        self.assertEqual(original, output.stdout)
-        self.assertNotEqual(self.call("--request", "request.json", "--out", "report.json").returncode, 0)
+        self.assertEqual(original, result.stdout)
+        repeated = self.call("--request", "request.json", "--out", "report.json")
+        self.assertNotEqual(repeated.returncode, 0)
+        self.assertEqual(json.loads(repeated.stdout)["code"], "output-already-exists")
         self.assertEqual((self.cwd / "report.json").read_bytes(), original)
+        self.assertEqual((self.cwd / "request.json").read_bytes(), before)
 
     def test_t02_no_model_and_t03_unit_only_positive_actual_command(self) -> None:
         request = build_unit_request(observed=datetime.now(UTC))
@@ -110,7 +132,7 @@ class QualifiedRouteRankingCliTests(unittest.TestCase):
                 self.assertFalse((self.cwd / "forbidden.json").exists())
 
     def test_t11_links_and_containment_on_input_and_output(self) -> None:
-        self.write_request({"schemaVersion": SCHEMA})
+        self.write_request(build_unit_request(observed=datetime.now(UTC)))
         (self.cwd / "link.json").symlink_to(self.cwd / "request.json")
         self.assertNotEqual(self.call("--request", "link.json").returncode, 0)
         self.assertNotEqual(self.call("--request", str(ROOT / "pyproject.toml")).returncode, 0)

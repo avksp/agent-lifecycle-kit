@@ -543,6 +543,7 @@ def _structured_shape(value: Any) -> None:
             "validationDigest",
             "fixtureResults",
             "evidenceComplete",
+            "productionPromotionClaimed",
             "measurementDigest",
         },
     )
@@ -560,6 +561,8 @@ def _structured_shape(value: Any) -> None:
         str,
     )
     _typed_fields(value, ("valid", "evidenceComplete"), bool)
+    if value.get("productionPromotionClaimed", False) is not False:
+        _invalid()
     _typed_fields(value, ("repairAttempts", "maxRepairAttempts"), int)
     if "fixtureResults" in value:
         _closed(value["fixtureResults"], {"positive", "boundary", "malformed"})

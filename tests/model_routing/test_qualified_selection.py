@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from agent_lifecycle.benchmarks import build_benchmark_run_receipt
+from agent_lifecycle.benchmarks.contracts import build_structured_result_measurement
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.model_routing.profiles import FAILURE_CLASSES
 from agent_lifecycle.model_routing.qualified_selection import rank_qualified_routes
@@ -152,9 +153,9 @@ def build_unit_request(*, observed: datetime = NOW) -> dict:
     return request
 
 
-def build_type_boundary_request() -> dict:
+def build_type_boundary_request(*, observed: datetime = NOW) -> dict:
     """Valid UNIT_ONLY envelope with optional delegated fields made explicit."""
-    request = build_unit_request()
+    request = build_unit_request(observed=observed)
     request["modelRequest"].update(
         budgetClass="normal",
         maxBillableTokens=10000,
@@ -202,20 +203,16 @@ def build_type_boundary_request() -> dict:
             disallowedForRisks=[],
             reviewStrategy="large-context-or-sliced-review",
         )
-    structured = {
-        "schemaVersion": "agent-structured-result-measurement.v1",
-        "operationId": "UNIT_ONLY",
-        "mode": "SCHEMA_ENFORCED",
-        "valid": True,
-        "repairAttempts": 0,
-        "maxRepairAttempts": 2,
-        "selectionDigest": "a" * 64,
-        "requiredSchemaDigest": "b" * 64,
-        "validationDigest": "c" * 64,
-        "fixtureResults": {"positive": True, "boundary": True, "malformed": True},
-        "evidenceComplete": True,
-    }
-    structured["measurementDigest"] = canonical_digest(structured)
+    structured = build_structured_result_measurement(
+        operation_id="UNIT_ONLY",
+        mode="SCHEMA_ENFORCED",
+        valid=True,
+        repair_attempts=0,
+        selection_digest="a" * 64,
+        required_schema_digest="b" * 64,
+        validation_digest="c" * 64,
+        fixture_results={"positive": True, "boundary": True, "malformed": True},
+    )
     request["candidates"][0]["receipts"][0]["measurements"]["structuredResult"] = structured
     refresh_unit_receipts(request, bindings=True)
     return request
@@ -245,6 +242,7 @@ TYPE_SCALAR_PATHS = (
             "requiredSchemaDigest",
             "validationDigest",
             "evidenceComplete",
+            "productionPromotionClaimed",
             "measurementDigest",
         )
     ),
@@ -366,6 +364,41 @@ class QualifiedSelectionTests(unittest.TestCase):
             canonical_digest({key: value for key, value in result.items() if key != "reportDigest"}),
         )
         self.assertNotIn("UNIT_ONLY-private", str(result))
+
+    def test_t03_canonical_and_legacy_structured_measurements_preserve_hand_sum(self) -> None:
+        for include_promotion in (True, False):
+            with self.subTest(includePromotion=include_promotion):
+                request = build_type_boundary_request()
+                measurement = request["candidates"][0]["receipts"][0]["measurements"]["structuredResult"]
+                self.assertIs(measurement["productionPromotionClaimed"], False)
+                if not include_promotion:
+                    del measurement["productionPromotionClaimed"]
+                    measurement["measurementDigest"] = canonical_digest(
+                        {key: value for key, value in measurement.items() if key != "measurementDigest"}
+                    )
+                    refresh_unit_receipts(request)
+                before = copy.deepcopy(request)
+                report = rank_qualified_routes(request, now=NOW)
+                self.assertEqual(report["status"], "RECOMMENDED")
+                self.assertEqual(report["selectedCandidateId"], "cheap")
+                self.assertEqual([row["metricTotal"] for row in report["ranking"]], [600, 1200])
+                self.assertIs(report["productionPromotionClaimed"], False)
+                self.assertEqual(request, before)
+
+    def test_t11_structured_promotion_true_and_malformed_are_refused(self) -> None:
+        for value in (True, 0, 1, None, "false", [], {}):
+            with self.subTest(value=value):
+                request = build_type_boundary_request()
+                measurement = request["candidates"][0]["receipts"][0]["measurements"]["structuredResult"]
+                measurement["productionPromotionClaimed"] = value
+                measurement["measurementDigest"] = canonical_digest(
+                    {key: item for key, item in measurement.items() if key != "measurementDigest"}
+                )
+                refresh_unit_receipts(request)
+                self.assertInvalidType(request)
+        request = build_type_boundary_request()
+        request["candidates"][0]["receipts"][0]["measurements"]["structuredResult"]["unexpected"] = False
+        self.assertInvalidType(request)
 
     def test_t04_unit_only_ties_keep_input_priority(self) -> None:
         request = build_unit_request()

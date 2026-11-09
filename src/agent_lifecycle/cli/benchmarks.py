@@ -86,7 +86,7 @@ def _rank_qualified(args: argparse.Namespace) -> dict[str, Any]:
         )
         request = load_json_object(raw, label="qualified route ranking request")
         payload = rank_qualified_routes(request)
-        if args.out:
+        if args.out and request.get("enabled", False):
             create_authority_bytes(
                 Path(args.out),
                 canonical_bytes(payload) + b"\n",
