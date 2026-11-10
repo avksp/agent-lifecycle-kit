@@ -211,6 +211,7 @@ def _classify_artifact(path: str, payload: dict[str, Any]) -> str:
         "agent-workflow-state.v3",
         "agent-workflow-state.v4",
         "agent-workflow-state.v5",
+        "agent-workflow-state.v6",
         "agent-runner-state.v1",
     }:
         return "coordination"

@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from agent_lifecycle.contracts import LifecycleError, write_json_create
+from agent_lifecycle.contracts.independent_evidence_schemas import build_independence_requirement
 from agent_lifecycle.review_mesh import build_review_mesh_profile, build_review_mesh_quorum_receipt
 from agent_lifecycle.workflow.review_mesh_gate import require_review_mesh_quorum_gate_pass, validate_review_mesh_quorum_gate, validate_review_mesh_quorum_path
 
@@ -16,6 +17,21 @@ class ReviewMeshWorkflowGateTests(unittest.TestCase):
 
         self.assertEqual(gate["status"], "PASS")
         self.assertFalse(gate["required"])
+
+    def test_missing_independent_evidence_preserves_actual_phase(self) -> None:
+        requirement = build_independence_requirement(required=True)
+        for phase in ("freeze", "implementation-audit", "final-audit"):
+            with self.subTest(phase=phase):
+                gate = validate_review_mesh_quorum_gate(
+                    phase=phase,
+                    config=None,
+                    independence_requirement=requirement,
+                )
+                self.assertEqual(gate["status"], "FAIL")
+                missing = [
+                    item for item in gate["blockers"] if item["code"] == "review-mesh-independent-evidence-required"
+                ]
+                self.assertEqual([item["phase"] for item in missing], [phase])
 
     def test_required_gate_fails_without_receipt(self) -> None:
         profile = build_review_mesh_profile(independence_required=False)

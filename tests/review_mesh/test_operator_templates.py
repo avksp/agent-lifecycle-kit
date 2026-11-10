@@ -9,7 +9,7 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from agent_lifecycle.contracts import LifecycleError, canonical_bytes
+from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.review_mesh_schemas import build_response_contract
 from agent_lifecycle.review_mesh.assignments import source_from_manifest
 from agent_lifecycle.review_mesh.operator_templates import (
@@ -25,6 +25,37 @@ from agent_lifecycle.review_mesh.results import import_review_mesh_result
 
 
 class ReviewMeshOperatorTemplateTests(unittest.TestCase):
+    def test_advisory_source_policy_mismatch_refuses_before_packet_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest, inventory = _handoff_fixture(root)
+            source = source_from_manifest(manifest)
+            selected = {
+                "schemaVersion": "agent-review-remedy-policy.v1",
+                "mode": "advisory",
+                "phases": ["freeze"],
+                "maxProposalsPerFinding": 1,
+                "roleScopes": [{"role": "reviewer", "modules": [], "paths": [], "checkIds": []}],
+            }
+            selected["policyDigest"] = canonical_digest(selected)
+            source["reviewMesh"] = {
+                "required": False,
+                "phases": ["freeze"],
+                "remedyProfile": selected,
+                "quorumPolicy": {"requiredRoles": ["reviewer"], "minReviewers": 1},
+            }
+            with self.assertRaises(LifecycleError) as caught:
+                prepare_review_mesh_operator_packets(
+                    source=source,
+                    template_id="leader-draft-review",
+                    review_input=inventory,
+                    authority_manifest=manifest,
+                    repository_root=root,
+                    out_dir=Path("prepared"),
+                )
+            self.assertEqual(caught.exception.code, "review-remedy-source-mismatch")
+            self.assertFalse((root / "prepared").exists())
+
     def test_index_round_trip_preserves_long_json_and_relocates_without_source_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "repo"

@@ -295,10 +295,36 @@ subject. Переносимость относительных путей тре
 контракт отклоняются до создания файла результата. Отрицательные замечания
 сохраняются. Coverage остаётся заявлением вызывающего, а не доказательством чтения.
 
-Единственное опциональное расширение —
+Одно из опциональных расширений —
 `responseExtensions: {coverage: {type: "array", paths: [...]}}` с нормализованными
 уникальными путями. Неизвестные названия, типы и ключи ограничений запрещены.
 Явный `responseContract` должен точно совпасть со сгенерированным. Используется
 существующий сборщик сырых ответов без второго движка схем. Нормализованный импорт
 не является положительным аудитом задачи или аттестацией независимости. См.
 [безопасное создание артефактов](safe-artifact-authoring.md).
+
+## Опциональный выбор исправления (2.46)
+
+Профиль выключен по умолчанию; без него сохраняются артефакты v1 и их digest. В frozen `reviewMesh` объект `remedyProfile` имеет закрытую схему `agent-review-remedy-policy.v1`: `mode` (`advisory`/`required`), отсортированные выбранные `phases` (`freeze`, `implementation-audit`, `final-audit`), `maxProposalsPerFinding` (1–3), `roleScopes`, `policyDigest`. Каждая область роли содержит `role`, `modules`, `paths`, `checkIds` и соответствует существующей обязательной роли плана. Digest вычисляется `canonical_digest` без собственного поля digest. Required-фазы требуют соответствующий Review Mesh gate. Установка и локальная рекомендация не включают профиль.
+
+Используйте существующий `review-mesh prepare` с полным manifest, `--review-input`, текущими authority-входами и корнем репозитория. Подготовка связывает всю политику и response contract с `reviewer-output.v2`; `plan-review` соответствует native `freeze`. Для невыбранных фаз остаётся v1. Прямой required assign без полного подготовленного контракта отклоняется.
+
+Каждая находка v2 имеет устойчивый ID и конкретные предложения `AVAILABLE` либо честный `UNAVAILABLE` с причиной. Достаточно одного решения. Предложение содержит `proposalId`, инертный `action`, относительные `paths`, `rationale`, ограниченные `risks`, проверки `checks` (`checkId`, `expectation`), выведенные из требований. Команды, патчи и миграции из текста не запускаются. Проверяются исходная и очищенная структуры; выбор связывает нормализованное предложение. `UNAVAILABLE` остаётся нерешённым.
+
+Координатор передаёт `agent-review-remedy-decisions.v1`: точные связи finding/result/assignment/independent review, выбранный вариант, причины и сравнение всех реальных непринятых альтернатив. Искусственная квота альтернатив не нужна. Выбор не разрешает исполнение, не закрывает находку и не заменяет native acceptance/finalization. Действуют существующие независимо проверенные finding dispositions.
+
+Новые опциональные параметры существующих команд:
+
+```text
+review-mesh import-result --profile profile.json --assignment assignment.json --reviewer-output raw.json --remedy-evidence evidence/index.json
+review-mesh synthesize --profile profile.json --result result.json --remedy-decisions decisions.json --remedy-evidence evidence/index.json
+review-mesh quorum --profile profile.json --synthesis synthesis.json --min-reviewers 1 --remedy-evidence evidence/index.json
+```
+
+Raw import остаётся неквалифицированным кандидатом. Отдельная закрытая обёртка `agent-review-remedy-participation.v1` связывает `assignmentDigest`, `rawOutputDigest`, существующие `participation`, `independentEvidence`, `sessionUsageContext` и `qualificationDigest`. Существующие валидаторы требуют реальную успешную terminal job, review verdict, независимого producer и доступный scoped provider usage. Одних ID, самодекларации или хеш-обёртки недостаточно. Квалифицированный результат сохраняет исходный кандидат. Fixtures имеют границу UNIT_ONLY и не доказывают живые вызовы.
+
+Индекс `agent-review-remedy-evidence.v1` содержит `artifacts` с уникальными отсортированными `{kind,path,sha256,digest}` и `bundleDigest`. Разрешены assignment, result, decision, participation, disposition, recheck, delta, dependency, validation-selection, finding-binding, finding-evidence, manifest, lock, state. Пути относительны корню репозитория; symlink, stale bytes, неверный kind, дубликаты, превышение лимитов и подмена digest отклоняются. Индекс не включает себя и окружающие synthesis/quorum. Пределы: 256 находок/решений, 32 результата/роли, 3 предложения, 512 ссылок, 8 MiB на артефакт и 64 MiB суммарно; меньшие действующие лимиты сохраняются. Усечения нет.
+
+Recheck сохраняет отдельные исходную/текущую эпохи review, соседние native attempts и реальные Git snapshot/delta-связи. Audit consumer заново вычисляет существующий read-only delta. Доказанное влияние требует объединение затронутых обязательных ролей; отсутствующее, stale, protected или неотображённое влияние даёт `FULL_AUDIT_REQUIRED`. Замена аудитора требует точных original/replacement ID, роли, причины и квалифицированной независимости. Исполнитель не принимает собственное исправление. Без native repair lineage нужен свежий полный review и новый набор решений текущего исходника. Final audit всегда свежий и полный. Экономия без сопоставимых измерений не обещается.
+
+Фактический terminal review verdict содержит закрытый `reviewMeshBinding`: `assignmentDigest`, `profileDigest`, `responseContractDigest`, `rawOutputDigest`, `sanitizedOutputDigest`, `findingsDigest`. Output digest успешной terminal job охватывает verdict вместе с этими связями. Collector выпускает их до завершения; добавленная позднее обёртка не квалифицирует чужой raw output. Native preparation отдельно связывает точный source revision и source lineage, вычисленный из manifest.

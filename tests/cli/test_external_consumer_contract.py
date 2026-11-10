@@ -325,6 +325,7 @@ class PublicCliConsumer:
                 "agent-workflow-state.v3",
                 "agent-workflow-state.v4",
                 "agent-workflow-state.v5",
+                "agent-workflow-state.v6",
             ):
                 raise ConsumerRefusal("unsupported state shape/schema")
             events = self._read_artifact(state["eventLog"], MAX_EVENT_BYTES)

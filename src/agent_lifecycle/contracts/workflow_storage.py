@@ -51,11 +51,13 @@ from agent_lifecycle.contracts.workflow_storage_schemas import (
     SNAPSHOT_KIND,
     STORAGE_VERSION,
     WORKFLOW_STATE_V5,
+    WORKFLOW_STATE_V6,
     capacity_error,
     is_initial_snapshot_lineage,
     is_storage_reference,
     item_counts,
     storage_error,
+    uses_reference_storage,
     validate_storage_counts,
     validate_storage_metadata,
     validate_storage_reference,
@@ -281,8 +283,9 @@ def prepare_storage(
     if state.get("schemaVersion") not in {
         "agent-workflow-state.v4",
         WORKFLOW_STATE_V5,
+        WORKFLOW_STATE_V6,
     }:
-        raise storage_error("Storage preparation requires v4 or v5 input")
+        raise storage_error("Storage preparation requires v4, v5 or v6 input")
     operation = operation or StorageOperation.current()
     if operation is not None:
         operation, _ = choose_operation(operation.root, operation)
@@ -297,7 +300,9 @@ def prepare_storage(
     validate_storage_metadata(metadata)
     if storage_root is not None and metadata["root"] != storage_root:
         raise storage_error("Existing immutable storage root cannot change")
-    compact["schemaVersion"] = WORKFLOW_STATE_V5
+    compact["schemaVersion"] = (
+        WORKFLOW_STATE_V6 if state.get("schemaVersion") == WORKFLOW_STATE_V6 else WORKFLOW_STATE_V5
+    )
     compact["storage"] = metadata
     objects: dict[str, bytes] = {}
     revisions = _plan_revisions(compact)
@@ -573,8 +578,8 @@ def _inspect_storage(
     started = time.monotonic()
     deadline = operation.deadline
     operation.bind(root, state)
-    if state.get("schemaVersion") != WORKFLOW_STATE_V5:
-        raise storage_error("Reference storage requires workflow state v5")
+    if not uses_reference_storage(state):
+        raise storage_error("Reference storage requires workflow state v5 or v6")
     validate_storage_metadata(state.get("storage"))
     validate_storage_counts(state)
     _bounded_bytes(state, "rootBytes")
@@ -839,7 +844,7 @@ def iter_historical_snapshots(
     operation: StorageOperation | None = None,
 ) -> Iterator[dict[str, Any]]:
     with storage_operation(root, state, operation) as current:
-        if state.get("schemaVersion") != WORKFLOW_STATE_V5:
+        if not uses_reference_storage(state):
             yield from state.get("priorSnapshots", [])
             return
         _inspect_storage(root, state, operation=current)
@@ -869,7 +874,7 @@ def task_evidence(
         raise storage_error("Unsupported task evidence slot")
     with storage_operation(root, state, operation) as current:
         value = task.get(field)
-        if state.get("schemaVersion") != WORKFLOW_STATE_V5:
+        if not uses_reference_storage(state):
             if value is None:
                 return None
             if not isinstance(value, dict) or is_storage_reference(value):

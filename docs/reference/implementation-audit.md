@@ -140,3 +140,17 @@ true`. In that case, direct `workflow finalize` must include
 Implementation audit does not fix findings and does not refreeze a plan. Write
 set, ownership or architecture gaps must be remediated inside the frozen scope
 or routed back to planning. The commands do not start model calls.
+
+## Optional remedy selection
+
+The profile is off by default. The policy, proposals, coordinator decisions and
+evidence formats are defined in [Review Mesh](review-mesh.md).
+Required implementation phases consume that exact qualified quorum chain and
+recompute its current native source, task and attempt bindings. Raw model output
+and format examples do not qualify as independent participation.
+
+For a repair, the audit consumer recomputes the existing read-only delta.
+Use only proven affected roles; keep frozen roles outside the declared remedy
+scopes mandatory. Missing, stale or unbounded impact requires a full audit.
+A decision neither executes a repair nor closes its finding. Independent task
+acceptance and a fresh full final audit remain required.

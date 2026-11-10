@@ -131,3 +131,11 @@ clocks могут канонически удаляться, а историче
 только expired-authorization refusal. Она не продлевает live grant, не принимает
 GUARDS и не закрывает RMK incident. Live recovery требует актуальных project-owned
 review, path/source reconciliation и явной авторизации после qualified delivery.
+
+## Полномочия required remedy (2.46)
+
+Только явно проверенная required-политика добавляет закрытый корневой `reviewRemedyAuthority` к canonical `agent-plan-manifest.v1`: `schemaVersion=agent-review-remedy-authority.v1`, точный `requiredPolicyDigest`, `stateSchemaVersion=agent-workflow-state.v6`. Off/advisory не содержат marker. ALK 2.45 отклоняет настоящее новое поле manifest и настоящий v6 state до мутации, даже с подставленным legacy quorum. Полная замена всего unsigned authority tree не входит в эту гарантию.
+
+Путь: явный unbound `workflow init` → `task compile` → проверенный `workflow adopt-plan` → отдельные authorization/start → обычные task/final gates. Adoption атомарно переводит v4/v5 в required-only v6 через существующее reference storage. Сохраняются полный graph/history v5, canonical JSON+LF, capacity/deadline проверки, исходные затраты, часы и attempts. Это не внутренний database protocol v6. Task override не удаляет унаследованную required-политику. Renewal сохраняет действующие source/grant/phase/closing ограничения.
+
+До записи отклоняются required composed `workflow init --manifest`, unrestricted migration в v6, прямой v3 promotion, downgrade v6, required → off/advisory и `--preserve-accepted-compatible` при required любой стороны. Сначала явно мигрируйте v3 в v4. Проверенные v6 → v6 amendments сохраняют историю. Руководство off v3/v4/v5 остаётся в силе: обновление само не мигрирует старые планы и не включает профиль. Общая адаптация старых планов остаётся draft 2.48; planning guidance 2.47 отдельно.

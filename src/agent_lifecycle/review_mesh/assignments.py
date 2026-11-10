@@ -53,6 +53,8 @@ def build_review_mesh_assignment_packet(
     if independence_requirement is not None:
         subject["independenceRequired"] = independence_requirement.get("required") is True
         subject["independenceRequirementDigest"] = independence_requirement.get("requirementDigest")
+    if "remedyProfile" in selected_profile:
+        subject["reviewMeshProfile"] = selected_profile
     reviewer = _reviewer(
         reviewer_id=reviewer_id,
         reviewer_role=reviewer_role,
@@ -80,7 +82,9 @@ def build_review_mesh_assignment_packet(
             "phase": phase,
             "mode": mode,
             "subject": subject,
-            "expectedResultSchema": "agent-review-mesh-result.v1",
+            "expectedResultSchema": "agent-review-mesh-result.v2"
+            if "remedyProfile" in selected_profile
+            else "agent-review-mesh-result.v1",
             "hostOwnedExecution": True,
             "alkCoreLaunchAllowed": False,
             "promptAuthorityGranted": False,
@@ -240,6 +244,8 @@ def _subject_from_source(source: dict[str, Any], *, blocking: bool) -> dict[str,
             readingIndexPath="reading-index.json",
             responseContract=handoff["responseContract"],
         )
+    if isinstance(source.get("reviewHandoff"), dict) and "remedyContext" in source["reviewHandoff"]:
+        subject["remedyContext"] = source["reviewHandoff"]["remedyContext"]
     return subject
 
 

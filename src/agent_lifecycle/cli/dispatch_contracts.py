@@ -77,6 +77,7 @@ from agent_lifecycle.review_mesh import (
     validate_review_mesh_profile,
     validate_review_mesh_recommendation,
 )
+from agent_lifecycle.review_mesh.remediation import load_remedy_evidence
 
 
 def dispatch_contracts(args: argparse.Namespace) -> dict[str, Any]:
@@ -313,136 +314,21 @@ def _dispatch_quality(args: argparse.Namespace) -> dict[str, Any]:
 
 def _dispatch_review_mesh(args: argparse.Namespace) -> dict[str, Any]:
     if args.review_mesh_command == "template-list":
-        payload = list_review_mesh_operator_templates()
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_template_list(args)
     if args.review_mesh_command == "profile":
-        budget_cap = _review_mesh_budget_cap(args)
-        payload = build_review_mesh_profile(
-            profile_id=args.profile_id,
-            modes=args.mode or None,
-            default_mode=args.default_mode,
-            budget_cap=budget_cap,
-            live_calls_allowed=args.allow_live_calls,
-            independence_required=args.require_independence,
-            independence_dimensions=args.independence_dimension or None,
-            reviewer_model_classes=args.reviewer_model_class or None,
-        )
-        require_review_mesh_profile_pass(validate_review_mesh_profile(payload))
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_profile(args)
     if args.review_mesh_command == "recommend":
-        if args.text is not None:
-            payload = recommend_review_mesh_for_text(args.text, sdd_tier=args.sdd_tier, risk_flags=args.risk_flag)
-        elif args.file:
-            path = Path(args.file)
-            payload = recommend_review_mesh_for_text(
-                path.read_text(encoding="utf-8"),
-                source_label=path.name,
-                sdd_tier=args.sdd_tier,
-                risk_flags=args.risk_flag,
-            )
-        elif args.intake:
-            payload = recommend_review_mesh_for_intake(
-                read_json_object(Path(args.intake), label="adapter task intake receipt")
-            )
-        elif args.manifest:
-            payload = recommend_review_mesh_for_plan_manifest(
-                read_json_object(Path(args.manifest), label="plan manifest")
-            )
-        else:
-            raise LifecycleError("review-mesh-recommendation-source-missing", "one recommendation source is required")
-        require_review_mesh_recommendation_pass(validate_review_mesh_recommendation(payload))
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_recommend(args)
     if args.review_mesh_command == "prepare":
-        source = _review_mesh_source(args, code="review-mesh-prepare-source-missing", label="prepare")
-        payload = prepare_review_mesh_operator_packets(
-            source=source,
-            template_id=args.template,
-            reviewers=[parse_reviewer_spec(spec) for spec in args.reviewer] if args.reviewer else None,
-            profile_id=args.profile_id,
-            phase=args.phase,
-            blocking=args.blocking,
-            evidence_ids=args.evidence_id,
-            out_dir=Path(args.out_dir) if args.out_dir else None,
-            review_input=read_json_object(Path(args.review_input)) if args.review_input else None,
-            repository_root=Path(args.repository_root),
-            authority_manifest=read_json_object(Path(args.manifest)) if args.manifest else None,
-            summary_output=Path(args.out) if args.out else None,
-        )
-        if args.out:
-            output = Path(args.out)
-            if args.review_input and not output.is_absolute():
-                output = Path(args.repository_root) / output
-            write_json_create(output, payload)
-        return payload
+        return _dispatch_mesh_prepare(args)
     if args.review_mesh_command == "assign":
-        source = _review_mesh_source(args, code="review-mesh-assignment-source-missing", label="assignment")
-        profile = (
-            read_json_object(Path(args.profile), label="review mesh profile")
-            if args.profile
-            else build_review_mesh_profile(default_mode=args.mode, independence_required=False)
-        )
-        payload = build_review_mesh_assignment_packet(
-            source=source,
-            mode=args.mode,
-            phase=args.phase,
-            assignment_id=args.assignment_id,
-            reviewer_id=args.reviewer_id,
-            reviewer_role=args.reviewer_role,
-            reviewer_model_class=args.reviewer_model_class,
-            reviewer_host_identity_hash=args.reviewer_host_identity_hash,
-            reviewer_model_identity_hash=args.reviewer_model_identity_hash,
-            blocking=args.blocking,
-            profile=profile,
-            evidence_ids=args.evidence_id,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_assign(args)
     if args.review_mesh_command == "import-result":
-        assignment_payload = read_json_object(Path(args.assignment), label="review mesh assignment")
-        assignment = (
-            assignment_payload.get("assignment")
-            if isinstance(assignment_payload.get("assignment"), dict)
-            else assignment_payload
-        )
-        payload = import_review_mesh_result(
-            profile=read_json_object(Path(args.profile), label="review mesh profile"),
-            assignment=cast(dict[str, Any], assignment),
-            reviewer_output=read_json_object(Path(args.reviewer_output), label="reviewer output"),
-            allow_local_evidence_refs=args.allow_local_evidence_ref,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_import_result(args)
     if args.review_mesh_command == "synthesize":
-        payload = synthesize_review_mesh_results(
-            profile=read_json_object(Path(args.profile), label="review mesh profile"),
-            results=[read_json_object(Path(path), label="review mesh result") for path in args.result],
-            mode=args.mode,
-            accepted_finding_ids=args.accepted_finding_id,
-            rejected_finding_ids=args.rejected_finding_id,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_synthesize(args)
     if args.review_mesh_command == "quorum":
-        profile = read_json_object(Path(args.profile), label="review mesh profile")
-        synthesis = read_json_object(Path(args.synthesis), label="review mesh synthesis")
-        payload = build_quorum_from_synthesis(
-            profile=profile,
-            synthesis=synthesis,
-            quorum_policy={"minReviewers": args.min_reviewers, "requiredRoles": args.required_role},
-            reviewer_roles=args.reviewer_role,
-        )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        return payload
+        return _dispatch_mesh_quorum(args)
     raise LifecycleError("command-not-implemented", "review-mesh command is not implemented")
 
 
@@ -468,3 +354,166 @@ def _review_mesh_budget_cap(args: argparse.Namespace) -> dict[str, int] | None:
         if value is not None
     }
     return budget_cap or None
+
+
+def _remedy_cli_evidence(path: str | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    selected = Path(path)
+    if selected.is_absolute():
+        try:
+            selected = selected.relative_to(Path.cwd())
+        except ValueError as exc:
+            raise LifecycleError(
+                "review-remedy-invalid", "Evidence index must be within the current repository"
+            ) from exc
+    return load_remedy_evidence(Path.cwd(), selected.as_posix())
+
+
+def _dispatch_mesh_template_list(args: argparse.Namespace) -> dict[str, Any]:
+    payload = list_review_mesh_operator_templates()
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _dispatch_mesh_profile(args: argparse.Namespace) -> dict[str, Any]:
+    budget_cap = _review_mesh_budget_cap(args)
+    payload = build_review_mesh_profile(
+        profile_id=args.profile_id,
+        modes=args.mode or None,
+        default_mode=args.default_mode,
+        budget_cap=budget_cap,
+        live_calls_allowed=args.allow_live_calls,
+        independence_required=args.require_independence,
+        independence_dimensions=args.independence_dimension or None,
+        reviewer_model_classes=args.reviewer_model_class or None,
+    )
+    require_review_mesh_profile_pass(validate_review_mesh_profile(payload))
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _dispatch_mesh_recommend(args: argparse.Namespace) -> dict[str, Any]:
+    if args.text is not None:
+        payload = recommend_review_mesh_for_text(args.text, sdd_tier=args.sdd_tier, risk_flags=args.risk_flag)
+    elif args.file:
+        path = Path(args.file)
+        payload = recommend_review_mesh_for_text(
+            path.read_text(encoding="utf-8"),
+            source_label=path.name,
+            sdd_tier=args.sdd_tier,
+            risk_flags=args.risk_flag,
+        )
+    elif args.intake:
+        payload = recommend_review_mesh_for_intake(
+            read_json_object(Path(args.intake), label="adapter task intake receipt")
+        )
+    elif args.manifest:
+        payload = recommend_review_mesh_for_plan_manifest(read_json_object(Path(args.manifest), label="plan manifest"))
+    else:
+        raise LifecycleError("review-mesh-recommendation-source-missing", "one recommendation source is required")
+    require_review_mesh_recommendation_pass(validate_review_mesh_recommendation(payload))
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _dispatch_mesh_prepare(args: argparse.Namespace) -> dict[str, Any]:
+    source = _review_mesh_source(args, code="review-mesh-prepare-source-missing", label="prepare")
+    payload = prepare_review_mesh_operator_packets(
+        source=source,
+        template_id=args.template,
+        reviewers=[parse_reviewer_spec(spec) for spec in args.reviewer] if args.reviewer else None,
+        profile_id=args.profile_id,
+        phase=args.phase,
+        blocking=args.blocking,
+        evidence_ids=args.evidence_id,
+        out_dir=Path(args.out_dir) if args.out_dir else None,
+        review_input=read_json_object(Path(args.review_input)) if args.review_input else None,
+        repository_root=Path(args.repository_root),
+        authority_manifest=read_json_object(Path(args.manifest)) if args.manifest else None,
+        summary_output=Path(args.out) if args.out else None,
+    )
+    if args.out:
+        output = Path(args.out)
+        if args.review_input and not output.is_absolute():
+            output = Path(args.repository_root) / output
+        write_json_create(output, payload)
+    return payload
+
+
+def _dispatch_mesh_assign(args: argparse.Namespace) -> dict[str, Any]:
+    source = _review_mesh_source(args, code="review-mesh-assignment-source-missing", label="assignment")
+    profile = (
+        read_json_object(Path(args.profile), label="review mesh profile")
+        if args.profile
+        else build_review_mesh_profile(default_mode=args.mode, independence_required=False)
+    )
+    payload = build_review_mesh_assignment_packet(
+        source=source,
+        mode=args.mode,
+        phase=args.phase,
+        assignment_id=args.assignment_id,
+        reviewer_id=args.reviewer_id,
+        reviewer_role=args.reviewer_role,
+        reviewer_model_class=args.reviewer_model_class,
+        reviewer_host_identity_hash=args.reviewer_host_identity_hash,
+        reviewer_model_identity_hash=args.reviewer_model_identity_hash,
+        blocking=args.blocking,
+        profile=profile,
+        evidence_ids=args.evidence_id,
+    )
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _dispatch_mesh_import_result(args: argparse.Namespace) -> dict[str, Any]:
+    assignment_payload = read_json_object(Path(args.assignment), label="review mesh assignment")
+    assignment = (
+        assignment_payload.get("assignment")
+        if isinstance(assignment_payload.get("assignment"), dict)
+        else assignment_payload
+    )
+    payload = import_review_mesh_result(
+        profile=read_json_object(Path(args.profile), label="review mesh profile"),
+        assignment=cast(dict[str, Any], assignment),
+        reviewer_output=read_json_object(Path(args.reviewer_output), label="reviewer output"),
+        allow_local_evidence_refs=args.allow_local_evidence_ref,
+        remedy_evidence=_remedy_cli_evidence(args.remedy_evidence),
+    )
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _dispatch_mesh_synthesize(args: argparse.Namespace) -> dict[str, Any]:
+    payload = synthesize_review_mesh_results(
+        profile=read_json_object(Path(args.profile), label="review mesh profile"),
+        results=[read_json_object(Path(path), label="review mesh result") for path in args.result],
+        mode=args.mode,
+        accepted_finding_ids=args.accepted_finding_id,
+        rejected_finding_ids=args.rejected_finding_id,
+        remedy_decisions=read_json_object(Path(args.remedy_decisions)) if args.remedy_decisions else None,
+        remedy_evidence=_remedy_cli_evidence(args.remedy_evidence),
+    )
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload
+
+
+def _dispatch_mesh_quorum(args: argparse.Namespace) -> dict[str, Any]:
+    profile = read_json_object(Path(args.profile), label="review mesh profile")
+    synthesis = read_json_object(Path(args.synthesis), label="review mesh synthesis")
+    payload = build_quorum_from_synthesis(
+        profile=profile,
+        synthesis=synthesis,
+        quorum_policy={"minReviewers": args.min_reviewers, "requiredRoles": args.required_role},
+        reviewer_roles=args.reviewer_role,
+        remedy_evidence=_remedy_cli_evidence(args.remedy_evidence),
+    )
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    return payload

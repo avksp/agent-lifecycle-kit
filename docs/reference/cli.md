@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.45.0
+python -m pip install agent-lifecycle-kit==2.46.0
 ```
 
 ## Task evidence identity
@@ -1067,3 +1067,11 @@ The current qualified Codex route observes auth.json link and target metadata. I
 `agent-lifecycle benchmark rank-qualified --request <local.json> [--out <new.json>]` reads a bounded local request. Manual is the default; set `enabled: true` only to request advice. It never launches a host or model, changes a profile or adopts a route.
 
 Use complete, fresh, independently accepted same-host benchmark records. Missing, partial, stale, untrusted or incomparable records return `NO_RECOMMENDATION`. Invalid input produces a bounded error. The explicit trust allowlist proves membership and integrity, not authentic collection. See [the input contract and examples](benchmark-qualification.md#qualified-evidence-ranking) and [routing policy boundaries](model-routing.md). Positive fixtures are `UNIT_ONLY`; live economics and savings remain unqualified.
+
+## Required remedy authority
+
+Use explicit `workflow init`, `task compile` and reviewed `workflow adopt-plan`,
+then separate authorization/start and ordinary task/final gates.
+The [storage authority contract](workflow-state-storage.md#required-remedy-authority-246)
+defines the required-only marker, v6 state, compatibility and refused routes.
+Installing a newer ALK alone does not migrate or opt in an existing plan.

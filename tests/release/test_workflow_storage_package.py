@@ -43,6 +43,28 @@ prepared = prepare_storage(state, storage_root='store')
 persist_storage(root, prepared)
 assert list(iter_historical_snapshots(root, prepared.state)) == [snapshot]
 assert callable(renew_execution_authorization)
+from agent_lifecycle.contracts import canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.schemas import get_schema
+from agent_lifecycle.contracts.workflow_state_authority import read_workflow_authority
+policy = {"schemaVersion": "agent-review-remedy-policy.v1", "mode": "required",
+    "phases": ["implementation-audit"], "maxProposalsPerFinding": 1,
+    "roleScopes": [{"role": "reviewer", "modules": [], "paths": [], "checkIds": []}]}
+policy["policyDigest"] = canonical_digest(policy)
+required = dict(state, schemaVersion="agent-workflow-state.v6",
+    reviewMesh={"required": True, "phases": ["implementation-audit"], "remedyProfile": policy,
+        "quorumPolicy": {"minReviewers": 1, "requiredRoles": ["reviewer"]}},
+    reviewRemedyAuthority={"schemaVersion": "agent-review-remedy-authority.v1",
+        "requiredPolicyDigest": policy["policyDigest"], "stateSchemaVersion": "agent-workflow-state.v6"})
+required_path = root / "required.json"
+required_prepared = prepare_storage(required, storage_root="required.json.storage")
+persist_storage(root, required_prepared)
+required_path.write_bytes(canonical_bytes(required_prepared.state) + b"\\n")
+loaded = read_workflow_authority(required_path)
+assert loaded["schemaVersion"] == "agent-workflow-state.v6"
+assert loaded["reviewRemedyAuthority"] == required["reviewRemedyAuthority"]
+assert list(iter_historical_snapshots(root, loaded)) == [snapshot]
+assert get_schema("agent-workflow-state.v6")["properties"]["schemaVersion"]["const"] == "agent-workflow-state.v6"
+assert get_schema("agent-review-remedy-authority.v1")["additionalProperties"] is False
 help_text = io.StringIO()
 with contextlib.redirect_stdout(help_text):
     try:

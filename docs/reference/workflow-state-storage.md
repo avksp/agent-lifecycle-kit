@@ -130,3 +130,11 @@ scope. The isolated RMK rehearsal migrates exact historical incident64 and check
 expired-authorization refusal only. It does not renew a live grant, accept GUARDS
 or close the RMK incident. Live recovery requires current project-owned review,
 path/source reconciliation and explicit authorization after qualified delivery.
+
+## Required remedy authority (2.46)
+
+Only an explicitly reviewed required remedy policy adds the closed root `reviewRemedyAuthority` on canonical `agent-plan-manifest.v1`: `schemaVersion=agent-review-remedy-authority.v1`, exact `requiredPolicyDigest`, `stateSchemaVersion=agent-workflow-state.v6`. Off/advisory omit the marker. Old 2.45 rejects the genuine required manifest's unknown root field and genuine v6 state before mutation, including with a substituted legacy quorum. Replacing an entire unsigned authority tree is outside that guarantee.
+
+Use explicit unbound `workflow init`, then `task compile`, reviewed `workflow adopt-plan`, separate authorization/start and ordinary task/final gates. Adoption atomically promotes v4/v5 to required-only v6 through existing reference storage. V6 retains v5 complete graph/history, canonical JSON plus LF, capacity/deadline checks and original costs/clocks/attempts. It is unrelated to the internal database protocol v6. Task overrides cannot erase inherited required policy. Renewal retains existing source, grant, phase and closing restrictions.
+
+Required composed `workflow init --manifest`, unrestricted migration to v6, direct v3 promotion, v6 downgrade, required-to-off/advisory adoption and `--preserve-accepted-compatible` involving required authority refuse before writes. Migrate v3 explicitly to v4 first. Reviewed v6-to-v6 amendments preserve history. Existing off v3/v4/v5 guidance remains valid; upgrading alone does not migrate or opt in older plans. General update/older-plan impact remains draft 2.48; planning guidance 2.47 is separate.

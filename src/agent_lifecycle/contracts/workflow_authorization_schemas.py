@@ -169,8 +169,12 @@ def _validate_renewal_shape(receipt: dict[str, Any]) -> None:
 
 
 def _require_renewable_phase(state: dict[str, Any]) -> None:
-    if state.get("schemaVersion") not in {"agent-workflow-state.v4", "agent-workflow-state.v5"}:
-        raise _renewal_error("Renewal requires supported v4/v5 state")
+    if state.get("schemaVersion") not in {
+        "agent-workflow-state.v4",
+        "agent-workflow-state.v5",
+        "agent-workflow-state.v6",
+    }:
+        raise _renewal_error("Renewal requires supported v4/v5/v6 state")
     if state.get("startMode") == "plan-only":
         raise LifecycleError("plan-only-not-executable", "Plan-only workflows cannot renew execution authority")
     if state.get("closingWindow") is not None:

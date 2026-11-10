@@ -516,7 +516,7 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
 
     def test_reusing_prepared_attempt_neither_restarts_nor_deletes_raw(self) -> None:
         result = self.launch()
-        self.assertEqual(result['status'], 'PASS')
+        self.assertEqual(result['status'], 'PASS', result)
         terminal_before = (self.evidence / 'attempt-result-terminal.json').read_bytes()
         with self.assertRaises(LifecycleError) as caught:
             self.launch()
@@ -580,7 +580,7 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
 
     def test_changed_manifest_after_result_cannot_authorize_positive_join(self) -> None:
         result = self.launch()
-        self.assertEqual(result['status'], 'PASS')
+        self.assertEqual(result['status'], 'PASS', result)
         self.manifest_path.write_bytes(canonical_bytes({**self.manifest, 'planRevision': 70}))
         with self.assertRaises(LifecycleError) as caught:
             bootstrap_r11.require_positive_attempt_result(self.root, intent_path=self.prepared['intentPath'])
