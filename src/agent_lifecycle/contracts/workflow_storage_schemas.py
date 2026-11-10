@@ -12,6 +12,14 @@ from agent_lifecycle.contracts.errors import LifecycleError
 STORAGE_VERSION = "agent-workflow-storage.v1"
 REFERENCE_VERSION = "agent-workflow-storage-reference.v1"
 WORKFLOW_STATE_V5 = "agent-workflow-state.v5"
+WORKFLOW_STATE_V6 = "agent-workflow-state.v6"
+
+
+def uses_reference_storage(state: dict[str, Any]) -> bool:
+    """Native v5 and required-remedy v6 share the same immutable storage."""
+    return state.get("schemaVersion") in {WORKFLOW_STATE_V5, WORKFLOW_STATE_V6}
+
+
 LEAF_KINDS = {
     "ownershipReceipt": "ownership-receipt",
     "resultChangeSetEvidence": "result-change-set-evidence",

@@ -25,6 +25,7 @@ from agent_lifecycle.contracts.workflow_storage import (
     prepare_storage,
 )
 from agent_lifecycle.contracts.workflow_storage_context import StorageOperation
+from agent_lifecycle.contracts.workflow_storage_schemas import uses_reference_storage
 from agent_lifecycle.workflow.checkpoint_gate import (
     PreparedCheckpoint,
     optional_checkpoint_failure,
@@ -241,7 +242,7 @@ def _prepare_mutation(
     prospective["updatedAt"] = now_iso()
     record_operation(prospective, operation_id=operation_id, event_type=event_type)
     prepared = None
-    if prospective.get("schemaVersion") == "agent-workflow-state.v5":
+    if uses_reference_storage(prospective):
         require_storage_root(path, prospective)
         prepared = prepare_storage(prospective, operation=operation)
         prospective = prepared.state

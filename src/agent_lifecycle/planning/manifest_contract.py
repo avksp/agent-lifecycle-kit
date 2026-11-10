@@ -18,6 +18,7 @@ from agent_lifecycle.contracts.plan_manifest_schemas import (
     MANIFEST_SCHEMA,
     MANIFEST_VALIDATION_SCHEMA,
 )
+from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
 from agent_lifecycle.planning.prerequisites import prerequisite_dependencies
 from agent_lifecycle.research.preflight import decision_research_blockers
 
@@ -55,6 +56,7 @@ _TOP_LEVEL = {
     "contextLimits",
     "dependsOn",
     "reviewMesh",
+    "reviewRemedyAuthority",
     "contextCheckpointPolicy",
     "controllerGates",
     "planReview",
@@ -114,6 +116,7 @@ _WORKSTREAM = {
     "plannedItems",
     "modelRoute",
     "reviewMesh",
+    "reviewRemedyAuthority",
     "controllerGates",
     "taskShape",
     "qualityFloor",
@@ -220,6 +223,10 @@ def validate_plan_manifest_contract(manifest: dict[str, Any]) -> dict[str, Any]:
         _unknown_keys(package, _PACKAGE, "package", blockers)
         if not isinstance(package.get("id"), str) or not package["id"].strip():
             blockers.append(_blocker("plan-manifest-package-id-missing", "package.id is required"))
+    try:
+        require_remedy_authority(manifest)
+    except LifecycleError as exc:
+        blockers.append(_blocker(exc.code, exc.message))
     _validate_nested(manifest, blockers)
     blockers.extend(_artifact_path_blockers(manifest))
     _validate_immutable_input_policy(manifest, blockers)

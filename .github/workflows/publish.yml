@@ -46,7 +46,9 @@ jobs:
             --target-version "${RELEASE_TAG#v}" \
             --evidence /tmp/publication-adoption.json
       - name: Install build frontend
-        run: python -m pip install build
+        run: |
+          python -m pip install build==1.6.1
+          python -c "import build; print('build frontend: ' + build.__version__); assert build.__version__ == '1.6.1'"
       - name: Build and smoke-test distribution
         run: python tests/package/run_packaging_smoke.py --dist-dir dist --python python --evidence /tmp/packaging-smoke.json
       - name: Publish to PyPI

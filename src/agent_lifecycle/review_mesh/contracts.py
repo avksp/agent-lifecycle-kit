@@ -10,6 +10,8 @@ from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.external_job_schemas import validate_cumulative_session_usage
 from agent_lifecycle.contracts.independent_evidence_schemas import validate_independence_requirement
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_MODE_IDS as REVIEW_MESH_MODE_IDS
+from agent_lifecycle.contracts.review_mesh_schemas import require_response_contract
+from agent_lifecycle.contracts.review_remedy_schemas import require_finding_remedies, require_remedy_policy
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES as ALLOWED_MODEL_CLASSES
 from agent_lifecycle.quality.cross_check import (
     INDEPENDENCE_IDENTITY_FIELDS as INDEPENDENCE_IDENTITY_FIELDS,
@@ -133,6 +135,7 @@ def build_review_mesh_profile(
     independence_required: bool = True,
     independence_dimensions: list[str] | None = None,
     reviewer_model_classes: list[str] | None = None,
+    remedy_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build an optional Review Mesh profile from shared cross-check semantics."""
 
@@ -170,6 +173,9 @@ def build_review_mesh_profile(
         "concreteProviderModelNamesInPortableContract": False,
         "productionPromotionClaimed": False,
     }
+    if remedy_profile is not None:
+        body["remedyProfile"] = dict(require_remedy_policy(remedy_profile))
+        body["schemaVersion"] = "agent-review-mesh-profile.v2"
     return {**body, "profileDigest": canonical_digest(body)}
 
 
@@ -177,8 +183,9 @@ def validate_review_mesh_profile(profile: dict[str, Any]) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     if not isinstance(profile, dict):
         raise LifecycleError("invalid-review-mesh-profile", "Review Mesh profile must be an object")
-    if profile.get("schemaVersion") != REVIEW_MESH_PROFILE_SCHEMA:
+    if profile.get("schemaVersion") not in {REVIEW_MESH_PROFILE_SCHEMA, "agent-review-mesh-profile.v2"}:
         blockers.append({"code": "review-mesh-profile-schema-invalid"})
+    blockers.extend(_remedy_contract_blockers(profile, profile=profile))
     _check_required_string(profile.get("profileId"), "review-mesh-profile-id-missing", blockers)
     if profile.get("status") != "OPTIONAL":
         blockers.append({"code": "review-mesh-profile-not-optional"})
@@ -203,20 +210,7 @@ def validate_review_mesh_profile(profile: dict[str, Any]) -> dict[str, Any]:
         blockers.append({"code": "review-mesh-profile-budget-units-invalid"})
     _validate_resource_cap(profile.get("budgetCap"), blockers, prefix="review-mesh-profile")
     _validate_model_classes(profile.get("reviewerModelClasses"), blockers)
-    cross_profile = profile.get("crossCheckProfile")
-    if not isinstance(cross_profile, dict):
-        blockers.append({"code": "review-mesh-cross-check-profile-invalid"})
-        cross_validation: dict[str, Any] | None = None
-    else:
-        cross_validation = validate_cross_check_profile(cross_profile)
-        if cross_validation["status"] != "PASS":
-            blockers.append({"code": "review-mesh-cross-check-profile-invalid", "validation": cross_validation})
-        if profile.get("budgetCap") != cross_profile.get("budgetCap"):
-            blockers.append({"code": "review-mesh-budget-cap-not-cross-check"})
-        if profile.get("independencePolicy") != cross_profile.get("independencePolicy"):
-            blockers.append({"code": "review-mesh-independence-not-cross-check"})
-        if profile.get("liveCallsAllowed") != cross_profile.get("liveCallsAllowed"):
-            blockers.append({"code": "review-mesh-live-calls-not-cross-check"})
+    cross_validation = _profile_cross_validation(profile, blockers)
     if profile.get("concreteProviderModelNamesInPortableContract") is not False:
         blockers.append({"code": "review-mesh-provider-model-names-in-core"})
     if profile.get("productionPromotionClaimed") is not False:
@@ -284,6 +278,9 @@ def build_review_mesh_assignment(
         "independenceRequirement": dict(independence_requirement) if independence_requirement is not None else None,
         "productionPromotionClaimed": False,
     }
+    if "remedyProfile" in profile:
+        _require_remedy_assignment(profile, body)
+        body["schemaVersion"] = "agent-review-mesh-assignment.v2"
     return {**body, "assignmentDigest": canonical_digest(body)}
 
 
@@ -293,8 +290,9 @@ def validate_review_mesh_assignment(
     blockers: list[dict[str, Any]] = []
     if not isinstance(assignment, dict):
         raise LifecycleError("invalid-review-mesh-assignment", "Review Mesh assignment must be an object")
-    if assignment.get("schemaVersion") != REVIEW_MESH_ASSIGNMENT_SCHEMA:
+    if assignment.get("schemaVersion") not in {REVIEW_MESH_ASSIGNMENT_SCHEMA, "agent-review-mesh-assignment.v2"}:
         blockers.append({"code": "review-mesh-assignment-schema-invalid"})
+    blockers.extend(_remedy_contract_blockers(assignment, profile=profile))
     _check_required_string(assignment.get("assignmentId"), "review-mesh-assignment-id-missing", blockers)
     _check_digest(assignment.get("profileDigest"), "review-mesh-assignment-profile-digest-invalid", blockers)
     if assignment.get("mode") not in REVIEW_MESH_MODE_IDS:
@@ -428,6 +426,9 @@ def build_review_mesh_result(
         body["sessionUsage"] = dict(session_usage_context["receipt"])
         body["assignmentDigest"] = assignment["assignmentDigest"]
         body["sessionBudgetBasis"] = "CUMULATIVE_PROVIDER_SESSION"
+    if "remedyProfile" in profile:
+        require_finding_remedies(body["findings"], profile["remedyProfile"])
+        body["schemaVersion"] = "agent-review-mesh-result.v2"
     return {**body, "resultDigest": canonical_digest(body)}
 
 
@@ -487,7 +488,12 @@ def _imported_independence_claimed(result: dict[str, Any]) -> bool:
         or explicitly_unproven
     )
     independence = result.get("independence")
-    return imported and isinstance(independence, dict) and independence.get("status") == "INDEPENDENT"
+    return (
+        imported
+        and "remedyQualification" not in result
+        and isinstance(independence, dict)
+        and independence.get("status") == "INDEPENDENT"
+    )
 
 
 def validate_review_mesh_result(
@@ -501,25 +507,14 @@ def validate_review_mesh_result(
     if not isinstance(result, dict):
         raise LifecycleError("invalid-review-mesh-result", "Review Mesh result must be an object")
     require_review_text(result)
-    subject = result.get("subject")
-    if "sessionUsage" in result or (isinstance(subject, dict) and subject.get("cumulativeUsageRequired") is True):
-        try:
-            if profile is None or not isinstance(session_usage_context, dict) or assignment is None:
-                raise LifecycleError("review-session-usage-required", "Bound session context is required")
-            if result.get("sessionUsage") != session_usage_context.get("receipt"):
-                raise LifecycleError("review-session-usage-invalid", "Session receipt differs")
-            require_review_mesh_assignment_pass(validate_review_mesh_assignment(assignment, profile=profile))
-            if any(result.get(key) != assignment.get(key) for key in ("subject", "assignmentId", "assignmentDigest")):
-                raise LifecycleError("review-session-usage-invalid", "Assignment binding differs")
-            cumulative_reviewer_budget(profile, assignment, result.get("budgetUsage", {}), session_usage_context)
-        except (LifecycleError, KeyError):
-            blockers.append({"code": "review-mesh-result-session-usage-invalid"})
+    blockers.extend(_result_session_validation(result, profile, session_usage_context, assignment))
     if _imported_independence_claimed(result):
         blockers.append({"code": "review-mesh-result-import-independence-not-proven"})
-    if result.get("schemaVersion") != REVIEW_MESH_RESULT_SCHEMA:
+    if result.get("schemaVersion") not in {REVIEW_MESH_RESULT_SCHEMA, "agent-review-mesh-result.v2"}:
         blockers.append({"code": "review-mesh-result-schema-invalid"})
     if result.get("status") not in RESULT_STATUSES:
         blockers.append({"code": "review-mesh-result-status-invalid"})
+    blockers.extend(_remedy_contract_blockers(result, profile=profile))
     _check_required_string(result.get("resultId"), "review-mesh-result-id-missing", blockers)
     _check_required_string(result.get("assignmentId"), "review-mesh-result-assignment-id-missing", blockers)
     _check_required_string(result.get("phase"), "review-mesh-result-phase-missing", blockers)
@@ -527,37 +522,7 @@ def validate_review_mesh_result(
     if result.get("mode") not in REVIEW_MESH_MODE_IDS:
         blockers.append({"code": "review-mesh-result-mode-invalid"})
     _check_object_list(result.get("findings"), "review-mesh-result-findings-invalid", blockers)
-    unavailable = result.get("budgetUsageStatus") == "UNAVAILABLE"
-    _validate_budget_usage(result.get("budgetUsage"), blockers, prefix="review-mesh-result", allow_unknown=unavailable)
-    if unavailable:
-        blockers.append({"code": "review-mesh-result-usage-unavailable"})
-        blockers.extend(_known_usage_budget_blockers(result.get("budgetUsage"), profile))
-        blockers.extend(_live_call_policy_blockers(result.get("liveCallsStarted"), profile))
-        participation = result.get("roundParticipation")
-        if not isinstance(participation, dict) or participation.get("eligible") is not False:
-            blockers.append({"code": "review-mesh-result-unavailable-participation"})
-    cross_receipt = result.get("crossCheckReceipt")
-    if not isinstance(cross_receipt, dict) and not (unavailable and cross_receipt is None):
-        blockers.append({"code": "review-mesh-result-cross-check-receipt-invalid"})
-    elif isinstance(cross_receipt, dict):
-        cross_profile = profile.get("crossCheckProfile") if isinstance(profile, dict) else None
-        cross_validation = validate_cross_check_receipt(cross_receipt, profile=cross_profile)
-        if cross_validation["status"] != "PASS":
-            blockers.append({"code": "review-mesh-result-cross-check-invalid", "validation": cross_validation})
-        if result.get("independence") != cross_receipt.get("independence"):
-            blockers.append({"code": "review-mesh-result-independence-mismatch"})
-        if result.get("budgetUsage") != cross_receipt.get("budgetUsage"):
-            blockers.append({"code": "review-mesh-result-budget-usage-mismatch"})
-        subject = result.get("subject")
-        joined_fields = {
-            "status": result.get("status"),
-            "subject": _cross_check_subject(subject) if isinstance(subject, dict) else None,
-            "reviewer": result.get("reviewer"),
-            "findings": result.get("findings"),
-        }
-        for field, value in joined_fields.items():
-            if canonical_digest(value) != canonical_digest(cross_receipt.get(field)):
-                blockers.append({"code": f"review-mesh-result-{field}-mismatch"})
+    blockers.extend(_result_cross_validation(result, profile))
     if "commandOutcomes" in result:
         commands = result["commandOutcomes"]
         command_blockers = _command_outcome_blockers(commands)
@@ -636,8 +601,9 @@ def validate_review_mesh_synthesis(
     blockers: list[dict[str, Any]] = []
     if not isinstance(synthesis, dict):
         raise LifecycleError("invalid-review-mesh-synthesis", "Review Mesh synthesis must be an object")
-    if synthesis.get("schemaVersion") != REVIEW_MESH_SYNTHESIS_SCHEMA:
+    if synthesis.get("schemaVersion") not in {REVIEW_MESH_SYNTHESIS_SCHEMA, "agent-review-mesh-synthesis.v2"}:
         blockers.append({"code": "review-mesh-synthesis-schema-invalid"})
+    blockers.extend(_remedy_contract_blockers(synthesis, profile=profile))
     if synthesis.get("status") not in SYNTHESIS_STATUSES:
         blockers.append({"code": "review-mesh-synthesis-status-invalid"})
     if synthesis.get("mode") not in REVIEW_MESH_MODE_IDS:
@@ -723,37 +689,16 @@ def validate_review_mesh_quorum_receipt(
     blockers: list[dict[str, Any]] = []
     if not isinstance(receipt, dict):
         raise LifecycleError("invalid-review-mesh-quorum", "Review Mesh quorum receipt must be an object")
-    if receipt.get("schemaVersion") != REVIEW_MESH_QUORUM_RECEIPT_SCHEMA:
+    if receipt.get("schemaVersion") not in {REVIEW_MESH_QUORUM_RECEIPT_SCHEMA, "agent-review-mesh-quorum-receipt.v2"}:
         blockers.append({"code": "review-mesh-quorum-schema-invalid"})
+    blockers.extend(_remedy_contract_blockers(receipt, profile=profile))
     if receipt.get("status") not in {"PASS", "FAIL", "SKIPPED"}:
         blockers.append({"code": "review-mesh-quorum-status-invalid"})
     if receipt.get("mode") not in REVIEW_MESH_MODE_IDS:
         blockers.append({"code": "review-mesh-quorum-mode-invalid"})
     _validate_quorum_policy(receipt.get("quorumPolicy"), blockers)
-    if (
-        not isinstance(receipt.get("reviewerCount"), int)
-        or isinstance(receipt.get("reviewerCount"), bool)
-        or receipt["reviewerCount"] < 0
-    ):
-        blockers.append({"code": "review-mesh-quorum-reviewer-count-invalid"})
-    if not isinstance(receipt.get("requiredRolesSatisfied"), bool):
-        blockers.append({"code": "review-mesh-quorum-roles-invalid"})
-    if not isinstance(receipt.get("quorumSatisfied"), bool):
-        blockers.append({"code": "review-mesh-quorum-satisfied-invalid"})
-    if not isinstance(receipt.get("blockingFindingsUnresolved"), bool):
-        blockers.append({"code": "review-mesh-quorum-blocking-findings-invalid"})
-    policy = receipt.get("quorumPolicy")
-    minimum = policy.get("minReviewers") if isinstance(policy, dict) else None
-    count = receipt.get("reviewerCount")
-    roles_satisfied = receipt.get("requiredRolesSatisfied")
-    if type(minimum) is int and type(count) is int and type(roles_satisfied) is bool:
-        expected_quorum = count >= minimum and roles_satisfied
-        if receipt.get("quorumSatisfied") is not expected_quorum:
-            blockers.append({"code": "review-mesh-quorum-count-roles-mismatch"})
-    if receipt.get("status") == "PASS" and (
-        receipt.get("quorumSatisfied") is not True or receipt.get("blockingFindingsUnresolved") is not False
-    ):
-        blockers.append({"code": "review-mesh-quorum-outcome-mismatch"})
+    blockers.extend(_quorum_scalar_validation(receipt))
+    blockers.extend(_quorum_count_validation(receipt))
     _check_object_list(receipt.get("blockers", []), "review-mesh-quorum-blockers-invalid", blockers)
     subject_value = receipt.get("subject")
     subject = subject_value if isinstance(subject_value, dict) else {}
@@ -877,3 +822,170 @@ def _cross_check_subject(subject: dict[str, Any]) -> dict[str, Any]:
 
 def _subject_has_blocking_opt_in(subject: dict[str, Any]) -> bool:
     return subject.get("reviewMeshBlockingOptIn") is True or subject.get("blockingCrossCheckRequired") is True
+
+
+def _require_remedy_assignment(profile: dict[str, Any], assignment: dict[str, Any]) -> None:
+    policy = require_remedy_policy(profile["remedyProfile"])
+    phase = "freeze" if assignment.get("phase") == "plan-review" else assignment.get("phase")
+    if phase not in policy["phases"]:
+        raise LifecycleError("review-remedy-phase-mismatch", "Assignment phase is outside prepared remedy policy")
+    subject = assignment.get("subject", {})
+    context = subject.get("remedyContext")
+    if not isinstance(context, dict) or any(
+        subject.get(key) != context.get(key) for key in ("sourceRevision", "sourceLineageDigest")
+    ):
+        raise LifecycleError(
+            "review-remedy-source-mismatch", "Prepared remedy subject differs from native source lineage"
+        )
+    contract = require_response_contract(assignment.get("subject", {}).get("responseContract"))
+    expected = {
+        "schemaVersion": "agent-review-remedy-extension.v1",
+        "policyDigest": policy["policyDigest"],
+        "maxProposalsPerFinding": policy["maxProposalsPerFinding"],
+    }
+    if contract["extensions"].get("remedy") != expected:
+        raise LifecycleError("review-remedy-contract-mismatch", "Prepared response contract differs from policy")
+    if (
+        policy["mode"] == "required"
+        and assignment.get("blocking", assignment.get("subject", {}).get("reviewMeshRequired")) is not True
+    ):
+        raise LifecycleError("review-remedy-blocking-required", "Required remedy cannot produce an advisory assignment")
+
+
+def _remedy_contract_blockers(value: dict[str, Any], *, profile: dict[str, Any] | None) -> list[dict[str, Any]]:
+    try:
+        schema_version = value.get("schemaVersion")
+        if not isinstance(schema_version, str):
+            raise LifecycleError("review-remedy-invalid", "Contract version must be a string")
+        if schema_version.endswith(".v2"):
+            from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS
+
+            schema = REVIEW_MESH_SCHEMAS.get(value["schemaVersion"], {})
+            known = schema.get("properties", {})
+            if set(value).difference(known) or not set(schema.get("required", [])).issubset(value):
+                raise LifecycleError("review-remedy-invalid", "V2 contract has unknown fields")
+        selected = value if value.get("schemaVersion", "").startswith("agent-review-mesh-profile.") else profile
+        policy = selected.get("remedyProfile") if isinstance(selected, dict) else None
+        opted = value.get("schemaVersion", "").endswith(".v2")
+        if policy is not None:
+            require_remedy_policy(policy)
+        if selected is not None and opted is not (policy is not None):
+            raise LifecycleError("review-remedy-version-mismatch", "Remedy requires opt-in v2 contracts")
+        if isinstance(selected, dict) and policy is not None and "assignmentId" in value:
+            _require_remedy_assignment(selected, value)
+        if policy is not None and "findings" in value:
+            require_finding_remedies(value["findings"], policy)
+    except LifecycleError as exc:
+        return [{"code": exc.code, "message": exc.message}]
+    return []
+
+
+def _profile_cross_validation(profile: dict[str, Any], blockers: list[dict[str, Any]]) -> dict[str, Any] | None:
+    cross_profile = profile.get("crossCheckProfile")
+    if not isinstance(cross_profile, dict):
+        blockers.append({"code": "review-mesh-cross-check-profile-invalid"})
+        cross_validation: dict[str, Any] | None = None
+    else:
+        cross_validation = validate_cross_check_profile(cross_profile)
+        if cross_validation["status"] != "PASS":
+            blockers.append({"code": "review-mesh-cross-check-profile-invalid", "validation": cross_validation})
+        if profile.get("budgetCap") != cross_profile.get("budgetCap"):
+            blockers.append({"code": "review-mesh-budget-cap-not-cross-check"})
+        if profile.get("independencePolicy") != cross_profile.get("independencePolicy"):
+            blockers.append({"code": "review-mesh-independence-not-cross-check"})
+        if profile.get("liveCallsAllowed") != cross_profile.get("liveCallsAllowed"):
+            blockers.append({"code": "review-mesh-live-calls-not-cross-check"})
+    return cross_validation
+
+
+def _result_session_validation(
+    result: dict[str, Any],
+    profile: dict[str, Any] | None,
+    session_usage_context: dict[str, Any] | None,
+    assignment: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    subject = result.get("subject")
+    if "sessionUsage" in result or (isinstance(subject, dict) and subject.get("cumulativeUsageRequired") is True):
+        try:
+            if profile is None or not isinstance(session_usage_context, dict) or assignment is None:
+                raise LifecycleError("review-session-usage-required", "Bound session context is required")
+            if result.get("sessionUsage") != session_usage_context.get("receipt"):
+                raise LifecycleError("review-session-usage-invalid", "Session receipt differs")
+            require_review_mesh_assignment_pass(validate_review_mesh_assignment(assignment, profile=profile))
+            if any(result.get(key) != assignment.get(key) for key in ("subject", "assignmentId", "assignmentDigest")):
+                raise LifecycleError("review-session-usage-invalid", "Assignment binding differs")
+            cumulative_reviewer_budget(profile, assignment, result.get("budgetUsage", {}), session_usage_context)
+        except (LifecycleError, KeyError):
+            blockers.append({"code": "review-mesh-result-session-usage-invalid"})
+    return blockers
+
+
+def _result_cross_validation(result: dict[str, Any], profile: dict[str, Any] | None) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    unavailable = result.get("budgetUsageStatus") == "UNAVAILABLE"
+    _validate_budget_usage(result.get("budgetUsage"), blockers, prefix="review-mesh-result", allow_unknown=unavailable)
+    if unavailable:
+        blockers.append({"code": "review-mesh-result-usage-unavailable"})
+        blockers.extend(_known_usage_budget_blockers(result.get("budgetUsage"), profile))
+        blockers.extend(_live_call_policy_blockers(result.get("liveCallsStarted"), profile))
+        participation = result.get("roundParticipation")
+        if not isinstance(participation, dict) or participation.get("eligible") is not False:
+            blockers.append({"code": "review-mesh-result-unavailable-participation"})
+    cross_receipt = result.get("crossCheckReceipt")
+    if not isinstance(cross_receipt, dict) and not (unavailable and cross_receipt is None):
+        blockers.append({"code": "review-mesh-result-cross-check-receipt-invalid"})
+    elif isinstance(cross_receipt, dict):
+        cross_profile = profile.get("crossCheckProfile") if isinstance(profile, dict) else None
+        cross_validation = validate_cross_check_receipt(cross_receipt, profile=cross_profile)
+        if cross_validation["status"] != "PASS":
+            blockers.append({"code": "review-mesh-result-cross-check-invalid", "validation": cross_validation})
+        if result.get("independence") != cross_receipt.get("independence"):
+            blockers.append({"code": "review-mesh-result-independence-mismatch"})
+        if result.get("budgetUsage") != cross_receipt.get("budgetUsage"):
+            blockers.append({"code": "review-mesh-result-budget-usage-mismatch"})
+        subject = result.get("subject")
+        joined_fields = {
+            "status": result.get("status"),
+            "subject": _cross_check_subject(subject) if isinstance(subject, dict) else None,
+            "reviewer": result.get("reviewer"),
+            "findings": result.get("findings"),
+        }
+        for field, value in joined_fields.items():
+            if canonical_digest(value) != canonical_digest(cross_receipt.get(field)):
+                blockers.append({"code": f"review-mesh-result-{field}-mismatch"})
+    return blockers
+
+
+def _quorum_count_validation(receipt: dict[str, Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    policy = receipt.get("quorumPolicy")
+    minimum = policy.get("minReviewers") if isinstance(policy, dict) else None
+    count = receipt.get("reviewerCount")
+    roles_satisfied = receipt.get("requiredRolesSatisfied")
+    if type(minimum) is int and type(count) is int and type(roles_satisfied) is bool:
+        expected_quorum = count >= minimum and roles_satisfied
+        if receipt.get("quorumSatisfied") is not expected_quorum:
+            blockers.append({"code": "review-mesh-quorum-count-roles-mismatch"})
+    if receipt.get("status") == "PASS" and (
+        receipt.get("quorumSatisfied") is not True or receipt.get("blockingFindingsUnresolved") is not False
+    ):
+        blockers.append({"code": "review-mesh-quorum-outcome-mismatch"})
+    return blockers
+
+
+def _quorum_scalar_validation(receipt: dict[str, Any]) -> list[dict[str, Any]]:
+    blockers: list[dict[str, Any]] = []
+    if (
+        not isinstance(receipt.get("reviewerCount"), int)
+        or isinstance(receipt.get("reviewerCount"), bool)
+        or receipt["reviewerCount"] < 0
+    ):
+        blockers.append({"code": "review-mesh-quorum-reviewer-count-invalid"})
+    if not isinstance(receipt.get("requiredRolesSatisfied"), bool):
+        blockers.append({"code": "review-mesh-quorum-roles-invalid"})
+    if not isinstance(receipt.get("quorumSatisfied"), bool):
+        blockers.append({"code": "review-mesh-quorum-satisfied-invalid"})
+    if not isinstance(receipt.get("blockingFindingsUnresolved"), bool):
+        blockers.append({"code": "review-mesh-quorum-blocking-findings-invalid"})
+    return blockers

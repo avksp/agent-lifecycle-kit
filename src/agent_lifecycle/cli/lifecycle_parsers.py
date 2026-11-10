@@ -175,6 +175,7 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
     import_result.add_argument("--assignment", required=True)
     import_result.add_argument("--reviewer-output", required=True)
     import_result.add_argument("--allow-local-evidence-ref", action="store_true")
+    import_result.add_argument("--remedy-evidence")
     import_result.add_argument("--out")
     synthesize = review_mesh_sub.add_parser("synthesize")
     synthesize.add_argument("--profile", required=True)
@@ -182,6 +183,8 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
     synthesize.add_argument("--mode", choices=list(REVIEW_MESH_MODE_IDS))
     synthesize.add_argument("--accepted-finding-id", action="append", default=[])
     synthesize.add_argument("--rejected-finding-id", action="append", default=[])
+    synthesize.add_argument("--remedy-evidence")
+    synthesize.add_argument("--remedy-decisions")
     synthesize.add_argument("--out")
     quorum = review_mesh_sub.add_parser("quorum")
     quorum.add_argument("--profile", required=True)
@@ -189,6 +192,7 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
     quorum.add_argument("--min-reviewers", type=int, required=True)
     quorum.add_argument("--required-role", action="append", default=[])
     quorum.add_argument("--reviewer-role", action="append", default=[])
+    quorum.add_argument("--remedy-evidence")
     quorum.add_argument("--out")
 
 

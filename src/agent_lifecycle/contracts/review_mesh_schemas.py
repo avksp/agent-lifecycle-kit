@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.review_remedy_schemas import (
+    DECISIONS_VERSION,
+    POLICY_VERSION,
+    REMEDY_SCHEMAS,
+    closed,
+    digest,
+)
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 
 REVIEW_MESH_MODE_IDS = (
@@ -19,10 +27,10 @@ RAW_REVIEW_STATUSES = ("PASS", "FAIL", "SKIPPED")
 RESPONSE_CONTRACT_VERSION = "agent-review-response-contract.v1"
 
 
-def raw_reviewer_schema() -> dict[str, Any]:
+def raw_reviewer_schema(version: str = RAW_REVIEW_VERSION) -> dict[str, Any]:
     """Describe the public raw payload, never the normalized mesh result."""
     return open_object_schema(
-        RAW_REVIEW_VERSION,
+        version,
         required=["schemaVersion", "status", "findings"],
         properties={
             "status": {"enum": list(RAW_REVIEW_STATUSES)},
@@ -43,16 +51,33 @@ def build_response_contract(
     raw_version: str = RAW_REVIEW_VERSION,
 ) -> dict[str, Any]:
     """Generate only supported typed constraints; this is not a schema engine."""
-    if raw_version != RAW_REVIEW_VERSION:
+    if raw_version not in {RAW_REVIEW_VERSION, "reviewer-output.v2"}:
         raise LifecycleError("review-response-version-unsupported", "Unsupported raw response version")
     selected = {} if extensions is None else extensions
-    if type(selected) is not dict or set(selected).difference({"coverage"}):
+    if type(selected) is not dict or set(selected).difference({"coverage", "remedy"}):
         raise LifecycleError("review-response-extension-unsupported", "Unsupported response extension")
-    schema = raw_reviewer_schema()
+    if (raw_version == "reviewer-output.v2") is not ("remedy" in selected):
+        raise LifecycleError("review-response-version-unsupported", "Remedy requires raw reviewer-output.v2")
+    schema = raw_reviewer_schema(raw_version)
+    if raw_version == "reviewer-output.v2":
+        schema["additionalProperties"] = False
+        schema["properties"]["liveCallsStarted"] = {"type": "boolean"}
     schema["required"] += ["contractDigest", "subjectDigest", "assignmentDigest"]
     for field in ("contractDigest", "subjectDigest", "assignmentDigest"):
         schema["properties"][field] = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
     normalized = {}
+    if "remedy" in selected:
+        extension = closed(
+            selected["remedy"], {"schemaVersion", "policyDigest", "maxProposalsPerFinding"}, "remedy extension"
+        )
+        digest(extension["policyDigest"], "policy digest")
+        if (
+            extension["schemaVersion"] != "agent-review-remedy-extension.v1"
+            or type(extension["maxProposalsPerFinding"]) is not int
+            or not 1 <= extension["maxProposalsPerFinding"] <= 3
+        ):
+            raise LifecycleError("review-response-extension-unsupported", "Invalid remedy extension")
+        normalized["remedy"] = dict(extension)
     if "coverage" in selected:
         extension = selected["coverage"]
         if type(extension) is not dict or set(extension) != {"type", "paths"} or extension["type"] != "array":
@@ -325,3 +350,92 @@ REVIEW_MESH_SCHEMAS["agent-review-mesh-result.v1"]["allOf"] = [
         },
     },
 ]
+
+
+for _kind in ("profile", "assignment", "result", "synthesis", "quorum-receipt"):
+    _v1 = f"agent-review-mesh-{_kind}.v1"
+    _v2 = f"agent-review-mesh-{_kind}.v2"
+    REVIEW_MESH_SCHEMAS[_v2] = deepcopy(REVIEW_MESH_SCHEMAS[_v1])
+    REVIEW_MESH_SCHEMAS[_v2]["$id"] = _v2
+    REVIEW_MESH_SCHEMAS[_v2]["properties"]["schemaVersion"] = {"const": _v2}
+    if _kind == "profile":
+        REVIEW_MESH_SCHEMAS[_v2]["required"].append("remedyProfile")
+        REVIEW_MESH_SCHEMAS[_v2]["properties"]["remedyProfile"] = {"type": "object"}
+    if _kind in {"synthesis", "quorum-receipt"}:
+        REVIEW_MESH_SCHEMAS[_v2]["required"].append("remedy")
+        REVIEW_MESH_SCHEMAS[_v2]["properties"]["remedy"] = {"type": "object"}
+
+for _kind in ("profile", "assignment", "result", "synthesis", "quorum-receipt"):
+    REVIEW_MESH_SCHEMAS[f"agent-review-mesh-{_kind}.v2"]["additionalProperties"] = False
+REVIEW_MESH_SCHEMAS["agent-review-mesh-result.v2"]["properties"].update(
+    {
+        field: {}
+        for field in (
+            "roundParticipation",
+            "commandOutcomes",
+            "redaction",
+            "import",
+            "remedyQualification",
+            "sessionUsage",
+            "assignmentDigest",
+            "sessionBudgetBasis",
+            "liveCallsStarted",
+        )
+    }
+)
+
+
+REVIEW_MESH_SCHEMAS["agent-review-mesh-profile.v2"]["properties"]["remedyProfile"] = deepcopy(
+    REMEDY_SCHEMAS[POLICY_VERSION]
+)
+_ORIGIN_SCHEMA = REMEDY_SCHEMAS[DECISIONS_VERSION]["properties"]["decisions"]["items"]["properties"]["findingRefs"][
+    "items"
+]
+_REMEDY_DIGEST = {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+REVIEW_MESH_SCHEMAS["agent-review-mesh-synthesis.v2"]["properties"]["remedy"] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "policyDigest",
+        "responseContractDigest",
+        "decisionsDigest",
+        "originFindingRefs",
+        "evidenceBundleDigest",
+    ],
+    "properties": {
+        "policyDigest": _REMEDY_DIGEST,
+        "responseContractDigest": _REMEDY_DIGEST,
+        "decisionsDigest": _REMEDY_DIGEST,
+        "originFindingRefs": {"type": "array", "maxItems": 256, "uniqueItems": True, "items": _ORIGIN_SCHEMA},
+        "evidenceBundleDigest": _REMEDY_DIGEST,
+    },
+}
+REVIEW_MESH_SCHEMAS["agent-review-mesh-quorum-receipt.v2"]["properties"]["remedy"] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "synthesisDigest",
+        "policyDigest",
+        "responseContractDigest",
+        "decisionsDigest",
+        "evidenceBundle",
+        "recheckDigests",
+    ],
+    "properties": {
+        "synthesisDigest": _REMEDY_DIGEST,
+        "policyDigest": _REMEDY_DIGEST,
+        "responseContractDigest": _REMEDY_DIGEST,
+        "decisionsDigest": _REMEDY_DIGEST,
+        "recheckDigests": {"type": "array", "maxItems": 32, "uniqueItems": True, "items": _REMEDY_DIGEST},
+        "evidenceBundle": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["path", "sha256", "digest"],
+            "properties": {
+                "path": {"type": "string", "minLength": 1, "maxLength": 1024},
+                "sha256": _REMEDY_DIGEST,
+                "digest": _REMEDY_DIGEST,
+            },
+        },
+    },
+}

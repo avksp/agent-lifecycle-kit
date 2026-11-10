@@ -17,14 +17,13 @@ from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, canonical_
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.workflow_state_schemas import (
-    WORKFLOW_STATE_V5,
     has_current_workflow_semantics,
     validate_workflow_state,
 )
 from agent_lifecycle.contracts.workflow_storage import iter_historical_snapshots, validate_storage
 from agent_lifecycle.contracts.workflow_storage_context import StorageOperation, choose_operation
 from agent_lifecycle.contracts.workflow_storage_io import check_deadline
-from agent_lifecycle.contracts.workflow_storage_schemas import IO_DEADLINE_SECONDS
+from agent_lifecycle.contracts.workflow_storage_schemas import IO_DEADLINE_SECONDS, uses_reference_storage
 
 BLOCKER_RECOVERY_ROUTES = {
     "run": {"resolve-run"},
@@ -63,10 +62,12 @@ def validate_workflow_authority(
     validate_workflow_state(state)
     if has_current_workflow_semantics(state):
         validate_recovery_state(state)
-    if state.get("schemaVersion") != WORKFLOW_STATE_V5:
+    if not uses_reference_storage(state):
         return state
     if root is None or state_path is None or operation is None:
-        raise LifecycleError("workflow-storage-context-required", "V5 authority requires root, path and operation")
+        raise LifecycleError(
+            "workflow-storage-context-required", "Reference-storage authority requires root, path and operation"
+        )
     operation.check()
     operation.bind_path(state_path)
     operation.bind(root, state)
@@ -91,8 +92,8 @@ def decode_workflow_authority(
     if operation is not None:
         operation.check()
     state = load_json_object(raw, label="workflow state")
-    if state.get("schemaVersion") == WORKFLOW_STATE_V5 and canonical_bytes(state) + b"\n" != raw:
-        raise LifecycleError("workflow-storage-invalid", "V5 state must be exact canonical JSON plus LF")
+    if uses_reference_storage(state) and canonical_bytes(state) + b"\n" != raw:
+        raise LifecycleError("workflow-storage-invalid", "Reference-storage state must be exact canonical JSON plus LF")
     return validate_workflow_authority(state, root=root, state_path=state_path, operation=operation)
 
 
@@ -156,7 +157,7 @@ def _read_authority_state(path: Path, root: Path, operation: StorageOperation) -
 
 
 def historical_snapshots(state: dict[str, Any], *, root: Path | None = None) -> Iterator[dict[str, Any]]:
-    if state.get("schemaVersion") != WORKFLOW_STATE_V5:
+    if not uses_reference_storage(state):
         yield from state.get("priorSnapshots", [])
         return
     operation = StorageOperation.current()

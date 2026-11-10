@@ -32,6 +32,7 @@ from agent_lifecycle.contracts.ownership_paths import (
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import create_private_json
+from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
 from agent_lifecycle.contracts.workflow_state_authority import workflow_package_root
 from agent_lifecycle.contracts.workflow_state_schemas import (
     WORKFLOW_STATE_MIGRATION_RECEIPT,
@@ -112,6 +113,8 @@ def migrate_workflow_state(
     )
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    if state.get("schemaVersion") == "agent-workflow-state.v6":
+        raise LifecycleError("review-remedy-downgrade-unsupported", "Required v6 authority cannot be downgraded")
     if target_schema == WORKFLOW_STATE_V5:
         return _migrate_storage_v5(state_path, state, operation_id)
     if target_schema != WORKFLOW_STATE_V4:
@@ -420,18 +423,10 @@ def _prepare_initialization_inputs(
     require_manifest_text(manifest)
     require_manifest_authority_paths(manifest, operation_root=root)
     validate_plan_manifest(manifest, require_completeness=True)
+    state_rel, state_path, selected_root = _initialization_selectors(
+        root, manifest, manifest_rel, state_path, run_id, package_id, package_root
+    )
     package = manifest["package"]
-    if not run_id or package_id != package["id"]:
-        raise LifecycleError("execution-target-selector-mismatch", "Run/package selectors do not match the plan")
-    if manifest_rel != package["planArtifactRoot"] + "/plan.manifest.json":
-        raise LifecycleError("execution-target-selector-mismatch", "Manifest selector does not match its authority")
-    state_rel = repository_authority_name(root / state_path, root)
-    state_path = root / state_rel
-    selected_root = package_root if package_root is not None else os.path.relpath(root, state_path.parent)
-    if (state_path.parent / selected_root).resolve() != root:
-        raise LifecycleError("execution-target-selector-mismatch", "State package root names a different checkout")
-    if resolve_authority_anchor(state_path, selected_root) != root:
-        raise LifecycleError("execution-target-selector-mismatch", "Run from the selected repository root")
     orchestration = manifest.get("orchestration", {})
     selected_event = normalize_repo_path(event_log or orchestration.get("eventLog", "events.jsonl"))
     for key, selected in [("stateFile", state_rel), ("eventLog", selected_event)]:
@@ -571,3 +566,31 @@ __all__ = [
     "migrate_workflow_state",
     "project_workflow_initialization",
 ]
+
+
+def _initialization_selectors(
+    root: Path,
+    manifest: dict[str, Any],
+    manifest_rel: str,
+    state_path: Path,
+    run_id: str,
+    package_id: str,
+    package_root: str | None,
+) -> tuple[str, Path, str]:
+    if require_remedy_authority(manifest) is not None:
+        raise LifecycleError(
+            "composition-policy-unsupported", "Required remedy uses explicit init, compile and reviewed adoption"
+        )
+    package = manifest["package"]
+    if not run_id or package_id != package["id"]:
+        raise LifecycleError("execution-target-selector-mismatch", "Run/package selectors do not match the plan")
+    if manifest_rel != package["planArtifactRoot"] + "/plan.manifest.json":
+        raise LifecycleError("execution-target-selector-mismatch", "Manifest selector does not match its authority")
+    state_rel = repository_authority_name(root / state_path, root)
+    state_path = root / state_rel
+    selected_root = package_root if package_root is not None else os.path.relpath(root, state_path.parent)
+    if (state_path.parent / selected_root).resolve() != root:
+        raise LifecycleError("execution-target-selector-mismatch", "State package root names a different checkout")
+    if resolve_authority_anchor(state_path, selected_root) != root:
+        raise LifecycleError("execution-target-selector-mismatch", "Run from the selected repository root")
+    return state_rel, state_path, selected_root

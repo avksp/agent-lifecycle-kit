@@ -17,6 +17,7 @@ from agent_lifecycle.contracts.implementation_audit_validation import (
 )
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import persist_json_artifact, prepared_artifact_identity
+from agent_lifecycle.contracts.review_remedy_schemas import remedy_policy
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 from agent_lifecycle.contracts.workflow_finalization_types import (
     AcceptedTaskProof,
@@ -35,6 +36,7 @@ from agent_lifecycle.host_protocol.lifecycle_gate import (
     lifecycle_control_selection,
     require_lifecycle_gate_pass,
 )
+from agent_lifecycle.review_mesh.remediation import native_remedy_context
 from agent_lifecycle.specification import (
     require_completion_gate_finalization,
     validate_completion_check,
@@ -663,11 +665,19 @@ def _validate_review_mesh_final_quorum(
         _validated_cast(dict[str, Any], state.get("reviewMesh")) if isinstance(state.get("reviewMesh"), dict) else None
     )
     receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
+    context = None
+    if remedy_policy(config, phase="final-audit") is not None:
+        manifest = read_json_object(root / state["manifestPath"], label="current manifest")
+        lock = read_json_object(
+            root / manifest["package"]["planArtifactRoot"] / "plan.lock.json", label="current plan lock"
+        )
+        context = native_remedy_context(root, manifest, lock, phase="final-audit", state=state)
     gate = validate_review_mesh_quorum_path(
         root=root,
         phase="final-audit",
         config=config,
         receipt_path=receipt_path,
+        trusted_context=context,
     )
     require_review_mesh_quorum_gate_pass(gate)
     return gate if gate.get("required") or receipt_path else None

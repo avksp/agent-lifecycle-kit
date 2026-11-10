@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.46.0
+
+- Add an optional, disabled-by-default Review Mesh remedy profile with bounded proposals, attributed coordinator choices, and independently qualified rechecks. Choices remain inert and never grant execution, acceptance, or finding closure.
+- Bind required frozen policies with a closed manifest authority marker and native v6 state, retaining v5 immutable storage, clocks, history, and final audit gates. Unsupported composition, downgrade, and accepted-task transfer routes refuse before writes.
+- Preserve legacy off payloads and pin the normal publication build frontend to 1.6.1, with an emitted version assertion. No runtime dependency, provider default, or measured savings claim is added.
+
 ## 2.45.0 - 2026-11-09
 
 - Add opt-in advisory ranking of qualified benchmark records by complete accepted-task token or elapsed-time totals. Manual selection stays the default.

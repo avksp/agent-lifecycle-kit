@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_lifecycle.contracts.review_remedy_schemas import AUTHORITY_VERSION, REMEDY_SCHEMAS
+
 MANIFEST_SCHEMA = "agent-plan-manifest.v1"
 MANIFEST_VALIDATION_SCHEMA = "agent-plan-manifest-validation.v1"
 
@@ -33,6 +35,7 @@ _OBJECT = {"type": "object"}
 
 
 PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
+    **REMEDY_SCHEMAS,
     MANIFEST_SCHEMA: _closed_object_schema(
         MANIFEST_SCHEMA,
         required=["status", "planRevision", "package"],
@@ -72,6 +75,7 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "contextLimits": _OBJECT,
             "dependsOn": _STRING_LIST,
             "reviewMesh": _OBJECT,
+            "reviewRemedyAuthority": REMEDY_SCHEMAS[AUTHORITY_VERSION],
             "contextCheckpointPolicy": _OBJECT,
             "controllerGates": _OBJECT,
             "planReview": _OBJECT,

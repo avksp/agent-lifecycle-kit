@@ -16,6 +16,7 @@ from agent_lifecycle.contracts.review_mesh_schemas import (
     RAW_REVIEW_STATUSES,
     require_response_contract,
 )
+from agent_lifecycle.contracts.review_remedy_schemas import remedy_error, require_finding_remedies
 from agent_lifecycle.contracts.thread_bridge_schemas import (
     validate_thread_context_import,
 )
@@ -27,6 +28,7 @@ from agent_lifecycle.review_mesh.contracts import (
     require_review_mesh_result_pass,
     validate_review_mesh_result,
 )
+from agent_lifecycle.review_mesh.remediation import qualify_remedy_candidate
 
 
 def import_review_mesh_result(
@@ -37,10 +39,14 @@ def import_review_mesh_result(
     allow_local_evidence_refs: bool = False,
     session_usage_context: dict[str, Any] | None = None,
     existing_results: list[dict[str, Any]] | None = None,
+    remedy_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Normalize a reviewer output object into a redacted Review Mesh result."""
 
     _validate_import_input(reviewer_output)
+    policy = profile.get("remedyProfile")
+    if policy is not None:
+        require_finding_remedies(reviewer_output.get("findings"), policy)
     _require_safe_bound_metadata(profile, allow_local_evidence_refs=allow_local_evidence_refs)
     _require_safe_bound_metadata(assignment, allow_local_evidence_refs=allow_local_evidence_refs)
     bindings = _validate_import_bindings(reviewer_output, assignment, profile)
@@ -51,6 +57,10 @@ def import_review_mesh_result(
     # These exact values have already matched the checked bound authority.
     # Content normalization must not rewrite identity labels or placeholders.
     findings = sanitized.get("findings", [])
+    if policy is not None:
+        require_finding_remedies(findings, policy)
+        if _remedy_identities(findings) != _remedy_identities(reviewer_output["findings"]):
+            raise remedy_error("redaction changed a bound finding/proposal identity")
     budget_usage = {key: sanitized.get("budgetUsage", {}).get(key) for key in sorted(USAGE_KEYS)}
     commands = sanitized.get("commandOutcomes", [])
     status = sanitized.get("status")
@@ -106,19 +116,12 @@ def import_review_mesh_result(
         session_usage_context=session_usage_context,
         assignment=assignment,
     )
-    if normalized.get("budgetUsageStatus") == "UNAVAILABLE" or unproven_independence:
-        # Return readable candidates only for these expected proof gaps. The
-        # public validator still rejects them; other validation errors survive.
-        validation = {
-            **validation,
-            "blockers": [
-                item
-                for item in validation["blockers"]
-                if not _readable_candidate_gap(item, unproven_independence=unproven_independence)
-            ],
-        }
-        validation["status"] = "FAIL" if validation["blockers"] else "PASS"
+    validation = _readable_import_validation(validation, normalized, unproven_independence, policy)
     require_review_mesh_result_pass(validation)
+    if remedy_evidence is not None:
+        if policy is None:
+            raise remedy_error("remedy evidence requires opted-in v2 result")
+        normalized = qualify_remedy_candidate(profile, assignment, normalized, remedy_evidence)
     if existing_results is not None:
         return _same_response_once(normalized, existing_results)
     return normalized
@@ -225,6 +228,7 @@ def _validate_import_input(value: Any) -> None:
         _invalid_import("reviewer output must be an object")
     if "schemaVersion" in value and (not isinstance(value["schemaVersion"], str) or not value["schemaVersion"].strip()):
         _invalid_import("schemaVersion must be a nonempty string")
+    _validate_raw_remedy_fields(value)
     findings = value.get("findings", [])
     if not isinstance(findings, list) or any(not isinstance(item, dict) for item in findings):
         _invalid_import("findings must be a list of objects")
@@ -460,3 +464,54 @@ def _sanitize_value(value: Any, *, stats: dict[str, int], allow_local_evidence_r
     if value is None or type(value) in {bool, int, float}:
         return value
     _invalid_import("nested reviewer output must contain only JSON values")
+
+
+def _remedy_identities(findings: list[dict[str, Any]]) -> list[Any]:
+    return [
+        (
+            item["id"],
+            [
+                (proposal["proposalId"], proposal["paths"], [check["checkId"] for check in proposal["checks"]])
+                for proposal in item["remedy"].get("proposals", [])
+            ],
+        )
+        for item in findings
+    ]
+
+
+def _readable_import_validation(
+    validation: dict[str, Any], normalized: dict[str, Any], unproven_independence: bool, policy: dict[str, Any] | None
+) -> dict[str, Any]:
+    if normalized.get("budgetUsageStatus") == "UNAVAILABLE" or unproven_independence or policy is not None:
+        # Return readable candidates only for these expected proof gaps. The
+        # public validator still rejects them; other validation errors survive.
+        validation = {
+            **validation,
+            "blockers": [
+                item
+                for item in validation["blockers"]
+                if not _readable_candidate_gap(item, unproven_independence=unproven_independence)
+                and not (policy is not None and item["code"] == "review-mesh-result-independent-evidence-required")
+            ],
+        }
+        validation["status"] = "FAIL" if validation["blockers"] else "PASS"
+    return validation
+
+
+def _validate_raw_remedy_fields(value: dict[str, Any]) -> None:
+    if value.get("schemaVersion") == "reviewer-output.v2":
+        allowed = {
+            "schemaVersion",
+            "status",
+            "findings",
+            "budgetUsage",
+            "sessionUsage",
+            "commandOutcomes",
+            "liveCallsStarted",
+            "contractDigest",
+            "subjectDigest",
+            "assignmentDigest",
+            "coverage",
+        }
+        if set(value).difference(allowed):
+            _invalid_import("raw reviewer-output.v2 has unknown fields")

@@ -39,6 +39,7 @@ def dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
             evidence_paths=args.evidence,
             sandbox_receipt_paths=args.sandbox_receipt,
             review_mesh_quorum_paths=args.review_mesh_quorum,
+            delta_audit_builder=build_rework_delta_audit,
             changed_paths=args.path or None,
             expected_revision=args.expected_revision,
             base=args.base,

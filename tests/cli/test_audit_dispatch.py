@@ -48,6 +48,32 @@ class AuditDispatchTests(unittest.TestCase):
                 finding_check_evidence_paths=[Path("work/evidence.json")],
             )
 
+    def test_implementation_injects_existing_trusted_delta_builder(self) -> None:
+        args = argparse.Namespace(
+            audit_command="implementation",
+            manifest="manifest.json",
+            state="state.json",
+            task="T",
+            result="result.json",
+            review="review.json",
+            evidence=[],
+            sandbox_receipt=[],
+            review_mesh_quorum=[],
+            path=[],
+            expected_revision=1,
+            base=None,
+            auditor_id="auditor",
+            auditor_surface="cli",
+            out=None,
+        )
+        with patch(
+            "agent_lifecycle.cli.dispatch_audit.build_implementation_audit_report", return_value={"status": "PASS"}
+        ) as builder:
+            from agent_lifecycle.cli.dispatch_audit import build_rework_delta_audit
+
+            self.assertEqual(dispatch_audit(args), {"status": "PASS"})
+        self.assertIs(builder.call_args.kwargs["delta_audit_builder"], build_rework_delta_audit)
+
     def test_lifecycle_dispatch_delegates_audit_group(self) -> None:
         args = argparse.Namespace(command="audit", audit_command="review-check")
         with patch(

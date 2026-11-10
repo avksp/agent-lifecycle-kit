@@ -11,9 +11,12 @@ from agent_lifecycle.contracts.closing_time import closing_instant as _closing_i
 from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.immutable_input_schemas import _validate_a5_state
 from agent_lifecycle.contracts.paths import MAX_REPO_PATH_BYTES, normalize_repo_path
+from agent_lifecycle.contracts.review_remedy_schemas import AUTHORITY_VERSION, REMEDY_SCHEMAS, require_remedy_authority
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.workflow_storage_schemas import (
     WORKFLOW_STATE_V5,
+    WORKFLOW_STATE_V6,
+    uses_reference_storage,
     validate_storage_counts,
     validate_storage_metadata,
 )
@@ -823,7 +826,7 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
 
 def has_current_workflow_semantics(state: dict[str, Any]) -> bool:
     """v5 changes storage representation and retains all v4 authority rules."""
-    return state.get("schemaVersion") in {WORKFLOW_STATE_V4, WORKFLOW_STATE_V5}
+    return state.get("schemaVersion") in {WORKFLOW_STATE_V4, WORKFLOW_STATE_V5, WORKFLOW_STATE_V6}
 
 
 WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5] = deepcopy(WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V4])
@@ -843,12 +846,25 @@ WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5]["properties"]["storage"] = {
 }
 
 
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V6] = deepcopy(WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5])
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V6].update({"$id": WORKFLOW_STATE_V6})
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V6]["properties"]["schemaVersion"] = {"const": WORKFLOW_STATE_V6}
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V6]["required"].extend(["reviewMesh", "reviewRemedyAuthority"])
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V6]["properties"]["reviewRemedyAuthority"] = REMEDY_SCHEMAS[AUTHORITY_VERSION]
+WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V6]["properties"]["reviewMesh"] = {
+    "type": "object",
+    "required": ["required", "remedyProfile"],
+    "properties": {"required": {"const": True}, "remedyProfile": REMEDY_SCHEMAS["agent-review-remedy-policy.v1"]},
+}
+
+
 def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True) -> dict[str, Any]:
     """Validate state shape and cross-field invariants before it is trusted."""
 
     if not isinstance(state, dict):
         raise LifecycleError("invalid-workflow-state", "workflow state must be an object")
     schema_version = state.get("schemaVersion")
+    require_remedy_authority(state, state=True)
     if schema_version == WORKFLOW_STATE_V3 and allow_legacy:
         _validate_legacy_state(state)
         _validate_a5_state(state)
@@ -857,7 +873,7 @@ def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True)
         return state
     if not has_current_workflow_semantics(state):
         raise LifecycleError("unsupported-workflow-state", "workflow state schemaVersion is unsupported")
-    if schema_version == WORKFLOW_STATE_V5:
+    if uses_reference_storage(state):
         validate_storage_metadata(state.get("storage"))
         validate_storage_counts(state)
     _require_string(state, "runId")

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts.review_remedy_schemas import remedy_error
 from agent_lifecycle.contracts.review_round_schemas import (
     ROUND_EXHAUSTION_OUTCOMES,
     build_review_round_evaluation,
@@ -22,6 +23,7 @@ from agent_lifecycle.review_mesh.contracts import (
     validate_review_mesh_result,
     validate_review_mesh_synthesis,
 )
+from agent_lifecycle.review_mesh.remediation import rejected_finding_digests, remedy_synthesis_section
 
 
 def synthesize_review_mesh_results(
@@ -32,45 +34,26 @@ def synthesize_review_mesh_results(
     subject: dict[str, Any] | None = None,
     accepted_finding_ids: list[str] | None = None,
     rejected_finding_ids: list[str] | None = None,
+    remedy_decisions: dict[str, Any] | None = None,
+    remedy_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build deterministic agreement/conflict/unresolved lists from results."""
 
-    for result in results:
-        require_review_mesh_result_pass(validate_review_mesh_result(result, profile=profile))
+    opted = "remedyProfile" in profile
+    rejected_digests: set[str] = set()
+    if opted:
+        if remedy_decisions is None or remedy_evidence is None or accepted_finding_ids or rejected_finding_ids:
+            raise remedy_error("v2 synthesis requires exact decisions/evidence and validated dispositions")
+        section = remedy_synthesis_section(profile, results, remedy_decisions, remedy_evidence)
+        rejected_digests = rejected_finding_digests(remedy_decisions, remedy_evidence)
+    else:
+        for result in results:
+            require_review_mesh_result_pass(validate_review_mesh_result(result, profile=profile))
     selected_mode = mode or (results[0]["mode"] if results else profile["defaultMode"])
     selected_subject = subject or (dict(results[0].get("subject", {})) if results else {})
     accepted_ids = set(accepted_finding_ids or [])
     rejected_ids = set(rejected_finding_ids or [])
-    grouped = _group_findings(results)
-    agreement: list[dict[str, Any]] = []
-    conflicts: list[dict[str, Any]] = []
-    accepted: list[dict[str, Any]] = []
-    rejected: list[dict[str, Any]] = []
-    unresolved: list[dict[str, Any]] = []
-    for key, findings in sorted(grouped.items()):
-        severities = {str(item.get("severity", "INFO")) for item in findings}
-        statuses = {str(item.get("status", "open")) for item in findings}
-        current_conflict = len(severities) > 1 or len(statuses) > 1
-        summary = {
-            "findingKey": key,
-            "count": len(findings),
-            "severities": sorted(severities),
-            "reviewerResultDigests": sorted(
-                str(item.get("resultDigest")) for item in findings if item.get("resultDigest")
-            ),
-        }
-        if len(findings) > 1 and len(severities) == 1 and len(statuses) == 1:
-            agreement.append(summary)
-        if current_conflict:
-            conflicts.append(summary)
-        representative = _representative_finding(key, findings)
-        finding_id = str(representative.get("id") or key)
-        if finding_id in rejected_ids:
-            rejected.append(representative)
-        elif finding_id in accepted_ids or (len(findings) > 1 and not current_conflict):
-            accepted.append(representative)
-        elif _blocking_finding(representative) or current_conflict:
-            unresolved.append(representative)
+    agreement, conflicts, accepted, rejected, unresolved = _synthesis_buckets(results, accepted_ids, rejected_ids)
     synthesis = build_review_mesh_synthesis(
         profile=profile,
         mode=selected_mode,
@@ -82,6 +65,7 @@ def synthesize_review_mesh_results(
         rejected_findings=rejected,
         unresolved_findings=unresolved,
     )
+    _extend_remedy_synthesis(synthesis, results, section if opted else None, rejected_digests)
     validation = validate_review_mesh_synthesis(synthesis, profile=profile)
     if validation["status"] != "PASS":
         from agent_lifecycle.contracts import LifecycleError
@@ -290,3 +274,71 @@ def _collect_participating_findings(
 
 
 __all__ = ["evaluate_review_round", "synthesize_review_mesh_results"]
+
+
+def _synthesis_buckets(
+    results: list[dict[str, Any]], accepted_ids: set[str], rejected_ids: set[str]
+) -> tuple[
+    list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]
+]:
+    grouped = _group_findings(results)
+    agreement: list[dict[str, Any]] = []
+    conflicts: list[dict[str, Any]] = []
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    unresolved: list[dict[str, Any]] = []
+    for key, findings in sorted(grouped.items()):
+        severities = {str(item.get("severity", "INFO")) for item in findings}
+        statuses = {str(item.get("status", "open")) for item in findings}
+        current_conflict = len(severities) > 1 or len(statuses) > 1
+        summary = {
+            "findingKey": key,
+            "count": len(findings),
+            "severities": sorted(severities),
+            "reviewerResultDigests": sorted(
+                str(item.get("resultDigest")) for item in findings if item.get("resultDigest")
+            ),
+        }
+        if len(findings) > 1 and len(severities) == 1 and len(statuses) == 1:
+            agreement.append(summary)
+        if current_conflict:
+            conflicts.append(summary)
+        representative = _representative_finding(key, findings)
+        finding_id = str(representative.get("id") or key)
+        if finding_id in rejected_ids:
+            rejected.append(representative)
+        elif finding_id in accepted_ids or (len(findings) > 1 and not current_conflict):
+            accepted.append(representative)
+        elif _blocking_finding(representative) or current_conflict:
+            unresolved.append(representative)
+    return agreement, conflicts, accepted, rejected, unresolved
+
+
+def _extend_remedy_synthesis(
+    synthesis: dict[str, Any], results: list[dict[str, Any]], section: dict[str, Any] | None, rejected_digests: set[str]
+) -> None:
+    if section is not None:
+        synthesis["schemaVersion"] = "agent-review-mesh-synthesis.v2"
+        synthesis["remedy"] = section
+        unresolved = {}
+        for result in results:
+            for finding in result["findings"]:
+                if (_blocking_finding(finding) and canonical_digest(finding) not in rejected_digests) or finding[
+                    "remedy"
+                ]["availability"] == "UNAVAILABLE":
+                    unresolved[canonical_digest(finding)] = finding
+        rejected = {
+            canonical_digest(finding): finding
+            for result in results
+            for finding in result["findings"]
+            if canonical_digest(finding) in rejected_digests
+        }
+        synthesis["rejectedFindings"] = [rejected[key] for key in sorted(rejected)]
+        synthesis["acceptedFindings"] = [
+            finding for finding in synthesis["acceptedFindings"] if canonical_digest(finding) not in rejected_digests
+        ]
+        synthesis["unresolvedFindings"] = [unresolved[key] for key in sorted(unresolved)]
+        synthesis["status"] = "INCONCLUSIVE" if unresolved else "PASS"
+        synthesis["synthesisDigest"] = canonical_digest(
+            {key: item for key, item in synthesis.items() if key != "synthesisDigest"}
+        )

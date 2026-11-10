@@ -283,10 +283,36 @@ Wrong raw version, stale identity/digest or a changed requested contract refuses
 before a result file is created. Negative findings remain negative; coverage is
 still a caller declaration, not proof of independent reading.
 
-The only optional extension is
+One optional extension is
 `responseExtensions: {coverage: {type: "array", paths: [...]}}`, with normalized
 unique paths; unknown extension names/types/keywords refuse. An optional explicit
 `responseContract` must exactly equal the generated contract. This extends the
 existing raw collector rather than introducing a generic schema engine. A valid
 normalized import is not an accepting task audit or an attested independence
 receipt. See [safe artifact authoring](safe-artifact-authoring.md).
+
+## Optional remedy selection (2.46)
+
+The remedy profile is off by default. Existing v1 artifacts and digests stay unchanged when it is absent. Under the frozen `reviewMesh` policy, `remedyProfile` is a closed `agent-review-remedy-policy.v1` object: `mode` (`advisory` or `required`), sorted selected `phases` (`freeze`, `implementation-audit`, `final-audit`), `maxProposalsPerFinding` (1–3), `roleScopes` and `policyDigest`. Each role scope has `role`, `modules`, `paths` and `checkIds` and maps an existing frozen required role. Compute the digest with `canonical_digest` over all policy fields except `policyDigest`. Required phases also require their containing Review Mesh gate. A local suggestion or installation never enables it.
+
+Use existing `review-mesh prepare` with the complete manifest, `--review-input` inventory, current authority inputs and repository root. Preparation maps `plan-review` to native `freeze`, binds the complete policy and negotiates `reviewer-output.v2` plus the remedy response extension. Unselected phases retain v1. Direct required assignment without that complete prepared contract refuses.
+
+Every v2 finding has a stable ID and either `AVAILABLE` proposals or `UNAVAILABLE` with a reason. One proposal is enough. A proposal contains `proposalId`, concrete inert `action`, relative `paths`, `rationale`, bounded `risks` and requirement-derived `checks` (`checkId`, `expectation`). Proposal commands, patches and migration text are never executed. Validate both original and redacted shape; decisions bind the normalized proposal actually selected. `UNAVAILABLE` remains unresolved.
+
+The coordinator supplies `agent-review-remedy-decisions.v1`, preserving exact finding/result/assignment/review origins, the selected proposal, reasons and comparison of every actual unselected alternative. No extra alternative is mandatory. Selection grants no execution, finding closure, task acceptance or finalization. Existing independently validated finding dispositions remain authoritative.
+
+Existing commands gain these optional inputs:
+
+```text
+review-mesh import-result --profile profile.json --assignment assignment.json --reviewer-output raw.json --remedy-evidence evidence/index.json
+review-mesh synthesize --profile profile.json --result result.json --remedy-decisions decisions.json --remedy-evidence evidence/index.json
+review-mesh quorum --profile profile.json --synthesis synthesis.json --min-reviewers 1 --remedy-evidence evidence/index.json
+```
+
+Raw imports remain unqualified candidates. The separate typed participation wrapper binds `assignmentDigest`, `rawOutputDigest`, existing `participation`, `independentEvidence` and `sessionUsageContext` under `agent-review-remedy-participation.v1` with `qualificationDigest`. Existing validators must qualify an actual successful terminal job, structured review verdict, independent producer and available scoped provider usage; self-reported identities or a hash wrapper alone are insufficient. The qualified result retains the original candidate. Fixtures are UNIT_ONLY and do not prove live execution.
+
+The closed `agent-review-remedy-evidence.v1` index contains sorted unique `{kind,path,sha256,digest}` artifact references and `bundleDigest`. Allowed kinds are assignment, result, decision, participation, disposition, recheck, delta, dependency, validation-selection, finding-binding, finding-evidence, manifest, lock and state. Paths are portable repository-relative files; symlinks, stale bytes, wrong types, duplicates, overflows and digest mismatches refuse. It excludes itself and enclosing synthesis/quorum to avoid cycles. Limits include 256 findings/decisions, 32 results/roles, 3 proposals, 512 artifact references, 8 MiB per loaded artifact and 64 MiB total. Smaller existing caps still apply; nothing is truncated.
+
+Repair rechecks preserve separate original/current review epochs, adjacent native attempts and actual Git snapshot/delta lineage. The audit consumer recomputes the existing read-only delta. Proven impact maps to the affected required role union; missing, stale, protected or unmapped impact requires `FULL_AUDIT_REQUIRED`. A qualified substitute needs the original/replacement identities, exact role and reason. An implementer cannot independently accept its own fix. If native repair lineage is unavailable, obtain a fresh full current review and decision set. Final audit always remains fresh and full. No savings are claimed without comparable measurements.
+
+The actual terminal review verdict also carries a closed `reviewMeshBinding` with `assignmentDigest`, `profileDigest`, `responseContractDigest`, `rawOutputDigest`, `sanitizedOutputDigest` and `findingsDigest`. The successful terminal job output digest covers that verdict including these bindings. A collector must emit them prospectively; adding a wrapper after completion cannot qualify unrelated raw output. Native preparation separately binds exact source revision and manifest-derived source lineage.

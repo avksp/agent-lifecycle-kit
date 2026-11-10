@@ -289,7 +289,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.45.0
+python -m pip install agent-lifecycle-kit==2.46.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -1134,3 +1134,11 @@ agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-
 `agent-lifecycle benchmark rank-qualified --request <local.json> [--out <new.json>]` читает ограниченный локальный запрос. По умолчанию выбор ручной; `enabled: true` запрашивает только рекомендацию. Команда не запускает хост или модель, не меняет профиль и не применяет маршрут.
 
 Нужны полные свежие записи одного хоста, принятые независимой проверкой. Неполные, устаревшие, недоверенные или несопоставимые данные дают `NO_RECOMMENDATION`. Некорректный вход даёт ограниченную ошибку. Явный список доверенных хешей доказывает членство и целостность, но не полноту сбора. См. [контракт входа и примеры](benchmark-qualification.md) и [границы политики выбора](model-routing.md). Положительные фикстуры — `UNIT_ONLY`; экономическая квалификация живого хоста и экономия не заявляются.
+
+## Required remedy authority
+
+Используйте явные `workflow init`, `task compile` и проверенный
+`workflow adopt-plan`, затем отдельные authorization/start и обычные task/final
+проверки. [Контракт хранения и полномочий](workflow-state-storage.md)
+определяет required-only marker, v6 state, совместимость и неподдерживаемые пути.
+Установка новой ALK сама не мигрирует старый план и не включает профиль.

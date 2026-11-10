@@ -14,6 +14,7 @@ from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, load_json_object
 from agent_lifecycle.contracts.immutable_input_schemas import validate_a5_plan_policy, validate_a5_policy
 from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
+from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
 from agent_lifecycle.freeze import verify_plan_lock_envelope, verify_plan_package_integrity
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.prerequisites import validate_prerequisite_acceptance
@@ -22,6 +23,7 @@ from agent_lifecycle.planning.task_compatibility import (
     task_contracts_compatible,
 )
 from agent_lifecycle.planning.validation import validate_plan_manifest
+from agent_lifecycle.review_mesh.remediation import native_remedy_context
 from agent_lifecycle.specification import validate_completion_check
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.checkpoint_gate import normalize_context_checkpoint_policy
@@ -39,6 +41,7 @@ from agent_lifecycle.workflow.state import (
     deadline_after,
     now_iso,
     require_current_authorization,
+    storage_root_for_state,
 )
 from agent_lifecycle.workflow.transactions import workflow_transaction
 
@@ -65,6 +68,7 @@ def adopt_plan(
     _require_adoptable(state, reset_tasks=reset_tasks)
     root = package_root(state_path, state)
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
+    _require_remedy_adoption(state, manifest, preserve_accepted_compatible)
     digest = _verify_frozen_manifest(root, manifest)
     validate_prerequisite_acceptance(manifest, repository_root=root)
     artifact_root = manifest.get("package", {}).get("artifactRoot")
@@ -75,26 +79,7 @@ def adopt_plan(
         _require_revision_upgrade(state, digest, revision, reset_tasks=reset_tasks)
         packet_set, packets = _packet_set(root, manifest, digest)
         tasks = _build_tasks(manifest, packets)
-        previous_tasks = {task["id"]: task for task in state["tasks"]}
-        unresolved = {item["taskId"]: copy.deepcopy(item) for item in state.get("unresolvedPlanIncompatibilities", [])}
-        for previous in state["tasks"]:
-            if "planIncompatibility" in previous:
-                unresolved[previous["id"]] = copy.deepcopy(previous["planIncompatibility"])
-        for task in tasks:
-            previous = previous_tasks.get(task["id"], {})
-            if task["id"] in unresolved:
-                task["planIncompatibility"] = copy.deepcopy(unresolved[task["id"]])
-                if "usageTotals" in previous:
-                    task["usageTotals"] = copy.deepcopy(previous["usageTotals"])
-                elif "cumulativeUsageTotals" in unresolved[task["id"]]:
-                    task["usageTotals"] = copy.deepcopy(unresolved[task["id"]]["cumulativeUsageTotals"])
-                else:
-                    task.pop("usageTotals", None)
-                task["priorFinancialObligations"] = copy.deepcopy(
-                    previous.get(
-                        "priorFinancialObligations", unresolved[task["id"]].get("financialObligations", previous)
-                    )
-                )
+        unresolved = _inherit_plan_incompatibilities(state, tasks)
         original_admissions: dict[str, dict[str, Any]] = {}
         original_legacy_plans: dict[str, str] = {}
         if preserve_accepted_compatible:
@@ -244,6 +229,9 @@ def _verify_frozen_manifest(root: Path, manifest: dict[str, Any]) -> str:
             phase="freeze",
             config=review_mesh,
             receipt_path=None,
+            trusted_context=native_remedy_context(root, manifest, lock, phase="freeze")
+            if require_remedy_authority(manifest) is not None
+            else None,
         )
     )
     return digest
@@ -336,6 +324,23 @@ def _build_tasks(
             "controllerGateReceipts": [],
             "remediationFindingIds": [],
         }
+        run_policy = require_remedy_authority(manifest)
+        if run_policy is not None:
+            inherited = copy.deepcopy(manifest["reviewMesh"])
+            override = task.get("reviewMesh") or {}
+            for key in (
+                "required",
+                "phases",
+                "remedyProfile",
+                "profileDigest",
+                "quorumPolicy",
+                "independenceRequirement",
+            ):
+                if key in override and key in inherited and override[key] != inherited[key]:
+                    raise LifecycleError(
+                        "review-remedy-task-override", "Task cannot replace required run review authority"
+                    )
+            task["reviewMesh"] = {**override, **inherited}
         if security_analysis is not None:
             # Keep the extension advisory until the authoritative acceptance gate
             # reads the copy materialized into this adopted task.
@@ -585,6 +590,8 @@ def _default_artifacts(manifest: dict[str, Any], task_id: str) -> dict[str, str]
 
 
 def _archive_prior_snapshot(state: dict[str, Any]) -> None:
+    marker = copy.deepcopy(state.get("reviewRemedyAuthority"))
+    prior_policy = copy.deepcopy(state.get("reviewMesh"))
     state.setdefault("priorSnapshots", []).append(
         {
             "planRevision": state.get("planRevision"),
@@ -601,11 +608,14 @@ def _archive_prior_snapshot(state: dict[str, Any]) -> None:
         }
     )
 
+    if marker is not None:
+        state["priorSnapshots"][-1].update(reviewRemedyAuthority=marker, reviewMesh=prior_policy)
+
 
 def _replace_plan_state(
     state: dict[str, Any],
     *,
-    state_path: Path,  # noqa: ARG001
+    state_path: Path,
     manifest_path: Path,
     manifest: dict[str, Any],
     digest: str,
@@ -624,6 +634,12 @@ def _replace_plan_state(
             "manifest-path-outside-package-root",
             "adopted manifest must be contained by the workflow package root",
         ) from exc
+    if require_remedy_authority(manifest) is not None:
+        state["schemaVersion"] = "agent-workflow-state.v6"
+        state["reviewRemedyAuthority"] = copy.deepcopy(manifest["reviewRemedyAuthority"])
+        state.setdefault(
+            "storage", {"schemaVersion": "agent-workflow-storage.v1", "root": storage_root_for_state(state_path, state)}
+        )
     state["planRevision"] = revision
     state["planDigest"] = digest
     state["sourceRevision"] = source_revision
@@ -733,3 +749,40 @@ def _last_plan_lock_review(root: Path, manifest: dict[str, Any]) -> dict[str, An
 def _raw_file_identity(path: Path) -> dict[str, Any]:
     data = read_authority_bytes(path, max_bytes=MAX_JSON_INPUT_BYTES)
     return {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data)}
+
+
+def _require_remedy_adoption(
+    state: dict[str, Any], manifest: dict[str, Any], preserve_accepted_compatible: bool
+) -> None:
+    next_policy = require_remedy_authority(manifest)
+    prior_policy = require_remedy_authority(state, state=True)
+    if next_policy is not None and state.get("schemaVersion") == "agent-workflow-state.v3":
+        raise LifecycleError("review-remedy-migration-required", "Migrate v3 explicitly to v4 before remedy adoption")
+    if prior_policy is not None and next_policy is None:
+        raise LifecycleError(
+            "review-remedy-downgrade-unsupported", "Required remedy authority cannot become off/advisory"
+        )
+    if preserve_accepted_compatible and (prior_policy is not None or next_policy is not None):
+        raise LifecycleError("review-remedy-preservation-unsupported", "Required remedy cannot transfer accepted tasks")
+
+
+def _inherit_plan_incompatibilities(state: dict[str, Any], tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    previous_tasks = {task["id"]: task for task in state["tasks"]}
+    unresolved = {item["taskId"]: copy.deepcopy(item) for item in state.get("unresolvedPlanIncompatibilities", [])}
+    for previous in state["tasks"]:
+        if "planIncompatibility" in previous:
+            unresolved[previous["id"]] = copy.deepcopy(previous["planIncompatibility"])
+    for task in tasks:
+        previous = previous_tasks.get(task["id"], {})
+        if task["id"] in unresolved:
+            task["planIncompatibility"] = copy.deepcopy(unresolved[task["id"]])
+            if "usageTotals" in previous:
+                task["usageTotals"] = copy.deepcopy(previous["usageTotals"])
+            elif "cumulativeUsageTotals" in unresolved[task["id"]]:
+                task["usageTotals"] = copy.deepcopy(unresolved[task["id"]]["cumulativeUsageTotals"])
+            else:
+                task.pop("usageTotals", None)
+            task["priorFinancialObligations"] = copy.deepcopy(
+                previous.get("priorFinancialObligations", unresolved[task["id"]].get("financialObligations", previous))
+            )
+    return unresolved

@@ -21,9 +21,11 @@ from agent_lifecycle.contracts.ownership_paths import (
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
 from agent_lifecycle.contracts.redaction import redact_value
 from agent_lifecycle.contracts.review_mesh_schemas import build_response_contract, require_response_contract
+from agent_lifecycle.contracts.review_remedy_schemas import remedy_policy, require_remedy_authority
 from agent_lifecycle.model_routing.profiles import ALLOWED_MODEL_CLASSES
 from agent_lifecycle.review_mesh.assignments import build_review_mesh_assignment_packet
 from agent_lifecycle.review_mesh.contracts import build_review_mesh_profile
+from agent_lifecycle.review_mesh.remediation import prepared_remedy_context
 from agent_lifecycle.review_mesh.results import import_review_mesh_result
 
 REVIEW_MESH_OPERATOR_TEMPLATE_SCHEMA = "agent-review-mesh-operator-template.v1"
@@ -239,6 +241,9 @@ def prepare_review_mesh_operator_packets(
             "review-mesh-prepare-blocking-without-plan-opt-in", "blocking Review Mesh requires a frozen plan opt-in"
         )
     selected_phase = phase or template["phase"]
+    policy, blocking = _operator_remedy_policy(
+        source, selected_phase, selected_reviewers, authority_manifest, review_input, blocking
+    )
     handoff = None
     if review_input is not None:
         if out_dir is None or repository_root is None or authority_manifest is None:
@@ -259,6 +264,7 @@ def prepare_review_mesh_operator_packets(
         independence_required=bool(template["independenceRequired"]),
         independence_dimensions=list(template["independenceDimensions"]),
         reviewer_model_classes=_unique_model_classes(selected_reviewers),
+        remedy_profile=policy,
     )
     packets = [
         build_review_mesh_assignment_packet(
@@ -376,21 +382,7 @@ def _prepare_review_handoff(
     paths = {item["path"] for item in entries}
     if not set(scope["changedPaths"]).issubset(paths):
         raise LifecycleError("review-handoff-source-missing", "Required source paths are absent")
-    contract = build_response_contract(
-        request.get(
-            "responseExtensions",
-            {
-                "coverage": {"type": "array", "paths": scope["changedPaths"]},
-            },
-        )
-    )
-    coverage = contract["extensions"].get("coverage")
-    if coverage is not None and coverage["paths"] != scope["changedPaths"]:
-        raise LifecycleError("review-response-coverage-invalid", "Coverage must bind the declared subject paths")
-    if "responseContract" in request:
-        requested = require_response_contract(request["responseContract"])
-        if requested["contractDigest"] != contract["contractDigest"]:
-            raise LifecycleError("review-response-contract-mismatch", "Requested and collector contracts differ")
+    contract, policy = _prepared_response_contract(request, manifest, phase, scope)
     subject = {
         "source": _source_summary(source),
         "sourceRevision": request["sourceRevision"],
@@ -417,7 +409,10 @@ def _prepare_review_handoff(
     }
     if len(canonical_bytes(index)) > 65536:
         raise LifecycleError("review-handoff-index-too-large", "Index must be split before preparation")
-    return {"subjectDigest": digest, "responseContract": contract, "index": index}
+    handoff = {"subjectDigest": digest, "responseContract": contract, "index": index}
+    if policy is not None:
+        handoff["remedyContext"] = prepared_remedy_context(root, manifest, request)
+    return handoff
 
 
 def _review_scope(value: Any, manifest: dict[str, Any], root: Path) -> dict[str, Any]:
@@ -789,3 +784,56 @@ def _required_string(value: Any, code: str) -> str:
     if not isinstance(value, str) or not value:
         raise LifecycleError(code, "required string is missing")
     return value
+
+
+def _operator_remedy_policy(
+    source: dict[str, Any],
+    phase: str,
+    reviewers: list[dict[str, str]],
+    authority_manifest: dict[str, Any] | None,
+    review_input: dict[str, Any] | None,
+    blocking: bool,
+) -> tuple[dict[str, Any] | None, bool]:
+    policy = remedy_policy(source.get("reviewMesh"), phase=phase)
+    if policy is not None and len(reviewers) > 32:
+        raise LifecycleError("review-remedy-invalid", "Remedy preparation supports at most 32 reviewers")
+    if policy is not None and policy["mode"] == "required":
+        if authority_manifest is None or require_remedy_authority(authority_manifest) != policy or review_input is None:
+            raise LifecycleError(
+                "review-remedy-prepare-required", "Required remedy needs complete manifest-bound preparation"
+            )
+        blocking = True
+    return policy, blocking
+
+
+def _prepared_response_contract(
+    request: dict[str, Any], manifest: dict[str, Any], phase: str, scope: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    extensions = dict(
+        request.get("responseExtensions", {"coverage": {"type": "array", "paths": scope["changedPaths"]}})
+    )
+    policy = remedy_policy(manifest.get("reviewMesh"), phase=phase)
+    if policy is not None:
+        expected = {
+            "schemaVersion": "agent-review-remedy-extension.v1",
+            "policyDigest": policy["policyDigest"],
+            "maxProposalsPerFinding": policy["maxProposalsPerFinding"],
+        }
+        if "remedy" in extensions and extensions["remedy"] != expected:
+            raise LifecycleError(
+                "review-remedy-contract-mismatch", "Requested remedy extension differs from frozen policy"
+            )
+        extensions["remedy"] = expected
+    elif "remedy" in extensions:
+        raise LifecycleError("review-remedy-phase-mismatch", "Unselected phase cannot request remedy")
+    contract = build_response_contract(
+        extensions, raw_version="reviewer-output.v2" if policy is not None else "reviewer-output.v1"
+    )
+    coverage = contract["extensions"].get("coverage")
+    if coverage is not None and coverage["paths"] != scope["changedPaths"]:
+        raise LifecycleError("review-response-coverage-invalid", "Coverage must bind the declared subject paths")
+    if "responseContract" in request:
+        requested = require_response_contract(request["responseContract"])
+        if requested["contractDigest"] != contract["contractDigest"]:
+            raise LifecycleError("review-response-contract-mismatch", "Requested and collector contracts differ")
+    return contract, policy

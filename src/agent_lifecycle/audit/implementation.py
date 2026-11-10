@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from typing import cast as _validated_cast
@@ -10,6 +11,7 @@ from agent_lifecycle.audit.ownership import build_ownership_report, report_has_c
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.authority_text import require_review_text
 from agent_lifecycle.contracts.paths import normalize_repo_path
+from agent_lifecycle.contracts.review_remedy_schemas import remedy_policy
 from agent_lifecycle.contracts.review_verdict import (
     BLOCKING_REVIEW_SEVERITIES,
     REVIEW_SEVERITY_RANK,
@@ -19,6 +21,7 @@ from agent_lifecycle.planning.task_compatibility import (
     validate_task_plan_compatibility_receipt,
 )
 from agent_lifecycle.review.validation import require_supported_review_provenance
+from agent_lifecycle.review_mesh.remediation import evidence_values, load_remedy_evidence, native_remedy_context
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.implementation_audit_gate import (
     validate_final_task_evidence_reports,
@@ -41,12 +44,14 @@ FINAL_IMPLEMENTATION_AUDIT_SCHEMA = "agent-final-implementation-audit.v1"
 def _implementation_external_receipts(
     *,
     root: Path,
+    state_path: Path,
     state: dict[str, Any],
     task: dict[str, Any],
     sandbox_receipt_paths: list[str] | None,
     review_mesh_quorum_paths: list[str] | None,
     findings: list[dict[str, Any]],
     blockers: list[dict[str, Any]],
+    delta_audit_builder: Callable[..., dict[str, Any]] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     sandbox = _sandbox_summary(root, state, task, sandbox_receipt_paths or [])
     if sandbox["validation"]["status"] != "PASS":
@@ -61,7 +66,9 @@ def _implementation_external_receipts(
                 context=blocker,
             )
 
-    review_mesh = _review_mesh_summary(root, state, task, review_mesh_quorum_paths or [])
+    review_mesh = _review_mesh_summary(
+        root, state_path, state, task, review_mesh_quorum_paths or [], delta_audit_builder
+    )
     if review_mesh["validation"]["status"] != "PASS":
         for blocker in review_mesh["validation"]["blockers"]:
             _add_finding(
@@ -91,6 +98,7 @@ def build_implementation_audit_report(
     base: str | None = None,
     auditor_id: str = "implementation-auditor",
     auditor_surface: str = "cli",
+    delta_audit_builder: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     manifest = read_json_object(manifest_path, label="plan manifest")
     state = load_state(state_path)
@@ -145,10 +153,12 @@ def build_implementation_audit_report(
 
     sandbox, review_mesh = _implementation_external_receipts(
         root=root,
+        state_path=state_path,
         state=state,
         task=task,
         sandbox_receipt_paths=sandbox_receipt_paths,
         review_mesh_quorum_paths=review_mesh_quorum_paths,
+        delta_audit_builder=delta_audit_builder,
         findings=findings,
         blockers=blockers,
     )
@@ -668,7 +678,12 @@ def _sandbox_summary(
 
 
 def _review_mesh_summary(
-    root: Path, state: dict[str, Any], task: dict[str, Any], quorum_receipt_paths: list[str]
+    root: Path,
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    quorum_receipt_paths: list[str],
+    delta_audit_builder: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     config = (
         _validated_cast(dict[str, Any], task.get("reviewMesh"))
@@ -676,11 +691,14 @@ def _review_mesh_summary(
         else state.get("reviewMesh")
     )
     receipt_path = quorum_receipt_paths[0] if quorum_receipt_paths else None
+    context, delta = _remedy_audit_context(root, state_path, state, task, config, receipt_path, delta_audit_builder)
     validation = validate_review_mesh_quorum_path(
         root=root,
         phase="implementation-audit",
         config=config if isinstance(config, dict) else None,
         receipt_path=receipt_path,
+        trusted_context=context,
+        trusted_delta=delta,
     )
     return {"receiptPath": receipt_path, "validation": validation}
 
@@ -763,3 +781,55 @@ def _check_expected(
             blockers.append(
                 {"code": f"{prefix}-lineage-mismatch", "field": key, "expected": value, "actual": payload.get(key)}
             )
+
+
+def _remedy_audit_context(
+    root: Path,
+    state_path: Path,
+    state: dict[str, Any],
+    task: dict[str, Any],
+    config: Any,
+    receipt_path: str | None,
+    delta_audit_builder: Callable[..., dict[str, Any]] | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    if remedy_policy(config, phase="implementation-audit") is None:
+        return None, None
+    manifest_path = root / state["manifestPath"]
+    manifest = read_json_object(manifest_path, label="current manifest")
+    lock_path = root / manifest["package"]["planArtifactRoot"] / "plan.lock.json"
+    lock = read_json_object(lock_path, label="current plan lock")
+    context = native_remedy_context(root, manifest, lock, phase="implementation-audit", state=state, task=task)
+    selected = receipt_path or config.get("quorumReceiptPath")
+    if not selected:
+        return context, None
+    receipt = read_json_object(root / normalize_repo_path(selected), label="review quorum")
+    section = receipt.get("remedy", {})
+    if not isinstance(section, dict):
+        raise LifecycleError("review-remedy-invalid", "Review quorum remedy section must be an object")
+    evidence = section.get("evidenceBundle", {})
+    if not isinstance(evidence, dict):
+        raise LifecycleError("review-remedy-invalid", "Review quorum evidence reference must be an object")
+    evidence_path = evidence.get("path")
+    if not evidence_path:
+        return context, None
+    bundle = load_remedy_evidence(root, evidence_path)
+    if not evidence_values(bundle, "recheck"):
+        return context, None
+    if not callable(delta_audit_builder):
+        raise LifecycleError("review-remedy-delta-producer-required", "Repair requires a trusted native delta producer")
+    paths: dict[str, list[Path]] = {}
+    for item in bundle["artifacts"]:
+        paths.setdefault(item["reference"]["kind"], []).append(root / item["reference"]["path"])
+    if len(paths.get("dependency", [])) != 1 or len(paths.get("validation-selection", [])) != 1:
+        raise LifecycleError("review-remedy-invalid", "Recheck needs exact native delta producer inputs")
+    delta = delta_audit_builder(
+        manifest_path=manifest_path,
+        lock_path=lock_path,
+        state_path=state_path,
+        task_id=task["id"],
+        dependency_report_path=paths["dependency"][0],
+        validation_selection_path=paths["validation-selection"][0],
+        finding_check_binding_paths=paths.get("finding-binding", []),
+        finding_check_evidence_paths=paths.get("finding-evidence", []),
+    )
+    return context, delta
