@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.45.0 - 2026-11-09
+
+- Add opt-in advisory ranking of qualified benchmark records by complete accepted-task token or elapsed-time totals. Manual selection stays the default.
+- Reuse existing routing policy floors and benchmark qualification. Reject stale, incomplete, untrusted or incomparable evidence without starting a model or changing an active attempt.
+- Validate nested input types, bounded JSON encoding and complete coordinator, worker, review, audit, retry and correction contributions before economic advice.
+- Add equivalent English and Russian instructions and installed-CLI contract checks. Positive test fixtures remain UNIT_ONLY; live economic qualification, production promotion and measured savings are not claimed.
+
 ## 2.44.1 - 2026-11-09
 
 - Close the owned in-memory SQLite schema template after commit or rollback, while keeping caller-owned connections open.

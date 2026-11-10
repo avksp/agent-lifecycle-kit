@@ -214,12 +214,12 @@ class PublicationVersionTests(unittest.TestCase):
                 for metric in metrics.values():
                     if metric["status"] == "UNAVAILABLE":
                         self.assertIsNone(metric["value"])
-        # The current release has real command receipts but incomplete run coverage.
-        self.assertEqual("PARTIAL", accounting["totals"]["metrics"]["steps"]["status"])
-        self.assertGreater(accounting["totals"]["metrics"]["steps"]["value"], 0)
-        # Recorded operation durations are partial; their sum is not run elapsed time.
-        self.assertEqual("PARTIAL", accounting["totals"]["metrics"]["elapsedWallMs"]["status"])
-        self.assertGreater(accounting["totals"]["metrics"]["elapsedWallMs"]["value"], 0)
+        # This release fixture contains four whole-host UNKNOWN scopes. Known
+        # command receipts remain in the scoped work ledger; do not relabel
+        # them as complete task steps or elapsed time, or reuse prior data.
+        for key in ("steps", "elapsedWallMs"):
+            self.assertEqual("UNAVAILABLE", accounting["totals"]["metrics"][key]["status"])
+            self.assertIsNone(accounting["totals"]["metrics"][key]["value"])
         self.assertEqual(
             {"status": "UNAVAILABLE", "value": None},
             accounting["workflowEconomics"]["enclosingElapsedWall"],

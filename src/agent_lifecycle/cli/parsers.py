@@ -128,6 +128,9 @@ def _add_benchmark_parser(subparsers: argparse._SubParsersAction[argparse.Argume
     route_compare.add_argument("--candidate", action="append", required=True)
     route_compare.add_argument("--sample")
     route_compare.add_argument("--out")
+    ranking = benchmark_sub.add_parser("rank-qualified")
+    ranking.add_argument("--request", required=True)
+    ranking.add_argument("--out")
 
 
 def _add_strategy_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

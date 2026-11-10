@@ -330,3 +330,42 @@ The producer writes new structured artifacts as canonical JSON. Changes to the
 source, prefix, actor, binding or frontier require a refusal or explicit recovery.
 This mode is never enabled automatically after a missing or failed v1 receipt.
 
+
+## Opt-in qualified evidence ranking
+
+`benchmark rank-qualified` offers an advisory ranking within an explicit local
+candidate allowlist. Manual selection remains the default:
+
+```json
+{"schemaVersion":"agent-qualified-route-ranking-request.v1","enabled":false}
+```
+
+```bash
+agent-lifecycle benchmark rank-qualified --request local-ranking.json --out new-report.json
+```
+
+The request and optional new output must be regular files within the caller's
+repository directory; links and traversal are refused. The command never calls a
+model, starts a host, modifies a profile or adopts a route. Omit `--out` to print
+the report without a file write. Disabling ranking changes no selection state.
+
+Enabled requests run the existing model resolver before considering economics.
+Deterministic work returns `NO_MODEL_REQUIRED`; tier, risk, data, context,
+capability, lifecycle quality and failure-escalation floors remain authoritative.
+Local-only requests are evaluated against each supplied host profile. Every
+selected binding requires `calibrationStatus=PASSED`. Availability, manual
+selection, onboarding, launch authority and the existing bounded failure/fallback
+mechanisms still apply separately. A recommendation is no permission to launch.
+
+See [the benchmark evidence contract](benchmark-qualification.md#qualified-evidence-ranking)
+for enabled input and complete accepted-task resource requirements. Incomplete,
+stale, untrusted or incomparable evidence anywhere in the allowlist refuses the
+whole request with `NO_RECOMMENDATION`; the command does not drop a candidate to
+manufacture a winner. Input errors return a bounded error and nonzero exit.
+
+Reports contain candidate IDs, binding digests, classes and integer metric totals,
+never private provider/model names. `advisoryOnly=true`,
+`automaticRouteAdoptionEligible=false`, `liveEconomicQualification=UNQUALIFIED`
+and `savingsClaimed=false` always apply. Positive synthetic tests are `UNIT_ONLY`;
+live economic qualification and production promotion remain deferred. Digest
+membership does not attest a producer's identity or complete collection of calls.
