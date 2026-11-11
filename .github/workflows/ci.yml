@@ -187,12 +187,15 @@ jobs:
           --test-receipt work/ci/test-timings.json
           --out work/ci/cell-evidence/cell-evidence.json
       - name: Upload complete suite evidence
+        id: suite-evidence-upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alk-${{ env.CI_FULL_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.CI_ROLE }}-${{ env.CI_CELL }}
           path: work/ci/cell-evidence/
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.suite-evidence-upload.outputs.artifact-id }} ${{ steps.suite-evidence-upload.outputs.artifact-digest }}
+        run: 'true'
 
   foundation:
     name: foundation / py${{ matrix.python-version }}
@@ -242,12 +245,15 @@ jobs:
           --test-receipt work/ci/foundation-test-timings.json
           --out work/ci/cell-evidence/cell-evidence.json
       - name: Upload complete suite evidence
+        id: suite-evidence-upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alk-${{ env.CI_FULL_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.CI_ROLE }}-${{ env.CI_CELL }}
           path: work/ci/cell-evidence/
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.suite-evidence-upload.outputs.artifact-id }} ${{ steps.suite-evidence-upload.outputs.artifact-digest }}
+        run: 'true'
 
   quality:
     name: Python quality / ${{ matrix.python }}
@@ -346,12 +352,15 @@ jobs:
           "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py record --role quality --cell "$CI_CELL"
           --out work/ci/cell-evidence/cell-evidence.json
       - name: Upload complete suite evidence
+        id: suite-evidence-upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alk-${{ env.CI_FULL_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.CI_ROLE }}-${{ env.CI_CELL }}
           path: work/ci/cell-evidence/
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.suite-evidence-upload.outputs.artifact-id }} ${{ steps.suite-evidence-upload.outputs.artifact-digest }}
+        run: 'true'
 
   candidate:
     name: Main PR evidence candidate
@@ -392,6 +401,10 @@ jobs:
           path: work/ci/reuse-candidate.json
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.evidence-upload.outputs.artifact-id }} ${{ steps.evidence-upload.outputs.artifact-digest }}
+        if: steps.evidence-upload.outcome == 'success'
+        run: 'true'
+
       - name: Record optional upload ${{ steps.evidence-upload.outcome }}
         if: always()
         env:
@@ -459,6 +472,10 @@ jobs:
           path: work/ci/probe/
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.evidence-upload.outputs.artifact-id }} ${{ steps.evidence-upload.outputs.artifact-digest }}
+        if: steps.evidence-upload.outcome == 'success'
+        run: 'true'
+
       - name: Record optional upload ${{ steps.evidence-upload.outcome }}
         if: always()
         env:
@@ -517,6 +534,10 @@ jobs:
           path: work/ci/probe/
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.evidence-upload.outputs.artifact-id }} ${{ steps.evidence-upload.outputs.artifact-digest }}
+        if: steps.evidence-upload.outcome == 'success'
+        run: 'true'
+
       - name: Record optional upload ${{ steps.evidence-upload.outcome }}
         if: always()
         env:
@@ -574,6 +595,10 @@ jobs:
           path: work/ci/probe/
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.evidence-upload.outputs.artifact-id }} ${{ steps.evidence-upload.outputs.artifact-digest }}
+        if: steps.evidence-upload.outcome == 'success'
+        run: 'true'
+
       - name: Record optional upload ${{ steps.evidence-upload.outcome }}
         if: always()
         env:
@@ -689,6 +714,7 @@ jobs:
           --python "$CELL_VENV_PYTHON" --evidence work/ci/main-packaging-smoke.json
           --prebuilt-receipt work/ci/main-package-build.json --source-sha "$GITHUB_SHA"
       - name: Upload main checks evidence
+        id: main-checks-upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alk-main-checks-${{ github.run_id }}-${{ github.run_attempt }}
@@ -697,6 +723,8 @@ jobs:
             work/ci/main-packaging-smoke.json
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.main-checks-upload.outputs.artifact-id }} ${{ steps.main-checks-upload.outputs.artifact-digest }}
+        run: 'true'
 
   main-qualification:
     name: Main CI qualification
@@ -742,12 +770,15 @@ jobs:
           python tools/ci/qualify_pr_evidence.py terminal --decision work/ci/reuse-decision.json
           --checks work/ci/main-checks --out work/ci/qualification.json
       - name: Upload main CI qualification
+        id: main-qualification-upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: alk-main-qualification-${{ github.run_id }}-${{ github.run_attempt }}
           path: work/ci/qualification.json
           if-no-files-found: error
           retention-days: 2
+      - name: Record artifact origin ${{ steps.main-qualification-upload.outputs.artifact-id }} ${{ steps.main-qualification-upload.outputs.artifact-digest }}
+        run: 'true'
 
   control:
     name: Validate full timing control input
