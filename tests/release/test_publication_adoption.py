@@ -21,8 +21,8 @@ class PublicationAdoptionTests(unittest.TestCase):
     def test_plugin_update_advice_is_reachable_and_does_not_claim_installation(self):
         for prefix in ("docs", "docs/ru"):
             for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):
-                self.assertIn("plugin-updates.md", (ROOT / prefix / page).read_text())
-            cli = (ROOT / prefix / "reference/cli.md").read_text()
+                self.assertIn("plugin-updates.md", (ROOT / prefix / page).read_text(encoding="utf-8"))
+            cli = (ROOT / prefix / "reference/cli.md").read_text(encoding="utf-8")
             for action in ("check", "assess", "offer", "install", "reconcile"):
                 self.assertIn(f"plugin-update {action}", cli)
             for marker in ("UNSUPPORTED", "UNKNOWN", "DRIFT", "exit 0", "exit 2", "sourceCommit=null"):
