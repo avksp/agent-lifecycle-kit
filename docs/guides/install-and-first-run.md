@@ -351,3 +351,5 @@ remain; measurements do not establish token savings or host enforcement.
 Optional local setup assigns an adapter, model and effort to each stage. Review a proposal before saving it; discovered configuration does not prove model access. An actual probe spends a model call and requires current ALK authorization. See [routing](../reference/model-routing.md), [project profiles](../reference/project-workflow-profile.md) and [deterministic recipes](deterministic-workflow-recipes.md).
 
 See [plugin updates and plan compatibility](../reference/plugin-updates.md) before changing the runtime for existing plans.
+
+Initial marketplace installation and manual plugin updates have different host command forms. Use the [explicit update recipe and derived descriptor procedure](../reference/plugin-updates.md); update advice does not execute the host installer.

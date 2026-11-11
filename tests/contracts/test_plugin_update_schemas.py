@@ -8,6 +8,7 @@ from jsonschema import Draft202012Validator
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes
 from agent_lifecycle.contracts.plugin_update_schemas import (
     PLUGIN_UPDATE_SCHEMAS,
+    UPDATE_CACHE_SCHEMA,
     UPDATE_IMPACT_SCHEMA,
     UPDATE_INVENTORY_SCHEMA,
     UPDATE_REQUEST_SCHEMA,
@@ -18,6 +19,7 @@ from agent_lifecycle.contracts.plugin_update_validation import (
     update_report,
     validate_plan_inventory,
     validate_release_impact,
+    validate_update_cache,
     validate_update_request,
 )
 
@@ -40,6 +42,32 @@ def make_descriptor():
 
 
 class PluginUpdateSchemasTests(unittest.TestCase):
+    def test_negative_cache_nullable_pair_requires_bounded_failed_attempt(self):
+        value = {
+            "schemaVersion": UPDATE_CACHE_SCHEMA,
+            "policyDigest": "a" * 64,
+            "observedAt": None,
+            "candidate": None,
+            "lastAttemptAt": 10000,
+            "lastFailureReason": "plugin-update-network-unavailable",
+        }
+        validator = Draft202012Validator(PLUGIN_UPDATE_SCHEMAS[UPDATE_CACHE_SCHEMA])
+        validator.validate(value)
+        self.assertEqual(validate_update_cache(value), value)
+        malformed = [
+            {**value, "candidate": {}},
+            {**value, "observedAt": 10000},
+            {**value, "lastAttemptAt": True},
+            {**value, "lastAttemptAt": -1},
+            {**value, "lastAttemptAt": 4102444801},
+            {**value, "lastFailureReason": "private exception text"},
+            {key: item for key, item in value.items() if key != "lastFailureReason"},
+            {key: item for key, item in value.items() if key != "lastAttemptAt"},
+        ]
+        for item in malformed:
+            with self.subTest(item=item), self.assertRaises(LifecycleError):
+                validate_update_cache(item)
+
     def test_public_definitions_are_closed_and_valid_json_schemas(self):
         self.assertEqual(len(PLUGIN_UPDATE_SCHEMAS), 5)
         for name, schema in PLUGIN_UPDATE_SCHEMAS.items():

@@ -17,9 +17,10 @@ from urllib.parse import urlsplit
 import agent_lifecycle
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, load_json_object, sha256_hex
 from agent_lifecycle.contracts.authority_io import create_authority_bytes, replace_authority_bytes
-from agent_lifecycle.contracts.plugin_update_schemas import UPDATE_CACHE_SCHEMA, UPDATE_SOURCE
+from agent_lifecycle.contracts.plugin_update_schemas import UPDATE_CACHE_SCHEMA, UPDATE_FAILURE_REASONS, UPDATE_SOURCE
 from agent_lifecycle.contracts.plugin_update_validation import (
     MAX_UPDATE_BYTES,
+    UPDATE_FORBIDDEN_ROOTS,
     read_update_json,
     require_update,
     update_bounds,
@@ -182,6 +183,19 @@ def _metadata_projection(url: str, value: dict[str, Any]) -> dict[str, Any]:
         return {"object": _metadata_fields(value.get("object"), ("type", "sha"))}
     if url.endswith("/.codex-plugin/plugin.json"):
         return _metadata_fields(value, ("name", "version"))
+    if url.endswith("/.agents/plugins/marketplace.json"):
+        rows = value.get("plugins")
+        if isinstance(rows, list):
+            rows = [
+                {
+                    **_metadata_fields(row, ("name",)),
+                    "source": _metadata_fields(row.get("source"), ("url", "ref")),
+                }
+                if isinstance(row, dict)
+                else row
+                for row in rows
+            ]
+        return {"plugins": rows}
     return value
 
 
@@ -365,9 +379,11 @@ def _discover(
     }
 
 
-def _cache_candidate(cache: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+def _cache_candidate(cache: dict[str, Any], request: dict[str, Any]) -> dict[str, Any] | None:
     validate_update_cache(cache)
     require_update(cache["policyDigest"] == canonical_digest(request), "cache policy changed")
+    if cache["candidate"] is None:
+        return None
     candidate = update_object(
         cache["candidate"],
         {
@@ -452,6 +468,49 @@ def _cached_target_identity(candidate: dict[str, Any], request: dict[str, Any]) 
             )
 
 
+def _cached_check(
+    request: dict[str, Any], cache: dict[str, Any], timestamp: int
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    previous = _cache_candidate(cache, request)
+    observed = cache["observedAt"]
+    attempt = cache.get("lastAttemptAt", observed)
+    require_update(attempt <= timestamp, "cache attempt is from the future")
+    require_update(observed is None or observed <= timestamp, "cache observation is from the future")
+    age = None if observed is None else timestamp - observed
+    if timestamp - attempt >= CACHE_CADENCE_SECONDS:
+        return previous, None
+    if "lastFailureReason" in cache:
+        return previous, update_report(
+            "check",
+            "STALE" if age is not None and age >= CACHE_TTL_SECONDS else "UNAVAILABLE",
+            request,
+            {
+                "reason": cache["lastFailureReason"],
+                "lastSuccess": previous,
+                "cache": cache,
+                "ageSeconds": age,
+                "provenance": "CACHED_LOCAL_RECORD",
+                "networkRequests": 0,
+                "cacheUpdated": False,
+            },
+        )
+    require_update(previous is not None, "cached success unavailable")
+    cached_candidate = cast(dict[str, Any], previous)
+    status = "CURRENT" if cached_candidate["version"] == agent_lifecycle.__version__ else "AVAILABLE"
+    return previous, update_report(
+        "check",
+        status,
+        request,
+        {
+            "candidate": previous,
+            "ageSeconds": age,
+            "provenance": "CACHED_LOCAL_RECORD",
+            "networkRequests": 0,
+            "cacheUpdated": False,
+        },
+    )
+
+
 def check_plugin_updates(
     request: dict[str, Any],
     *,
@@ -482,40 +541,49 @@ def check_plugin_updates(
     require_update(type(timestamp) is int and 0 <= timestamp <= 4102444800, "invalid observation time")
     previous = None
     if cache is not None:
-        previous = _cache_candidate(cache, request)
-        age = timestamp - cache["observedAt"]
-        require_update(age >= 0, "cache observation is from the future")
-        if age < CACHE_CADENCE_SECONDS:
-            status = "CURRENT" if previous["version"] == agent_lifecycle.__version__ else "AVAILABLE"
-            return update_report(
-                "check",
-                status,
-                request,
-                {
-                    "candidate": previous,
-                    "ageSeconds": age,
-                    "provenance": "CACHED_LOCAL_RECORD",
-                    "networkRequests": 0,
-                    "cacheUpdated": False,
-                },
-            )
+        previous, replay = _cached_check(request, cache, timestamp)
+        if replay is not None:
+            return replay
     transport = client or UpdateMetadataClient()
     try:
         candidate = _discover(request, transport, previous)
     except (LifecycleError, OSError, ValueError, TypeError) as exc:
-        reason = exc.code if isinstance(exc, LifecycleError) else type(exc).__name__
-        stale = cache is not None and timestamp - cache["observedAt"] >= CACHE_TTL_SECONDS
+        if isinstance(exc, LifecycleError):
+            reason = exc.code if exc.code in UPDATE_FAILURE_REASONS else "plugin-update-metadata-unavailable"
+        else:
+            reason = (
+                "plugin-update-network-unavailable" if isinstance(exc, OSError) else "plugin-update-metadata-invalid"
+            )
+        observed = cache["observedAt"] if cache is not None else None
+        stale = observed is not None and timestamp - observed >= CACHE_TTL_SECONDS
+        failed_cache = validate_update_cache(
+            {
+                "schemaVersion": UPDATE_CACHE_SCHEMA,
+                "policyDigest": canonical_digest(request),
+                "observedAt": observed,
+                "candidate": previous,
+                "lastAttemptAt": timestamp,
+                "lastFailureReason": reason,
+            }
+        )
         return update_report(
             "check",
             "STALE" if stale else "UNAVAILABLE",
             request,
-            {"reason": reason, "lastSuccess": previous, **transport.usage(), "cacheUpdated": False},
+            {
+                "reason": reason,
+                "lastSuccess": previous,
+                "cache": failed_cache,
+                **transport.usage(),
+                "cacheUpdated": True,
+            },
         )
     cached = validate_update_cache(
         {
             "schemaVersion": UPDATE_CACHE_SCHEMA,
             "policyDigest": canonical_digest(request),
             "observedAt": timestamp,
+            "lastAttemptAt": timestamp,
             "candidate": candidate,
         }
     )
@@ -541,9 +609,9 @@ def store_update_cache(root: Path, name: str, value: dict[str, Any], *, inputs: 
 
     normalized = normalize_repo_path(name)
     require_update(normalized not in inputs, "cache aliases an input")
-    require_update(normalized.split("/")[0] not in {".git", ".codex", ".claude", "tasks"}, "unsafe cache scope")
+    require_update(normalized.split("/")[0].casefold() not in UPDATE_FORBIDDEN_ROOTS, "unsafe cache scope")
     require_update(
-        not normalized.endswith((".state.json", ".lock.json", "plan.manifest.json")),
+        not normalized.casefold().endswith((".state.json", ".lock.json", "plan.manifest.json")),
         "cache cannot use an authority filename",
     )
     path = root / normalized

@@ -38,6 +38,13 @@ an **inert operator recipe**. It is not a qualified transaction or installation
 recommendation. Other unmapped hosts receive an explicit unsupported result;
 there is no silent fallback to another adapter.
 
+The initial-install guide uses the marketplace shorthand `avksp/agent-lifecycle-kit`.
+The update-only recipe instead removes the existing same-name marketplace, adds
+the explicit Git URL `https://github.com/avksp/agent-lifecycle-kit.git` with an
+exact `--ref`, and requests JSON output. These are different operation shapes: an
+initial registration versus an inert recipe for replacing an existing entry.
+They do not qualify the operation, its global scope or usable rollback.
+
 Before any separate manual update, inspect the actual host help/version,
 resolve the exact upstream tag/commit again and obtain permission for its real
 scope. Marketplace removal and reinstall can affect the user's other projects.

@@ -13,6 +13,7 @@ from agent_lifecycle.contracts.plugin_update_schemas import (
     UPDATE_ACTIONS,
     UPDATE_CACHE_SCHEMA,
     UPDATE_DOMAINS,
+    UPDATE_FAILURE_REASONS,
     UPDATE_IMPACT_SCHEMA,
     UPDATE_INVENTORY_SCHEMA,
     UPDATE_MODES,
@@ -23,13 +24,14 @@ from agent_lifecycle.contracts.plugin_update_schemas import (
 
 MAX_UPDATE_BYTES = 262144
 MAX_PLAN_INPUT_BYTES = 8388608
+UPDATE_FORBIDDEN_ROOTS = frozenset({".git", ".alk", ".codex", ".claude", "tasks"})
 _VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?\Z")
 _HEX = re.compile(r"[0-9a-f]+\Z")
 
 
-def require_update(condition: bool, reason: str) -> None:
+def require_update(condition: bool, reason: str, *, code: str = "plugin-update-invalid") -> None:
     if not condition:
-        raise LifecycleError("plugin-update-invalid", reason)
+        raise LifecycleError(code, reason)
 
 
 def update_bounds(value: Any, depth: int = 0) -> None:
@@ -250,6 +252,19 @@ def update_report(
 def validate_update_cache(value: Any) -> dict[str, Any]:
     obj = _envelope(value, UPDATE_CACHE_SCHEMA)
     update_digest(obj["policyDigest"])
-    require_update(type(obj["observedAt"]) is int and 0 <= obj["observedAt"] <= 4102444800, "invalid cache timestamp")
-    require_update(isinstance(obj["candidate"], dict), "invalid cached candidate")
+    observed = obj["observedAt"]
+    candidate = obj["candidate"]
+    require_update((observed is None) == (candidate is None), "cache observation/candidate must be paired")
+    if observed is not None:
+        require_update(type(observed) is int and 0 <= observed <= 4102444800, "invalid cache timestamp")
+        require_update(isinstance(candidate, dict), "invalid cached candidate")
+    attempt = obj.get("lastAttemptAt", observed)
+    require_update(type(attempt) is int and 0 <= attempt <= 4102444800, "invalid last attempt timestamp")
+    require_update(observed is None or attempt >= observed, "attempt precedes successful observation")
+    failed = "lastFailureReason" in obj
+    if failed:
+        require_update(obj["lastFailureReason"] in UPDATE_FAILURE_REASONS, "invalid cache failure reason")
+        require_update("lastAttemptAt" in obj, "failed cache needs last attempt timestamp")
+    else:
+        require_update(observed is not None and attempt == observed, "cache lacks success or failure observation")
     return obj

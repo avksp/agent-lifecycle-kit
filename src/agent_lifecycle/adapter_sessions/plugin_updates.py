@@ -59,15 +59,19 @@ def _recheck_subjects(root: Path, subjects: dict[str, str]) -> None:
         require_update(sha256_hex(body) == digest, "assessment became stale; reassess changed input")
 
 
-def _target(request: dict[str, Any], assessment: dict[str, Any]) -> dict[str, str]:
+def _target(request: dict[str, Any], assessment: dict[str, Any]) -> dict[str, Any]:
     target = update_object(
         assessment["details"].get("target"), {"version", "sourceCommit"}, {"version", "sourceCommit"}
     )
     version = update_version(target.get("version"))
-    commit = update_digest(target.get("sourceCommit"), 40)
+    commit = target["sourceCommit"]
+    if commit is not None:
+        update_digest(commit, 40)
     require_update(request.get("targetVersion", version) == version, "offer target differs from request")
     require_update(request.get("pin") in (None, "v" + version), "offer differs from immutable pin")
-    require_update(request.get("trustedTargetCommit", commit) == commit, "offer commit differs from request")
+    require_update(
+        commit is None or request.get("trustedTargetCommit", commit) == commit, "offer commit differs from request"
+    )
     require_update(
         request.get("channel", "stable") == "prerelease" or "-" not in version, "offer prerelease is not opted in"
     )
@@ -120,6 +124,20 @@ def offer_plugin_update(
     )
     require_update(assessment["requestDigest"] == canonical_digest(request), "assessment policy changed")
     target = _target(request, assessment)
+    if target["sourceCommit"] is None:
+        return update_report(
+            "offer",
+            "UNKNOWN",
+            request,
+            {
+                "reason": "TARGET_COMMIT_UNRESOLVED: bind a separately observed exact commit before offering commands",
+                "target": target,
+                "assessmentTrust": "DECLARED_LOCAL_REPORT_NOT_AUTHORITY",
+                "installationEligibility": "UNQUALIFIED",
+                "hostDispatch": False,
+            },
+            {"assessmentDigest": canonical_digest(assessment)},
+        )
     subjects, plans = _assessment_subjects(assessment)
     _recheck_subjects(repository_root, subjects)
     deferred = [plan.get("lifecycle", {}).get("action") for plan in plans]

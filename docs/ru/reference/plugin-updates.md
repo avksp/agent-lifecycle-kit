@@ -1,6 +1,6 @@
 # Обновления плагина и влияние на планы
 
-[English](../../reference/plugin-updates.md)
+[English](https://github.com/avksp/agent-lifecycle-kit/blob/main/docs/reference/plugin-updates.md)
 
 Проверка новой версии и совместимость активного запуска — разные результаты.
 Файлы установленного плагина, загруженные инструкции, текущий Python runtime и
@@ -33,8 +33,14 @@ commit и проверяет версии, источник и состав пу
 
 На вызов разрешены восемь HTTP-запросов, десять секунд, один МиБ суммарно и
 256 КиБ на ответ; редиректов и автоматических повторов нет. Интервал кеша — час,
-срок успешного наблюдения — 24 часа. При отсутствии сети сохраняются прежний
-результат и его давность. Разрешённая работа не отменяется. `off` не обращается
+срок успешного наблюдения — 24 часа. Успех и ошибка возвращают явный кеш с
+`lastAttemptAt`; ошибка добавляет `lastFailureReason`, сохраняя исходные
+`observedAt` и candidate последнего успеха. До первого успеха оба поля null.
+Если вызывающий сохраняет возвращённый кеш, в течение часа после попытки, включая
+ошибку, HTTP не выполняется; результат ошибки — `UNAVAILABLE` или `STALE`. Старый
+положительный кеш использует `observedAt` как время попытки. Это не process lock
+и не глобальный scheduler: без сохранённого кеша и между независимыми процессами
+общего интервала нет. Разрешённая работа не отменяется. `off` не обращается
 к сети. Неподтверждённый trigger уведомления или `safe-auto` получает отказ до
 вызова хоста, даже если вход утверждает, что trigger квалифицирован.
 
@@ -57,7 +63,10 @@ agent-lifecycle plugin-update assess --request request.json --release release-im
 ```
 
 Оценка использует штатную проверку целостности плана. Лимиты: 32 выбранных плана,
-64 файла на план, 256 КиБ на файл, восемь МиБ суммарно. Другие проекты не
+64 файла на план, 256 КиБ на файл, восемь МиБ уникальных входных байтов.
+Каждый допустимый путь учитывается один раз; повторные чтения, включая другие
+планы, должны совпадать с первым размером и хешем. `inputBytes` — уникальные байты,
+`readBytes` — сумма чтений обёртки, без полного IO verifier или хоста. Другие проекты не
 сканируются, команды проверок не исполняются, планы не изменяются. Лимит вывода
 — 256 КиБ. Превышение даёт отказ, а не незаметно сокращённый успешный результат.
 В этих границах поддерживаются плоские lock v1/v2. Scoped/v3 lock и
@@ -82,3 +91,45 @@ amendment. Для активной и приостановленной рабо�
 Установка, перезапуск сессии и наблюдаемая проверка — отдельные действия.
 Перед обновлением прочитайте [границы хоста](../adapters/plugin-updates.md).
 ALK не обещает запрет независимого фонового обновления хоста или сохранение кеша.
+
+Канонический shipped descriptor сохраняет `sourceCommit: null`: offer возвращает
+`UNKNOWN` без команд. Непустой некорректный commit или несовпадение с объявленным
+trusted commit дают отказ. Для локального связывания сохраните исходный
+`release-impact.json` и точный `available.json`, сравните версию и содержимое
+описания, затем создайте отдельный файл через `open("xb")`. Выполните Python-рецепт
+из [English source](https://github.com/avksp/agent-lifecycle-kit/blob/main/docs/reference/plugin-updates.md):
+он проверяет равенство `candidate.releaseImpact` исходному descriptor и версии,
+подставляет только отдельно наблюдавшийся `candidate.sourceCommit` и печатает
+SHA256 исходного descriptor, discovery и производного файла. Существующий файл
+не перезаписывается. Затем выполните новую оценку с
+`--release release-impact.observed.json` и прежней политикой запроса. Сохраните
+хеши вместе с обоими входами. Производная копия остаётся `DECLARED`, канонический
+источник сохраняет null; рецепт и локальный отчёт не аутентифицируют друг друга
+и не дают полномочий на установку.
+
+```sh
+python - <<'PYTHON'
+from pathlib import Path
+from agent_lifecycle.contracts import canonical_bytes, load_json_object, sha256_hex
+from agent_lifecycle.contracts.plugin_update_validation import (
+    update_digest, validate_release_impact, validate_update_report,
+)
+source = Path("release-impact.json").read_bytes()
+discovery = Path("available.json").read_bytes()
+descriptor = validate_release_impact(load_json_object(source))
+report = validate_update_report(load_json_object(discovery))
+assert report["action"] == "check" and report["status"] in ("AVAILABLE", "CURRENT")
+candidate = report["details"]["candidate"]
+assert descriptor["sourceCommit"] is None
+assert candidate["releaseImpact"] == descriptor
+assert candidate["version"] == descriptor["version"]
+derived = {**descriptor, "sourceCommit": update_digest(candidate["sourceCommit"], 40)}
+body = canonical_bytes(validate_release_impact(derived)) + b"\n"
+with Path("release-impact.observed.json").open("xb") as output:
+    output.write(body)
+print("canonical descriptor SHA256:", sha256_hex(source))
+print("discovery report SHA256:", sha256_hex(discovery))
+print("derived descriptor SHA256:", sha256_hex(body))
+print("trust: DECLARED local derivation; no authority granted")
+PYTHON
+```

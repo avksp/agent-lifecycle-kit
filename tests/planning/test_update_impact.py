@@ -57,6 +57,102 @@ def snapshot(root):
 
 
 class PluginUpdateImpactTests(unittest.TestCase):
+    def test_two_plans_share_six_mib_unique_inputs_without_charging_rereads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, inventory = write_plan(root)
+            (root / "shared").mkdir()
+            names = [f"shared/input-{index}.txt" for index in range(24)]
+            for name in names:
+                (root / name).write_bytes(b"x" * 262144)
+            manifest["planFiles"] = names
+            (root / "plan/plan.manifest.json").write_bytes(canonical_bytes(manifest))
+            (root / "other").mkdir()
+            second = copy.deepcopy(manifest)
+            second["package"] = {"id": "second-fixture", "planArtifactRoot": "other"}
+            (root / "other/plan.manifest.json").write_bytes(canonical_bytes(second))
+            (root / "other/acceptance-criteria.md").write_bytes((root / "plan/acceptance-criteria.md").read_bytes())
+            inventory["plans"].append({"manifest": "other/plan.manifest.json"})
+            report = assess_plugin_update(make_request(), make_descriptor(), inventory, repository_root=root)
+            self.assertEqual(report["status"], "ASSESSED")
+            self.assertEqual(len(report["details"]["plans"]), 2)
+            self.assertTrue(all(plan["structuralResult"] == "PASS" for plan in report["details"]["plans"]))
+            self.assertGreater(report["details"]["inputBytes"], 6 * 1048576)
+            self.assertLess(report["details"]["inputBytes"], 8 * 1048576)
+            self.assertGreater(report["details"]["readBytes"], 24 * 1048576)
+            self.assertEqual(report["details"]["readBytesBasis"], "CUMULATIVE_WRAPPER_READS_NOT_WHOLE_VERIFIER_IO")
+
+    def test_real_same_size_and_size_drift_are_detected_during_reread(self):
+        from agent_lifecycle.contracts.paths import read_stable_repository_file
+        from agent_lifecycle.planning.update_impact import _PlanInputs
+
+        for changed in (b"other", b"longer changed"):
+            with self.subTest(changed=changed), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _, inventory = write_plan(root)
+                path = root / "plan/acceptance-criteria.md"
+                original = path.read_bytes()
+                replacement = b"x" * len(original) if changed == b"other" else changed
+
+                def mutate_after_first_read(
+                    repository, name, original=original, path=path, replacement=replacement, **kwargs
+                ):
+                    body = read_stable_repository_file(repository, name, **kwargs)
+                    if name == "plan/acceptance-criteria.md" and body == original:
+                        path.write_bytes(replacement)
+                    return body
+
+                with patch(
+                    "agent_lifecycle.planning.update_impact.read_stable_repository_file",
+                    side_effect=mutate_after_first_read,
+                ):
+                    report = assess_plugin_update(make_request(), make_descriptor(), inventory, repository_root=root)
+                self.assertEqual(report["status"], "UNKNOWN")
+                self.assertEqual(report["details"]["reason"], "plugin-update-input-drift")
+                self.assertEqual(path.read_bytes(), replacement)
+                reader = _PlanInputs(root)
+                self.assertEqual(reader.read("plan/acceptance-criteria.md"), replacement)
+
+    def test_unique_input_budget_still_refuses_more_than_eight_mib(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            manifest, inventory = write_plan(root)
+            manifest["planFiles"] = [f"plan/input-{index}.txt" for index in range(33)]
+            for name in manifest["planFiles"]:
+                (root / name).write_bytes(b"x" * 262144)
+            (root / "plan/plan.manifest.json").write_bytes(canonical_bytes(manifest))
+            with patch("agent_lifecycle.planning.update_impact.build_plan_verification") as verify:
+                report = assess_plugin_update(make_request(), make_descriptor(), inventory, repository_root=root)
+            self.assertEqual(report["status"], "UNKNOWN")
+            self.assertEqual(report["details"]["reason"], "plugin-update-input-budget")
+            self.assertLessEqual(report["details"]["inputBytes"], 8 * 1048576)
+            verify.assert_not_called()
+
+    def test_budget_and_state_binding_have_distinct_codes_and_safe_messages(self):
+        for case in ("budget", "state"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                _, inventory = write_plan(root, phase="RUNNING")
+                if case == "budget":
+                    (root / "plan/acceptance-criteria.md").write_bytes(b"private source " * 30000)
+                else:
+                    state = {"schemaVersion": "agent-workflow-state.v4", "packageId": "private-source-secret"}
+                    (root / "plan/state.json").write_bytes(canonical_bytes(state))
+                report = assess_plugin_update(make_request(), make_descriptor(), inventory, repository_root=root)
+                expected = "plugin-update-input-budget" if case == "budget" else "plugin-update-state-identity"
+                self.assertEqual(report["details"]["reason"], expected)
+                self.assertLessEqual(len(report["details"]["reasonMessage"]), 128)
+                self.assertNotIn(b"private source", canonical_bytes(report))
+                self.assertNotIn(b"private-source-secret", canonical_bytes(report))
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _, inventory = write_plan(root)
+            with patch(
+                "agent_lifecycle.planning.update_impact._assess_plan", side_effect=ValueError("private exception")
+            ):
+                report = assess_plugin_update(make_request(), make_descriptor(), inventory, repository_root=root)
+            self.assertNotIn(b"private exception", canonical_bytes(report))
+
     def test_scoped_lock_or_review_policy_refuses_before_canonical_or_transitive_reads(self):
         for kind in ("v3", "reviewPolicy"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:

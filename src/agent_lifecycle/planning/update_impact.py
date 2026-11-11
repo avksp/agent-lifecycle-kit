@@ -26,19 +26,45 @@ _ACTIVE_PHASES = frozenset(
     {"RUNNING", "VERIFYING", "FINAL_AUDIT", "PAUSED", "BLOCKED", "READY", "AWAITING_AUTHORIZATION"}
 )
 _STATE_SCHEMAS = frozenset({"agent-workflow-state.v4", "agent-workflow-state.v5", "agent-workflow-state.v6"})
+_SAFE_ASSESSMENT_REASONS = {
+    "plugin-update-input-budget": "Explicit plan inputs exceed the supported byte or file budget",
+    "plugin-update-state-identity": "Supplied state does not bind to this plan identity",
+    "plugin-update-input-drift": "Explicit plan input bytes changed during assessment",
+    "plugin-update-scoped-verification-unsupported": "Scoped verification needs a separate bounded evidence closure",
+}
 
 
 class _PlanInputs:
     def __init__(self, root: Path) -> None:
         self.root = root
         self.bytes = 0
+        self.read_bytes = 0
+        self.identities: dict[str, tuple[int, str]] = {}
 
     def read(self, name: str) -> bytes:
-        normalize_repo_path(name)
-        remaining = MAX_PLAN_INPUT_BYTES - self.bytes
-        require_update(remaining > 0, "aggregate plan input cap8MiB")
-        data = read_stable_repository_file(self.root, name, max_bytes=min(MAX_UPDATE_BYTES, remaining))
-        self.bytes += len(data)
+        name = normalize_repo_path(name)
+        try:
+            data = read_stable_repository_file(self.root, name, max_bytes=MAX_UPDATE_BYTES)
+        except LifecycleError as exc:
+            if exc.code == "repository-input-too-large":
+                raise LifecycleError("plugin-update-input-budget", "Explicit plan file exceeds256KiB") from None
+            if exc.code == "repository-input-changed-during-read":
+                raise LifecycleError("plugin-update-input-drift", "Explicit plan file changed during read") from None
+            raise
+        self.read_bytes += len(data)
+        identity = (len(data), sha256_hex(data))
+        if name in self.identities:
+            require_update(
+                self.identities[name] == identity, "plan changed during assessment", code="plugin-update-input-drift"
+            )
+        else:
+            require_update(
+                self.bytes + len(data) <= MAX_PLAN_INPUT_BYTES,
+                "unique aggregate plan input cap8MiB",
+                code="plugin-update-input-budget",
+            )
+            self.identities[name] = identity
+            self.bytes += len(data)
         return data
 
 
@@ -51,7 +77,11 @@ def _plan_snapshots(reader: _PlanInputs, item: dict[str, Any]) -> tuple[dict[str
     for path in files:
         normalize_repo_path(path)
         if path not in snapshot:
-            require_update(len(snapshot) < 64, "total plan file cap64 including authority siblings")
+            require_update(
+                len(snapshot) < 64,
+                "total plan file cap64 including authority siblings",
+                code="plugin-update-input-budget",
+            )
             snapshot[path] = reader.read(path)
     siblings = {
         "acceptance": (Path(name).parent / "acceptance-criteria.md").as_posix(),
@@ -63,7 +93,11 @@ def _plan_snapshots(reader: _PlanInputs, item: dict[str, Any]) -> tuple[dict[str
             continue
         candidate = reader.root / sibling_path
         if key in item or candidate.exists() or candidate.is_symlink():
-            require_update(len(snapshot) < 64, "total plan file cap64 including authority siblings")
+            require_update(
+                len(snapshot) < 64,
+                "total plan file cap64 including authority siblings",
+                code="plugin-update-input-budget",
+            )
             snapshot[sibling_path] = reader.read(sibling_path)
     return manifest, snapshot
 
@@ -73,7 +107,11 @@ def _bound_state(manifest: dict[str, Any], item: dict[str, Any], snapshot: dict[
         return None
     state = load_json_object(snapshot[item["state"]])
     package = manifest.get("package", {})
-    require_update(state.get("schemaVersion") in _STATE_SCHEMAS, "unsupported workflow state schema")
+    require_update(
+        state.get("schemaVersion") in _STATE_SCHEMAS,
+        "unsupported workflow state schema",
+        code="plugin-update-state-identity",
+    )
     require_update(
         isinstance(package, dict)
         and state.get("packageId") == package.get("id")
@@ -81,12 +119,23 @@ def _bound_state(manifest: dict[str, Any], item: dict[str, Any], snapshot: dict[
         and type(state.get("planRevision")) is int
         and state.get("planRevision") == manifest.get("planRevision"),
         "state/plan identity mismatch",
+        code="plugin-update-state-identity",
     )
     require_update(
-        type(state.get("stateRevision")) is int and state["stateRevision"] >= 0, "state revision unavailable"
+        type(state.get("stateRevision")) is int and state["stateRevision"] >= 0,
+        "state revision unavailable",
+        code="plugin-update-state-identity",
     )
-    require_update(isinstance(state.get("runId"), str) and bool(state["runId"]), "state run identity unavailable")
-    require_update(isinstance(state.get("phase"), str) and bool(state["phase"]), "state phase unavailable")
+    require_update(
+        isinstance(state.get("runId"), str) and bool(state["runId"]),
+        "state run identity unavailable",
+        code="plugin-update-state-identity",
+    )
+    require_update(
+        isinstance(state.get("phase"), str) and bool(state["phase"]),
+        "state phase unavailable",
+        code="plugin-update-state-identity",
+    )
     return state
 
 
@@ -301,7 +350,7 @@ def assess_plugin_update(
     pin = request.get("pin")
     require_update(pin is None or pin == "v" + descriptor["version"], "descriptor differs from immutable pin")
     trusted = request.get("trustedTargetCommit")
-    require_update(trusted is None or descriptor["sourceCommit"] == trusted, "descriptor commit mismatch")
+    require_update(trusted is None or descriptor["sourceCommit"] in (None, trusted), "descriptor commit mismatch")
     reader = _PlanInputs(repository_root)
     plans = []
     for item in inventory["plans"]:
@@ -310,7 +359,7 @@ def assess_plugin_update(
                 _assess_plan(reader, item, descriptor, inventory.get("currentVersion"), request.get("host", {}))
             )
         except (LifecycleError, OSError, UnicodeError, TypeError, KeyError, ValueError) as exc:
-            reason = exc.code if isinstance(exc, LifecycleError) else type(exc).__name__
+            reason = exc.code if isinstance(exc, LifecycleError) else "plugin-update-input-unavailable"
             return update_report(
                 "assess",
                 "UNKNOWN",
@@ -319,6 +368,12 @@ def assess_plugin_update(
                     "plans": plans,
                     "assessmentComplete": False,
                     "reason": reason,
+                    "reasonMessage": _SAFE_ASSESSMENT_REASONS.get(
+                        reason, "Explicit plan input could not be assessed safely"
+                    ),
+                    "inputBytes": reader.bytes,
+                    "readBytes": reader.read_bytes,
+                    "readBytesBasis": "CUMULATIVE_WRAPPER_READS_NOT_WHOLE_VERIFIER_IO",
                     "unassessedPlanCount": len(inventory["plans"]) - len(plans),
                     "failedManifest": item["manifest"],
                     "installationEligibility": "UNQUALIFIED",
@@ -333,6 +388,8 @@ def assess_plugin_update(
             "plans": plans,
             "assessmentComplete": True,
             "inputBytes": reader.bytes,
+            "readBytes": reader.read_bytes,
+            "readBytesBasis": "CUMULATIVE_WRAPPER_READS_NOT_WHOLE_VERIFIER_IO",
             "target": {"version": descriptor["version"], "sourceCommit": descriptor["sourceCommit"]},
             "targetProvenance": "DECLARED_LOCAL_DESCRIPTOR",
             "installationEligibility": "UNQUALIFIED",

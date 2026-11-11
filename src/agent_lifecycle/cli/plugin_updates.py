@@ -11,6 +11,7 @@ from agent_lifecycle.contracts.authority_io import create_authority_bytes
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.plugin_update_validation import (
     MAX_UPDATE_BYTES,
+    UPDATE_FORBIDDEN_ROOTS,
     read_update_json,
     require_update,
     validate_plan_inventory,
@@ -41,9 +42,10 @@ def add_plugin_update_parser(subparsers: argparse._SubParsersAction[argparse.Arg
 def _protected_path(name: str, inputs: set[str]) -> str:
     name = normalize_repo_path(name)
     require_update(name not in inputs, "output/cache aliases an input")
-    require_update(name.split("/")[0] not in {".git", ".alk", ".codex", ".claude", "tasks"}, "unsafe output scope")
+    require_update(name.split("/")[0].casefold() not in UPDATE_FORBIDDEN_ROOTS, "unsafe output scope")
     require_update(
-        not name.endswith((".state.json", ".lock.json", "plan.manifest.json")), "output cannot use authority filename"
+        not name.casefold().endswith((".state.json", ".lock.json", "plan.manifest.json")),
+        "output cannot use authority filename",
     )
     return name
 
@@ -74,6 +76,19 @@ def _subject_inputs(action: str, data: dict[str, Any]) -> set[str]:
             if isinstance(item, dict) and isinstance(item.get("inputSHA256"), dict):
                 subjects.update(normalize_repo_path(path) for path in item["inputSHA256"])
     return subjects
+
+
+def _write_update_report(root: Path, output: str | None, payload: dict[str, Any]) -> None:
+    validate_update_report(payload)
+    body = canonical_bytes(payload) + b"\n"
+    require_update(len(body) <= MAX_UPDATE_BYTES, "update output exceeds256KiB")
+    if output is not None:
+        require_update(
+            payload["action"] != "assess" or payload["details"].get("assessmentComplete") is True,
+            "incomplete assessment cannot write --out; omit --out for its diagnostic report",
+            code="plugin-update-incomplete-assessment-output",
+        )
+        create_authority_bytes(root / output, body, root=root, private=True)
 
 
 def dispatch_plugin_updates(args: argparse.Namespace) -> dict[str, Any]:
@@ -121,9 +136,5 @@ def dispatch_plugin_updates(args: argparse.Namespace) -> dict[str, Any]:
         payload = reconcile_plugin_update(request)
     else:
         raise LifecycleError("command-not-implemented", "plugin-update action is not implemented")
-    validate_update_report(payload)
-    body = canonical_bytes(payload) + b"\n"
-    require_update(len(body) <= MAX_UPDATE_BYTES, "update output exceeds256KiB")
-    if output is not None:
-        create_authority_bytes(root / output, body, root=root, private=True)
+    _write_update_report(root, output, payload)
     return payload

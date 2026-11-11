@@ -23,6 +23,13 @@ UPDATE_IMPACT_SCHEMA = "agent-plugin-release-impact.v1"
 UPDATE_INVENTORY_SCHEMA = "agent-plugin-plan-inventory.v1"
 UPDATE_REPORT_SCHEMA = "agent-plugin-update-report.v1"
 UPDATE_CACHE_SCHEMA = "agent-plugin-update-cache.v1"
+UPDATE_FAILURE_REASONS = (
+    "plugin-update-invalid",
+    "plugin-update-network-timeout",
+    "plugin-update-network-unavailable",
+    "plugin-update-metadata-unavailable",
+    "plugin-update-metadata-invalid",
+)
 
 
 def _object(properties: dict[str, Any], required: tuple[str, ...] = ()) -> dict[str, Any]:
@@ -154,11 +161,21 @@ PLUGIN_UPDATE_SCHEMAS = {
         {
             "schemaVersion": {"const": UPDATE_CACHE_SCHEMA},
             "policyDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-            "observedAt": {"type": "integer", "minimum": 0, "maximum": 4102444800},
-            "candidate": {"type": "object"},
+            "observedAt": {"type": ["integer", "null"], "minimum": 0, "maximum": 4102444800},
+            "candidate": {"type": ["object", "null"]},
+            "lastAttemptAt": {"type": "integer", "minimum": 0, "maximum": 4102444800},
+            "lastFailureReason": {"enum": list(UPDATE_FAILURE_REASONS)},
         },
         ("schemaVersion", "policyDigest", "observedAt", "candidate"),
     ),
 }
+PLUGIN_UPDATE_SCHEMAS[UPDATE_CACHE_SCHEMA]["oneOf"] = [
+    {"properties": {"observedAt": {"type": "integer"}, "candidate": {"type": "object"}}},
+    {
+        "properties": {"observedAt": {"type": "null"}, "candidate": {"type": "null"}},
+        "required": ["lastAttemptAt", "lastFailureReason"],
+    },
+]
+PLUGIN_UPDATE_SCHEMAS[UPDATE_CACHE_SCHEMA]["dependentRequired"] = {"lastFailureReason": ["lastAttemptAt"]}
 for _name, _schema in PLUGIN_UPDATE_SCHEMAS.items():
     _schema.update({"$id": _name, "$schema": "https://json-schema.org/draft/2020-12/schema"})

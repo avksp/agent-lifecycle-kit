@@ -197,6 +197,21 @@ class PluginUpdateNetworkTests(unittest.TestCase):
         self.assertEqual(report["status"], "AVAILABLE")
         self.assertNotIn(b"UNTRUSTED NOTE", canonical_bytes(report))
 
+    def test_unused_long_marketplace_text_is_projected_before_field_bounds(self):
+        rows = publication_metadata()
+        key = next(key for key in rows if key.endswith("marketplace.json"))
+        rows[key]["description"] = "UNTRUSTED MARKETPLACE " * 1000
+        rows[key]["plugins"][0]["description"] = "UNTRUSTED MARKETPLACE " * 1000
+        rows[key]["plugins"][0]["source"]["unused"] = "UNTRUSTED MARKETPLACE " * 1000
+        client, _ = fixture_client(rows)
+        report = check_plugin_updates(make_request(), client=client, now=10000)
+        self.assertEqual(report["status"], "AVAILABLE")
+        self.assertNotIn(b"UNTRUSTED MARKETPLACE", canonical_bytes(report))
+        source = next(item for item in report["details"]["sources"] if item["url"] == key)
+        from agent_lifecycle.contracts import sha256_hex
+
+        self.assertEqual(source["rawSHA256"], sha256_hex(canonical_bytes(rows[key])))
+
     def test_parent_network_deadline_handles_a_blocked_reader_without_retry(self):
         with (
             patch(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import importlib.resources
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,7 +13,7 @@ from agent_lifecycle.adapter_sessions.plugin_updates import (
     reconcile_plugin_update,
     refuse_plugin_install,
 )
-from agent_lifecycle.contracts import LifecycleError, canonical_digest
+from agent_lifecycle.contracts import LifecycleError, canonical_digest, load_json_object, sha256_hex
 from agent_lifecycle.planning.update_impact import assess_plugin_update
 from tests.contracts.test_plugin_update_schemas import make_descriptor, make_request
 from tests.planning.test_update_impact import snapshot, write_plan
@@ -28,6 +29,47 @@ def offer_fixture(root, *, phase=None, frozen=False):
 
 
 class PluginUpdateHostAdviceTests(unittest.TestCase):
+    def test_shipped_descriptor_null_commit_is_unknown_and_explicit_derived_copy_can_offer(self):
+        source = importlib.resources.files("agent_lifecycle").joinpath("data/plugin-updates/release-impact.v1.json")
+        shipped = source.read_bytes()
+        descriptor = load_json_object(shipped)
+        self.assertIsNone(descriptor["sourceCommit"])
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _, inventory = write_plan(root)
+            request = make_request(host={"adapterId": "codex", "version": "0.167.1"})
+            assessment = assess_plugin_update(request, descriptor, inventory, repository_root=root)
+            report = offer_plugin_update(request, assessment, repository_root=root)
+            self.assertEqual(report["status"], "UNKNOWN")
+            self.assertIn("TARGET_COMMIT_UNRESOLVED", report["details"]["reason"])
+            self.assertNotIn("commands", report["details"])
+            from agent_lifecycle.diagnostics.plugin_updates import check_plugin_updates
+            from tests.diagnostics.test_plugin_update_network import fixture_client, publication_metadata
+
+            rows = publication_metadata()
+            key = next(key for key in rows if key.endswith("release-impact.v1.json"))
+            rows[key] = descriptor
+            client, _ = fixture_client(rows)
+            discovery = check_plugin_updates(request, client=client, now=10000)
+            candidate = discovery["details"]["candidate"]
+            self.assertEqual(candidate["releaseImpact"], descriptor)
+            derived = {**descriptor, "sourceCommit": candidate["sourceCommit"]}
+            assessment = assess_plugin_update(request, derived, inventory, repository_root=root)
+            report = offer_plugin_update(request, assessment, repository_root=root)
+            self.assertEqual(report["status"], "OFFERED")
+            self.assertEqual(report["details"]["assessmentTrust"], "DECLARED_LOCAL_REPORT_NOT_AUTHORITY")
+            self.assertEqual(assessment["inputs"]["releaseDigest"], canonical_digest(derived))
+            self.assertEqual(sha256_hex(source.read_bytes()), sha256_hex(shipped))
+            self.assertIsNone(descriptor["sourceCommit"])
+
+    def test_nonnull_malformed_target_commit_still_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            request, assessment = offer_fixture(root)
+            assessment["details"]["target"]["sourceCommit"] = "invalid"
+            with self.assertRaises(LifecycleError):
+                offer_plugin_update(request, assessment, repository_root=root)
+
     def test_manual_offer_is_inert_and_does_not_grant_global_or_native_authority(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

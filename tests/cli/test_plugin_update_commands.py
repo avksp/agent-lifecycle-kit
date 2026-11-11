@@ -109,12 +109,49 @@ class PluginUpdateCommandTests(unittest.TestCase):
             ".alk/new.json",
             "tasks/new.json",
             "run.state.json",
+            ".ALK/new.json",
+            ".aLk/new.json",
+            ".GIT/new.json",
+            ".CoDeX/new.json",
+            ".ClAuDe/new.json",
+            "TaSkS/new.json",
+            "run.STATE.JSON",
+            "nested/PLAN.LOCK.JSON",
+            "nested/PLAN.MANIFEST.JSON",
         ):
             with self.subTest(path=path):
                 self.action("check", "--out", path, success=False)
                 self.action("check", "--cache", path, success=False)
         self.action("check", "--cache", "request.json", success=False)
         self.assertEqual(set(self.root.iterdir()), {self.root / "request.json"})
+
+    def test_incomplete_assessment_cannot_create_missing_plan_input_or_any_output(self):
+        manifest, inventory = write_plan(self.root)
+        missing = "plan/not-created.md"
+        manifest["planFiles"] = [missing]
+        self.write("plan/plan.manifest.json", manifest)
+        self.write("inventory.json", inventory)
+        self.write("release.json", make_descriptor())
+        before = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        for output in (missing, "incomplete-report.json"):
+            with self.subTest(output=output):
+                report = self.action(
+                    "assess",
+                    "--release",
+                    "release.json",
+                    "--inventory",
+                    "inventory.json",
+                    "--out",
+                    output,
+                    success=False,
+                )
+                self.assertEqual(report["code"], "plugin-update-incomplete-assessment-output")
+                self.assertFalse((self.root / output).exists())
+        report = self.action("assess", "--release", "release.json", "--inventory", "inventory.json")
+        self.assertEqual(report["status"], "UNKNOWN")
+        self.assertFalse(report["details"]["assessmentComplete"])
+        after = {str(p.relative_to(self.root)): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        self.assertEqual(before, after)
 
     @unittest.skipIf(os.name == "nt", "symlink creation needs optional Windows privilege")
     def test_symlink_input_and_output_parent_refuse(self):
