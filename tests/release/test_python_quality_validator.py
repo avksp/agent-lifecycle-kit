@@ -8,7 +8,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from tools.ci import qualify_pr_evidence as ci
+from tools.release.release_common import digest_value
 from tools.release.validate_python_quality import _validate_policy, validate_quality
 
 
@@ -63,6 +66,70 @@ def _run_receipt() -> dict:
 
 
 class PythonQualityValidatorTests(unittest.TestCase):
+    def test_qualified_validation_requires_raw_binding_and_existing_coverage_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            package = root / "src"
+            package.mkdir()
+            source = package / "example.py"
+            source.write_text("value = 1\n", encoding="utf-8")
+            policy = root / "policy.json"
+            policy.write_text(json.dumps(_policy(_digest(source))), encoding="utf-8")
+            work = root / "work"
+            invocation = work / "run-qualified"
+            invocation.mkdir(parents=True)
+            run = _run_receipt()
+            run["runDirectory"] = "work/run-qualified"
+            for key, original in run["artifacts"].items():
+                path = invocation / Path(original).name
+                run["artifacts"][key] = path.relative_to(root).as_posix()
+                if key != "coverage":
+                    path.write_text("" if key == "mypy" else "[]", encoding="utf-8")
+            coverage_path = root / run["artifacts"]["coverage"]
+            receipt = root / "run.json"
+            args = ci.QualityInputs(root / "index.json", "a" * 64, "cell", root / "raw.json")
+
+            def store(raw: bytes) -> dict:
+                coverage_path.write_bytes(raw)
+                binding = {"main": {"sha": "b" * 40}, "coverageSha256": ci.sha256(raw)}
+                run["qualifiedCoverage"] = binding
+                run["sourceRevision"] = binding["main"]["sha"]
+                run["runDigest"] = digest_value({key: value for key, value in run.items() if key != "runDigest"})
+                receipt.write_text(json.dumps(run), encoding="utf-8")
+                return binding
+
+            def validate(qualified=None) -> dict:
+                return validate_quality(
+                    repository_root=root,
+                    policy_path=policy,
+                    run_receipt_path=receipt,
+                    work_root=work,
+                    qualified=qualified,
+                )
+
+            good = b'{"totals":{"percent_covered":92.0}}'
+            binding = store(good)
+            self.assertIn("quality-qualified-inputs-required", {row["code"] for row in validate()["blockers"]})
+            with mock.patch.object(ci, "qualification_binding", return_value=(good, binding)):
+                valid = validate(args)
+                self.assertEqual(valid["status"], "PASS", valid["blockers"])
+                self.assertEqual(valid["qualifiedCoverage"], binding)
+                coverage_path.write_bytes(good + b" ")
+                self.assertIn(
+                    "quality-qualified-coverage-bytes-differ", {row["code"] for row in validate(args)["blockers"]}
+                )
+                coverage_path.write_bytes(good)
+                database = invocation / "coverage.data"
+                database.touch()
+                self.assertIn(
+                    "quality-qualified-coverage-database-present", {row["code"] for row in validate(args)["blockers"]}
+                )
+                database.unlink()
+            low = b'{"totals":{"percent_covered":75.9}}'
+            binding = store(low)
+            with mock.patch.object(ci, "qualification_binding", return_value=(low, binding)):
+                self.assertIn("coverage-floor-failed", {row["code"] for row in validate(args)["blockers"]})
+
     def test_selected_test_scope_refuses_invalid_paths_and_baselines(self) -> None:
         path = Path(__file__).resolve().parents[2] / "policy/python-quality.json"
         policy = json.loads(path.read_text())
@@ -105,9 +172,7 @@ class PythonQualityValidatorTests(unittest.TestCase):
         for section, name in baselines:
             for test_path in (selected, outside, *disguised):
                 invalid = copy.deepcopy(policy)
-                invalid[section][name].append(
-                    {"path": test_path, "code": "F821", "count": 1, "sourceDigest": "a" * 64}
-                )
+                invalid[section][name].append({"path": test_path, "code": "F821", "count": 1, "sourceDigest": "a" * 64})
                 self.assertIn("quality-tests-baseline-forbidden", {row["code"] for row in _validate_policy(invalid)})
 
     def test_current_correctness_selectors_and_historical_scope_interpretation(self) -> None:
@@ -131,9 +196,7 @@ class PythonQualityValidatorTests(unittest.TestCase):
         legacy_opt_in = copy.deepcopy(policy)
         legacy_opt_in["revision"] = 8
         legacy_opt_in["ruff"]["correctnessSelectors"].remove("F")
-        self.assertIn(
-            "quality-correctness-selectors-invalid", {row["code"] for row in _validate_policy(legacy_opt_in)}
-        )
+        self.assertIn("quality-correctness-selectors-invalid", {row["code"] for row in _validate_policy(legacy_opt_in)})
         for revision in (7, 8):
             with self.subTest(historical_revision=revision):
                 legacy = copy.deepcopy(policy)
@@ -162,8 +225,9 @@ class PythonQualityValidatorTests(unittest.TestCase):
         self.assertTrue(_validate_policy(invalid))
         for baseline in ("correctnessBaseline", "migrationBaseline", "formatBaseline", "lineLengthBaseline"):
             invalid = copy.deepcopy(policy)
-            invalid["ruff"][baseline].append({"path": policy["tooling"]["paths"][0], "code": "F401",
-                                               "count": 1, "sourceDigest": "a" * 64})
+            invalid["ruff"][baseline].append(
+                {"path": policy["tooling"]["paths"][0], "code": "F401", "count": 1, "sourceDigest": "a" * 64}
+            )
             self.assertIn("quality-tooling-baseline-forbidden", {row["code"] for row in _validate_policy(invalid)})
 
     def _coverage_result(

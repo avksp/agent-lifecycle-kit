@@ -22,6 +22,9 @@ if __package__:
 else:
     from release_common import digest_value, write_json
 
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+from tools.ci import qualify_pr_evidence as ci_proof
 
 SCHEMA = "agent-python-quality-run.v1"
 DEFAULT_TIMEOUT_SECONDS = 900
@@ -95,7 +98,11 @@ def run_quality(
     test_top_level: Path,
     base_sha: str,
     work_root: Path,
+    qualified: ci_proof.QualityInputs | None = None,
 ) -> dict[str, Any]:
+    proof = ci_proof.qualification_binding(repository_root, policy_path, qualified) if qualified else None
+    if proof and proof[1]["main"]["sha"] != base_sha:
+        raise ci_proof.ProofError("qualified quality base SHA differs from current main")
     package_root = (repository_root / package_root).resolve()
     policy = _read_object(policy_path)
     limits = policy.get("limits", {})
@@ -147,59 +154,27 @@ def run_quality(
             )
         )
 
-    coverage_file = work_root / "coverage.data"
     coverage_json = work_root / "coverage.json"
-    coverage_env = os.environ.copy()
-    coverage_env["COVERAGE_FILE"] = str(coverage_file)
-    coverage_result = _run_tool(
-        "coverage",
-        [
-            sys.executable,
-            "-m",
-            "coverage",
-            "run",
-            "--branch",
-            "--source=src/agent_lifecycle",
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            tests_root.as_posix(),
-            "-t",
-            test_top_level.as_posix(),
-            "-q",
-        ],
-        repository_root,
-        work_root,
-        timeout,
-        output_limit,
-        expected_exit_codes={0},
-        env=coverage_env,
-    )
-    if coverage_file.is_file():
-        json_result = _run_tool(
-            "coverage-json",
-            [sys.executable, "-m", "coverage", "json", "-o", coverage_json.as_posix()],
-            repository_root,
-            work_root,
-            timeout,
-            output_limit,
-            expected_exit_codes={0},
-            env=coverage_env,
+    if proof is None:
+        commands.extend(
+            _fresh_coverage(repository_root, tests_root, test_top_level, work_root, timeout, output_limit, blockers)
         )
-        if json_result["status"] != "PASS":
-            blockers.append({"code": "coverage-json-failed"})
-        commands.append(json_result)
     else:
-        blockers.append({"code": "coverage-data-missing"})
+        ci_proof.write_bytes(coverage_json, proof[0])
+        if __package__:
+            from .validate_python_quality import _validate_coverage
+        else:
+            from validate_python_quality import _validate_coverage
 
-    for record in (*selected, coverage_result):
+        blockers.extend(_validate_coverage(policy, coverage_json))
+
+    for record in selected:
         commands.append(record)
         if record["status"] == "FAIL":
             blockers.append({"code": "quality-command-failed", "id": record["id"]})
 
     changed_paths = _changed_paths(repository_root, base_sha)
-    body = {
+    body: dict[str, Any] = {
         "schemaVersion": SCHEMA,
         "status": "PASS" if not blockers else "FAIL",
         "sourceRevision": base_sha,
@@ -222,14 +197,82 @@ def run_quality(
             "ruffLineLength": _relative(repository_root, work_root / "ruff-line-length.stdout.json"),
             "mypy": _relative(repository_root, work_root / "mypy.stdout.txt"),
             "coverage": _relative(repository_root, coverage_json),
-            "coverageData": _relative(repository_root, coverage_file),
         },
         "blockers": blockers,
         "modelCallsStarted": False,
         "hostLaunchStarted": False,
         "productionPromotionClaimed": False,
     }
+    if proof is None:
+        body["artifacts"]["coverageData"] = _relative(repository_root, work_root / "coverage.data")
+    else:
+        body["qualifiedCoverage"] = proof[1]
     return {**body, "runDigest": digest_value(body)}
+
+
+def _fresh_coverage(
+    repository_root: Path,
+    tests_root: Path,
+    test_top_level: Path,
+    work_root: Path,
+    timeout: int,
+    output_limit: int,
+    blockers: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    coverage_json = work_root / "coverage.json"
+    timing_runner = Path("tools/ci/run_unittest.py")
+    if not (repository_root / timing_runner).is_file():
+        timing_runner = Path(__file__).resolve().parents[1] / "ci/run_unittest.py"
+    coverage_file = work_root / "coverage.data"
+    coverage_env = os.environ.copy()
+    coverage_env["COVERAGE_FILE"] = str(coverage_file)
+    coverage_result = _run_tool(
+        "coverage",
+        [
+            sys.executable,
+            "-m",
+            "coverage",
+            "run",
+            "--branch",
+            "--source=src/agent_lifecycle",
+            timing_runner.as_posix(),
+            "--start",
+            tests_root.as_posix(),
+            "--top",
+            test_top_level.as_posix(),
+            "--pattern",
+            "test*.py",
+            "--out",
+            (work_root / "test-timings.json").as_posix(),
+        ],
+        repository_root,
+        work_root,
+        timeout,
+        output_limit,
+        expected_exit_codes={0},
+        env=coverage_env,
+    )
+    commands = []
+    if coverage_file.is_file():
+        json_result = _run_tool(
+            "coverage-json",
+            [sys.executable, "-m", "coverage", "json", "-o", coverage_json.as_posix()],
+            repository_root,
+            work_root,
+            timeout,
+            output_limit,
+            expected_exit_codes={0},
+            env=coverage_env,
+        )
+        if json_result["status"] != "PASS":
+            blockers.append({"code": "coverage-json-failed"})
+        commands.append(json_result)
+    else:
+        blockers.append({"code": "coverage-data-missing"})
+
+    if coverage_result["status"] == "FAIL":
+        blockers.append({"code": "quality-command-failed", "id": "coverage"})
+    return [*commands, coverage_result]
 
 
 def _run_tool(
@@ -416,16 +459,25 @@ def main() -> int:
     parser.add_argument("--base-sha", required=True)
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    ci_proof.add_quality_arguments(parser)
     args = parser.parse_args()
-    result = run_quality(
-        repository_root=Path.cwd().resolve(),
-        policy_path=args.policy,
-        package_root=args.package_root,
-        tests_root=args.tests_root,
-        test_top_level=args.test_top_level,
-        base_sha=args.base_sha,
-        work_root=args.work_root,
-    )
+    try:
+        result = run_quality(
+            repository_root=Path.cwd().resolve(),
+            policy_path=args.policy,
+            package_root=args.package_root,
+            tests_root=args.tests_root,
+            test_top_level=args.test_top_level,
+            base_sha=args.base_sha,
+            work_root=args.work_root,
+            qualified=ci_proof.quality_arguments(args),
+        )
+    except ci_proof.EnvironmentMismatch as exc:
+        print(str(exc), file=sys.stderr)
+        return 3
+    except (ci_proof.ProofError, OSError, subprocess.SubprocessError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     write_json(args.evidence, result)
     print(json.dumps(result, ensure_ascii=False, separators=(",", ":"), sort_keys=True))
     return 0 if result["status"] == "PASS" else 1

@@ -12,6 +12,9 @@ import zipfile
 from pathlib import Path
 from unittest import mock
 
+from tools.ci import qualify_pr_evidence as ci
+
+from ..release.test_ci_evidence_reuse import ENV, SOURCE
 from . import run_packaging_smoke as smoke
 from .run_packaging_smoke import (
     ROOT,
@@ -176,6 +179,77 @@ class PackagingSmokePortabilityTests(unittest.TestCase):
                 )
                 result = json.loads(evidence.read_bytes())
                 self.assertEqual(result["status"], "FAIL" if inject_stale else "PASS")
+
+    def test_prebuilt_consumes_exact_unchanged_files_without_a_distribution_build(self) -> None:
+        for case in ("pass", "missing", "extra", "linked", "changed", "wrong-source", "changed-during-install"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder).resolve()
+                files = self._export(root)
+                dist = root / ci.MAIN_DIST
+                dist.mkdir(parents=True)
+                wheel, sdist = self._archives(dist, files)
+                receipt, evidence = root / "build.json", root / "smoke.json"
+                python = str(root / ".venv/bin/python")
+                ci.write_object(
+                    receipt,
+                    {
+                        "schemaVersion": "alk-ci-main-build.v1",
+                        "status": "PASS",
+                        "source": SOURCE,
+                        "environment": ENV,
+                        "argv": ci.package_argv(python),
+                        "returncode": 0,
+                        "artifacts": ci.package_artifacts(root, dist),
+                    },
+                )
+                if case == "missing":
+                    wheel.unlink()
+                elif case == "extra":
+                    (dist / "extra.txt").write_text("unexpected", encoding="utf-8")
+                elif case == "linked":
+                    other = root / "other.whl"
+                    wheel.rename(other)
+                    wheel.hardlink_to(other)
+                elif case == "changed":
+                    wheel.write_bytes(wheel.read_bytes() + b"changed")
+
+                def consume(kind, artifact, *args, **kwargs):
+                    if case == "changed-during-install" and kind == "sdist":
+                        wheel.write_bytes(wheel.read_bytes() + b"changed")
+                    return {"kind": kind, "status": "PASS", "artifactIdentity": smoke._file_identity(artifact)}
+
+                argv = [
+                    "smoke",
+                    "--dist-dir",
+                    str(dist),
+                    "--python",
+                    python,
+                    "--evidence",
+                    str(evidence),
+                    "--prebuilt-receipt",
+                    str(receipt),
+                    "--source-sha",
+                    "0" * 40 if case == "wrong-source" else SOURCE["sha"],
+                ]
+                with (
+                    mock.patch.object(smoke, "ROOT", root),
+                    mock.patch.object(sys, "argv", argv),
+                    mock.patch.object(ci, "source", return_value=SOURCE),
+                    mock.patch.object(ci, "env_snapshot", return_value=ENV),
+                    mock.patch.object(smoke, "_run_command") as distribution_build,
+                    mock.patch.object(smoke, "_check_artifact", side_effect=consume) as check,
+                ):
+                    self.assertEqual(smoke.main(), 0 if case == "pass" else 1)
+                distribution_build.assert_not_called()
+                self.assertTrue(dist.is_dir())
+                result = json.loads(evidence.read_bytes())
+                if case in {"pass", "changed-during-install"}:
+                    self.assertEqual([call.args[1] for call in check.call_args_list], [wheel, sdist])
+                    self.assertEqual(result["prebuilt"]["receiptSha256"], ci.sha256(receipt.read_bytes()))
+                else:
+                    check.assert_not_called()
+                if case == "changed-during-install":
+                    self.assertIn("prebuilt-package-changed", {item["code"] for item in result["blockers"]})
 
 
 if __name__ == "__main__":

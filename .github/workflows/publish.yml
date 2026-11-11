@@ -8,8 +8,45 @@ permissions:
   contents: read
 
 jobs:
+  main-proof:
+    name: Verify exact push-main and CodeQL proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      verified_sha: ${{ steps.verify.outputs.verified_sha }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/heads/main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Verify current main qualification for this release
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: >-
+          python tools/ci/qualify_pr_evidence.py verify-main --repository "$GITHUB_REPOSITORY"
+          --source-sha "$GITHUB_SHA" --out work/ci/publisher-main-proof.json
+      - name: Retain publisher main proof
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: publisher-main-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/ci/publisher-main-proof.json
+          if-no-files-found: error
+          retention-days: 2
+
   publish:
     name: Build and publish to PyPI
+    needs: main-proof
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -20,7 +57,7 @@ jobs:
         run: git config --global core.autocrlf false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ needs.main-proof.outputs.verified_sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -50,12 +87,23 @@ jobs:
           python -m pip install build==1.6.1
           python -c "import build; print('build frontend: ' + build.__version__); assert build.__version__ == '1.6.1'"
       - name: Build and smoke-test distribution
-        run: python tests/package/run_packaging_smoke.py --dist-dir dist --python python --evidence /tmp/packaging-smoke.json
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERIFIED_SHA: ${{ needs.main-proof.outputs.verified_sha }}
+        run: |
+          python tools/ci/qualify_pr_evidence.py verify-release --tag "$RELEASE_TAG" --source-sha "$VERIFIED_SHA"
+          python tests/package/run_packaging_smoke.py --dist-dir dist --python python --evidence /tmp/packaging-smoke.json
+      - name: Recheck verified source before PyPI upload
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERIFIED_SHA: ${{ needs.main-proof.outputs.verified_sha }}
+        run: python tools/ci/qualify_pr_evidence.py verify-release --tag "$RELEASE_TAG" --source-sha "$VERIFIED_SHA"
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
 
   agent-plugin:
     name: Build and publish Agent Plugins archive
+    needs: main-proof
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -64,7 +112,7 @@ jobs:
         run: git config --global core.autocrlf false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ needs.main-proof.outputs.verified_sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -78,6 +126,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERIFIED_SHA: ${{ needs.main-proof.outputs.verified_sha }}
         run: |
           VERSION="$(python - <<'PY'
           import os
@@ -90,6 +139,7 @@ jobs:
           PY
           )"
           ARCHIVE="/tmp/agent-lifecycle-kit-agent-plugin-${RELEASE_TAG}.zip"
+          python tools/ci/qualify_pr_evidence.py verify-release --tag "$RELEASE_TAG" --source-sha "$VERIFIED_SHA"
           python tools/release/build_agent_plugin.py \
             --root . \
             --version "$VERSION" \
@@ -101,4 +151,5 @@ jobs:
             --archive "$ARCHIVE" \
             --version "$VERSION" \
             --evidence /tmp/agent-plugin-validation.json
+          python tools/ci/qualify_pr_evidence.py verify-release --tag "$RELEASE_TAG" --source-sha "$VERIFIED_SHA"
           gh release upload "$RELEASE_TAG" "$ARCHIVE"

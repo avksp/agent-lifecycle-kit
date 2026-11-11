@@ -133,6 +133,28 @@ read the diagnostic summary for retained debt. The full quality runner already
 runs unittest for coverage, so one local full run can satisfy both checks for
 the same source and inputs.
 
+## Pull-request and main CI
+
+Pull requests run all 25 platform, foundation and Python quality cells in
+`.github/workflows/ci.yml`. The workflow keeps the required check names and
+the separate CodeQL workflow. Each cell records the checked commit and tree,
+test discovery, run attempt, runner image, interpreter and locked toolchain.
+The CI environment uses the pinned uv version for its role and the
+hash-checked build dependencies in `tools/ci/build-requirements.txt`.
+
+On a push to main, CI can qualify one complete, successful attempt from the
+merged same-repository PR. All 25 current cells must match its source and
+environment inputs. The five quality probes rerun the static checks, strict
+mypy and quality validation against the exact qualified coverage JSON. The
+existing coverage floors apply to those bytes.
+
+The main decision selects `QUALIFIED_REUSE` for the whole matrix when every
+probe passes. Missing, stale or incompatible evidence selects `FULL` and
+runs all 25 suites on main. Failed current static checks or invalid internal
+receipts fail qualification. Both modes run fresh main history, integration,
+packaging and CodeQL checks. The terminal receipt identifies the mode and
+the suites that actually ran on main.
+
 ## Prepare repository test data
 
 Full repository tests use the bundled release fixture. In a clean checkout,

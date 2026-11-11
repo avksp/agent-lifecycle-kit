@@ -12,25 +12,29 @@ ACTION_USE_RE = re.compile(r"^\s*(?:-\s+)?uses:\s+[^@\s]+@([0-9a-f]{40})\s+#.*\b
 
 class ReleaseWorkflowTests(unittest.TestCase):
     def test_test_matrices_include_python_3_14(self) -> None:
-        for relative_path in [
-            ".github/workflows/ci.yml",
-            ".github/workflows/matrix.yml",
-            ".github/workflows/neutrality.yml",
-        ]:
+        for relative_path in [".github/workflows/ci.yml", ".github/workflows/matrix.yml"]:
             workflow = (ROOT / relative_path).read_text(encoding="utf-8")
             self.assertIn('"3.14"', workflow, relative_path)
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        self.assertIn('"3.14"', _job_block(ci, "foundation"))
 
     def test_complete_supported_runtime_and_quality_matrices(self) -> None:
         versions = ["3.11", "3.12", "3.13", "3.14", "3.15"]
         platforms = ["ubuntu-latest", "macos-latest", "windows-latest"]
-        for name in ("ci.yml", "matrix.yml", "python-quality.yml", "neutrality.yml"):
-            workflow = (ROOT / ".github/workflows" / name).read_text()
+        ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        matrix = (ROOT / ".github/workflows/matrix.yml").read_text(encoding="utf-8")
+        for name, workflow in {
+            "platform": _job_block(ci, "test"),
+            "manual": matrix,
+            "quality": _job_block(ci, "quality"),
+            "foundation": _job_block(ci, "foundation"),
+        }.items():
             found = re.search(r"python(?:-version)?: \[(.*?)\]", workflow)
             self.assertIsNotNone(found, name)
             actual = json.loads("[" + found.group(1) + "]")
             self.assertEqual(actual, versions, name)
             self.assertNotIn("continue-on-error", workflow, name)
-            if name in ("ci.yml", "matrix.yml"):
+            if name in ("platform", "manual"):
                 operating_systems = re.search(r"os: \[(.*?)\]", workflow)
                 self.assertIsNotNone(operating_systems)
                 actual_platforms = [value.strip() for value in operating_systems.group(1).split(",")]
@@ -41,12 +45,26 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 self.assertNotIn("exclude:", workflow, name)
                 self.assertNotIn("include:", workflow, name)
 
+    def test_each_full_family_keeps_its_own_discovery(self) -> None:
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        platform = " ".join(_job_block(workflow, "test").split())
+        foundation = " ".join(_job_block(workflow, "foundation").split())
+        quality = " ".join(_job_block(workflow, "quality").split())
+        self.assertIn("tools/ci/run_unittest.py --start tests --top . --pattern 'test*.py'", platform)
+        self.assertIn("-m unittest discover -s tests/security -t . -v", platform)
+        self.assertIn("tools/ci/run_unittest.py --start tests --top . --pattern 'test_*.py'", foundation)
+        self.assertIn("tools/release/run_python_quality.py", quality)
+        self.assertIn("--tests-root tests --test-top-level .", quality)
+        self.assertNotIn("--qualified-coverage", quality)
+
     def test_reduced_contract_modules_keep_strict_type_guard(self) -> None:
-        workflow = (ROOT / ".github/workflows/python-quality.yml").read_text()
-        step = workflow.split("- name: Check strict types in reduced contract modules\n", 1)[1].split(
-            "\n      - name:", 1
-        )[0]
-        self.assertIn("python -m mypy --strict", step)
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        step = (
+            _job_block(workflow, "quality")
+            .split("- name: Check strict types in reduced contract modules\n", 1)[1]
+            .split("\n      - name:", 1)[0]
+        )
+        self.assertIn('"$CELL_VENV_PYTHON" -m mypy --strict', step)
         for module in ("preparation_policy", "agent_plugin_qualification_schemas"):
             self.assertIn("src/agent_lifecycle/contracts/" + module + ".py", step)
         self.assertNotIn("ignore", step)
@@ -76,9 +94,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 "ci.yml",
                 "codeql.yml",
                 "matrix.yml",
-                "neutrality.yml",
                 "publish.yml",
-                "python-quality.yml",
                 "release.yml",
             },
         )
@@ -109,6 +125,13 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("package-ecosystem: github-actions", dependabot)
         self.assertIn("github/codeql-action/*", dependabot)
         self.assertIn("package-ecosystem: pip", dependabot)
+
+
+def _job_block(workflow: str, job_id: str) -> str:
+    match = re.search(rf"^  {re.escape(job_id)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|\Z)", workflow, re.MULTILINE | re.DOTALL)
+    if match is None:
+        raise AssertionError(f"workflow job not found: {job_id}")
+    return match.group(1)
 
 
 if __name__ == "__main__":

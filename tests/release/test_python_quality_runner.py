@@ -13,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import patch
 
+from tools.ci import qualify_pr_evidence as ci
 from tools.release.run_python_quality import _run_command, run_quality
 from tools.release.validate_python_quality import validate_quality
 
@@ -161,6 +162,48 @@ class PythonQualityRunnerTests(unittest.TestCase):
             format_command = next(row for row in current["commands"] if row["id"] == "ruff-format")
             self.assertEqual(format_command["argv"][-2:], ["--output-format", "json"])
 
+    def test_qualified_runner_invokes_static_tools_and_never_starts_coverage_suite(self) -> None:
+        repository = Path(__file__).resolve().parents[2]
+        policy = json.loads((repository / "policy/python-quality.json").read_bytes())
+        policy.pop("tooling")
+        policy.pop("tests")
+        policy["mypy"]["strictClean"] = []
+        policy["coverage"] = {"minimumStatementLinePercent": 76, "baseline": {}}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            package = root / "src/agent_lifecycle"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text("value = 1\n", encoding="utf-8")
+            tests = root / "tests"
+            tests.mkdir()
+            (tests / "__init__.py").write_text("", encoding="utf-8")
+            (tests / "test_refuse_run.py").write_text("raise RuntimeError('suite started')\n", encoding="utf-8")
+            policy_file = root / "policy.json"
+            policy_file.write_text(json.dumps(policy), encoding="utf-8")
+            raw = b'{"totals":{"percent_covered":92.0}}'
+            binding = {"main": {"sha": "a" * 40}, "coverageSha256": ci.sha256(raw)}
+            qualified = ci.QualityInputs(root / "index.json", "b" * 64, "cell", root / "coverage.json")
+            with patch.object(ci, "qualification_binding", return_value=(raw, binding)):
+                run = run_quality(
+                    repository_root=root,
+                    policy_path=policy_file,
+                    package_root=package,
+                    tests_root=tests,
+                    test_top_level=root,
+                    base_sha="a" * 40,
+                    work_root=root / "work",
+                    qualified=qualified,
+                )
+            self.assertEqual(run["status"], "PASS", run["blockers"])
+            self.assertEqual(run["qualifiedCoverage"], binding)
+            actual = {row["id"] for row in run["commands"]}
+            self.assertTrue({"ruff-correctness", "ruff-migration", "ruff-format", "mypy", "coverage-version"} <= actual)
+            self.assertTrue({"coverage", "coverage-json"}.isdisjoint(actual))
+            self.assertEqual((root / run["artifacts"]["coverage"]).read_bytes(), raw)
+            self.assertNotIn("coverageData", run["artifacts"])
+            self.assertFalse(list((root / run["runDirectory"]).glob("coverage.data*")))
+            self.assertFalse((root / run["runDirectory"] / "test-timings.json").exists())
+
     def test_selected_tool_gate_rejects_real_lint_type_format_and_source_drift(self) -> None:
         repository = Path(__file__).resolve().parents[2]
         policy = json.loads((repository / "policy/python-quality.json").read_text(encoding="utf-8"))
@@ -175,6 +218,7 @@ class PythonQualityRunnerTests(unittest.TestCase):
             root = Path(directory).resolve()
             for relative in (
                 *policy["tooling"]["paths"],
+                "tools/ci/qualify_pr_evidence.py",
                 "tools/release/run_python_quality.py",
                 "tools/release/release_common.py",
                 "pyproject.toml",

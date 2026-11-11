@@ -4,19 +4,43 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact main commit for a full timing control
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONNOUSERSITE: "1"
+  PYTHONPATH: src
+
 jobs:
   test:
     name: ${{ matrix.os }} / py${{ matrix.python }}
+    needs: [decide, control]
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'pull_request' ||
+        (github.event_name == 'push' && needs.decide.result == 'success' && needs.decide.outputs.mode == 'FULL') ||
+        (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
     runs-on: ${{ matrix.os == 'macos-latest' && 'macos-26-intel' || matrix.os }}
-    strategy:
+    strategy: &platform_matrix
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    env:
+      CI_ROLE: ci
+      CI_CELL: ${{ matrix.os }}-py${{ matrix.python }}
+      CI_FULL_ARTIFACT: ${{ github.event_name == 'pull_request' && 'pr-ci' || (github.event_name == 'push' && 'main-full' || 'control-full') }}
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false
@@ -25,19 +49,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
         with:
           python-version: ${{ matrix.python }}
       - name: Install pinned quality runner
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.13.1"
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role ci
       - name: Restore versioned release test fixture
-        run: python -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16
-      - name: Install package
-        run: python -m pip install -e .
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
       - name: Validate repository hygiene
         run: >-
-          python tools/release/validate_repository_hygiene.py
+          "$CELL_VENV_PYTHON" tools/release/validate_repository_hygiene.py
           --root .
           --policy policy/repository-hygiene.json
           --ref HEAD
@@ -47,7 +74,7 @@ jobs:
         id: accounting-git
         if: matrix.os == 'windows-latest' && matrix.python == '3.15'
         shell: pwsh
-        run: |
+        run: &accounting_backend |
           $code = @'
           import hashlib, json, os, shutil, stat, subprocess
           from pathlib import Path
@@ -77,56 +104,57 @@ jobs:
               stream.write("ALK_ACCOUNTING_GIT_EXECUTABLE=" + str(backend) + "\n")
           print(json.dumps(metadata, sort_keys=True))
           '@
-          python -c $code
+          & $env:CELL_VENV_PYTHON -c $code
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Require Node projection syntax and export smoke
         env:
           ALK_REQUIRE_NODE: "1"
-        run: >-
-          uv run --frozen --group quality --python ${{ matrix.python }}
-          python -m unittest tests.adapters.test_opencode_projection_runtime -v
+        run: &main_gate_1 >-
+          "$CELL_VENV_PYTHON" -m unittest tests.adapters.test_opencode_projection_runtime -v
       - name: Run stdlib tests
         id: stdlib-tests
         timeout-minutes: ${{ runner.os == 'Windows' && 60 || 360 }}
         run: >-
-          uv run --frozen --group quality --python ${{ matrix.python }}
-          python tools/ci/run_unittest.py
-          --start tests --top .
+          "$CELL_VENV_PYTHON" tools/ci/run_unittest.py
+          --start tests --top . --pattern 'test*.py'
           --out work/ci/test-timings.json
       - name: Run security tests directly
-        run: uv run --frozen --group quality --python ${{ matrix.python }} python -m unittest discover -s tests/security -t . -v
+        run: &main_gate_2 >-
+          "$CELL_VENV_PYTHON" -m unittest discover -s tests/security -t . -v
       - name: Validate model routing profile
-        run: python -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
+        run: &main_gate_3 >-
+          "$CELL_VENV_PYTHON" -m agent_lifecycle model profile-check --profile profiles/model-routing-profile.v1.json
       - name: Run neutrality scan
-        run: python -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --require-zero-findings
+        run: &main_gate_4 >-
+          "$CELL_VENV_PYTHON" -m agent_lifecycle.neutrality scan --scope tracked-release --policy policy/neutrality.policy.json --require-zero-findings
       - name: Validate module and package architecture
-        run: >-
-          python tools/release/validate_module_dependencies.py
+        run: &main_gate_5 >-
+          "$CELL_VENV_PYTHON" tools/release/validate_module_dependencies.py
           --package-root src/agent_lifecycle
           --policy policy/architecture-dependencies.json
           --require-acyclic-modules
           --require-acyclic-packages
           --evidence work/ci/module-dependencies.json
       - name: Validate workflow transition contract
-        run: >-
-          python tools/release/validate_workflow_transition_contract.py
+        run: &main_gate_6 >-
+          "$CELL_VENV_PYTHON" tools/release/validate_workflow_transition_contract.py
           --package-root src/agent_lifecycle
           --evidence work/ci/workflow-transition-contract.json
       - name: Validate standard-library runtime boundary
-        run: >-
-          python tools/release/validate_stdlib_runtime_boundary.py
+        run: &main_gate_7 >-
+          "$CELL_VENV_PYTHON" tools/release/validate_stdlib_runtime_boundary.py
           --package-root src/agent_lifecycle
           --evidence work/ci/stdlib-runtime-boundary.json
       - name: Validate architecture complexity
-        run: >-
-          python tools/release/validate_architecture_complexity.py
+        run: &main_gate_8 >-
+          "$CELL_VENV_PYTHON" tools/release/validate_architecture_complexity.py
           --package-root src/agent_lifecycle
           --policy policy/architecture-limits.json
           --evidence work/ci/architecture-complexity.json
       - name: Verify accounting Git backend and PATH after tests
         if: always() && steps.accounting-git.outcome == 'success'
         shell: pwsh
-        run: |
+        run: &accounting_backend_after |
           $code = @'
           import hashlib, json, os
           from pathlib import Path
@@ -140,16 +168,600 @@ jobs:
                          "sourceHead": os.environ["GITHUB_SHA"], "unchanged": True,
                          "before": metadata}, stream, sort_keys=True)
           '@
-          python -c $code
+          & $env:CELL_VENV_PYTHON -c $code
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Retain test timing evidence
         if: always() && steps.stdlib-tests.outcome != 'skipped'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-timings-${{ matrix.os }}-py${{ matrix.python }}
+          name: test-timings-${{ github.run_attempt }}-${{ matrix.os }}-py${{ matrix.python }}
           path: |
             work/ci/test-timings.json
             work/ci/test-timings/
             work/ci/accounting-git-backend*.json
           if-no-files-found: error
           retention-days: 14
+      - name: Record complete suite evidence
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py record --role ci --cell "$CI_CELL"
+          --test-receipt work/ci/test-timings.json
+          --out work/ci/cell-evidence/cell-evidence.json
+      - name: Upload complete suite evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-${{ env.CI_FULL_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.CI_ROLE }}-${{ env.CI_CELL }}
+          path: work/ci/cell-evidence/
+          if-no-files-found: error
+          retention-days: 2
+
+  foundation:
+    name: foundation / py${{ matrix.python-version }}
+    needs: [decide, control]
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'pull_request' ||
+        (github.event_name == 'push' && needs.decide.result == 'success' && needs.decide.outputs.mode == 'FULL') ||
+        (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
+    runs-on: ubuntu-latest
+    strategy: &foundation_matrix
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    env:
+      CI_ROLE: foundation
+      CI_CELL: ubuntu-latest-py${{ matrix.python-version }}
+      CI_FULL_ARTIFACT: ${{ github.event_name == 'pull_request' && 'pr-ci' || (github.event_name == 'push' && 'main-full' || 'control-full') }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pinned quality runner
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.1"
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role foundation
+      - name: Restore versioned release test fixture
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
+      - name: Run foundation and neutrality negative tests
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/run_unittest.py
+          --start tests --top . --pattern 'test_*.py'
+          --out work/ci/foundation-test-timings.json
+      - name: Record complete suite evidence
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py record --role foundation --cell "$CI_CELL"
+          --test-receipt work/ci/foundation-test-timings.json
+          --out work/ci/cell-evidence/cell-evidence.json
+      - name: Upload complete suite evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-${{ env.CI_FULL_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.CI_ROLE }}-${{ env.CI_CELL }}
+          path: work/ci/cell-evidence/
+          if-no-files-found: error
+          retention-days: 2
+
+  quality:
+    name: Python quality / ${{ matrix.python }}
+    needs: [decide, control]
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'pull_request' ||
+        (github.event_name == 'push' && needs.decide.result == 'success' && needs.decide.outputs.mode == 'FULL') ||
+        (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
+    runs-on: ubuntu-latest
+    strategy: &quality_matrix
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    env:
+      CI_ROLE: quality
+      CI_CELL: ubuntu-latest-py${{ matrix.python }}
+      CI_FULL_ARTIFACT: ${{ github.event_name == 'pull_request' && 'pr-ci' || (github.event_name == 'push' && 'main-full' || 'control-full') }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role quality
+      - name: Restore versioned release test fixture
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
+      - name: Run bounded runtime and selected tooling quality evidence
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+        run: >-
+          "$CELL_VENV_PYTHON" tools/release/run_python_quality.py
+          --policy policy/python-quality.json
+          --package-root src/agent_lifecycle
+          --tests-root tests
+          --test-top-level .
+          --base-sha "$CI_BASE_SHA"
+          --work-root work/python-quality/raw
+          --evidence work/python-quality/run.json
+      - name: Show failed quality command diagnostics
+        if: failure()
+        run: &quality_diagnostics |
+          "$CELL_VENV_PYTHON" - <<'PY_DIAGNOSTICS'
+          import hashlib
+          import json
+          import sys
+          from pathlib import Path
+
+          root = Path.cwd().resolve()
+          evidence_root = (root / "work/python-quality").resolve()
+          receipt_path = evidence_root / "run.json"
+          if not receipt_path.is_file():
+              print("Quality receipt unavailable; preceding failure is retained.")
+          else:
+              receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+              for command in receipt.get("commands", []):
+                  if command.get("status") == "PASS":
+                      continue
+                  for key in ("stdoutPath", "stderrPath"):
+                      name = command.get(key)
+                      if not isinstance(name, str):
+                          continue
+                      path = (root / name).resolve()
+                      if not path.is_relative_to(evidence_root) or not path.is_file():
+                          print(f"Diagnostic unavailable: {command.get('id')} {key}")
+                          continue
+                      raw = path.read_bytes()
+                      digest = hashlib.sha256(raw).hexdigest()
+                      print(f"BEGIN quality diagnostic {command.get('id')} {key} bytes={len(raw)} sha256={digest}")
+                      sys.stdout.flush()
+                      sys.stdout.buffer.write(raw)
+                      sys.stdout.buffer.flush()
+                      print(f"\nEND quality diagnostic {command.get('id')} {key}")
+          PY_DIAGNOSTICS
+      - name: Check strict types in reduced contract modules
+        run: >-
+          "$CELL_VENV_PYTHON" -m mypy --strict
+          src/agent_lifecycle/contracts/preparation_policy.py
+          src/agent_lifecycle/contracts/agent_plugin_qualification_schemas.py
+      - name: Validate quality evidence
+        run: >-
+          "$CELL_VENV_PYTHON" tools/release/validate_python_quality.py
+          --policy policy/python-quality.json
+          --run-receipt work/python-quality/run.json
+          --work-root work/python-quality/raw
+          --evidence work/python-quality/validation.json
+      - name: Record complete suite evidence
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py record --role quality --cell "$CI_CELL"
+          --out work/ci/cell-evidence/cell-evidence.json
+      - name: Upload complete suite evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-${{ env.CI_FULL_ARTIFACT }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ env.CI_ROLE }}-${{ env.CI_CELL }}
+          path: work/ci/cell-evidence/
+          if-no-files-found: error
+          retention-days: 2
+
+  candidate:
+    name: Main PR evidence candidate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      status: ${{ steps.candidate.outputs.status }}
+      sha256: ${{ steps.candidate.outputs.sha256 }}
+      generation_outcome: ${{ steps.candidate.outcome }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Qualify exact PR run attempt
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python tools/ci/qualify_pr_evidence.py candidate --repository "$GITHUB_REPOSITORY"
+          --main-sha "$GITHUB_SHA" --out work/ci/reuse-candidate.json
+      - name: Upload qualified candidate inputs
+        id: evidence-upload
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/ci/reuse-candidate.json
+          if-no-files-found: error
+          retention-days: 2
+      - name: Record optional upload ${{ steps.evidence-upload.outcome }}
+        if: always()
+        env:
+          EVIDENCE_UPLOAD_OUTCOME: ${{ steps.evidence-upload.outcome }}
+        run: >-
+          python -c "import json, os; print(json.dumps({'optionalEvidenceUploadOutcome': os.environ['EVIDENCE_UPLOAD_OUTCOME']}))"
+
+  probe-ci:
+    name: probe / ci/${{ matrix.os }}-py${{ matrix.python }}
+    needs: candidate
+    if: github.event_name == 'push' && needs.candidate.outputs.status == 'CANDIDATE'
+    runs-on: ${{ matrix.os == 'macos-latest' && 'macos-26-intel' || matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    strategy: *platform_matrix
+    env:
+      CI_CELL: ${{ matrix.os }}-py${{ matrix.python }}
+      QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
+      CANDIDATE_STATUS: ${{ needs.candidate.outputs.status }}
+      CANDIDATE_GENERATION_OUTCOME: ${{ needs.candidate.outputs.generation_outcome }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install pinned quality runner
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.1"
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role ci
+      - name: Restore versioned release test fixture
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
+      - name: Select verified accounting Git backend for Windows 3.15
+        id: accounting-git
+        if: matrix.os == 'windows-latest' && matrix.python == '3.15'
+        shell: pwsh
+        run: *accounting_backend
+      - name: Check compatibility and current quality
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py probe --role ci --cell "$CI_CELL"
+          --candidate work/ci/reuse-candidate.json --out work/ci/probe/probe.json
+      - name: Verify accounting Git backend and PATH after tests
+        if: always() && steps.accounting-git.outcome == 'success'
+        shell: pwsh
+        run: *accounting_backend_after
+      - name: Upload compatibility observation
+        id: evidence-upload
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-probe-${{ github.run_id }}-${{ github.run_attempt }}-ci-${{ env.CI_CELL }}
+          path: work/ci/probe/
+          if-no-files-found: error
+          retention-days: 2
+      - name: Record optional upload ${{ steps.evidence-upload.outcome }}
+        if: always()
+        env:
+          EVIDENCE_UPLOAD_OUTCOME: ${{ steps.evidence-upload.outcome }}
+        run: >-
+          python -c "import json, os; print(json.dumps({'optionalEvidenceUploadOutcome': os.environ['EVIDENCE_UPLOAD_OUTCOME']}))"
+
+  probe-foundation:
+    name: probe / foundation/ubuntu-latest-py${{ matrix.python-version }}
+    needs: candidate
+    if: github.event_name == 'push' && needs.candidate.outputs.status == 'CANDIDATE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    strategy: *foundation_matrix
+    env:
+      CI_CELL: ubuntu-latest-py${{ matrix.python-version }}
+      QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
+      CANDIDATE_STATUS: ${{ needs.candidate.outputs.status }}
+      CANDIDATE_GENERATION_OUTCOME: ${{ needs.candidate.outputs.generation_outcome }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pinned quality runner
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.1"
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role foundation
+      - name: Restore versioned release test fixture
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
+      - name: Check compatibility and current quality
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py probe --role foundation --cell "$CI_CELL"
+          --candidate work/ci/reuse-candidate.json --out work/ci/probe/probe.json
+      - name: Upload compatibility observation
+        id: evidence-upload
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-probe-${{ github.run_id }}-${{ github.run_attempt }}-foundation-${{ env.CI_CELL }}
+          path: work/ci/probe/
+          if-no-files-found: error
+          retention-days: 2
+      - name: Record optional upload ${{ steps.evidence-upload.outcome }}
+        if: always()
+        env:
+          EVIDENCE_UPLOAD_OUTCOME: ${{ steps.evidence-upload.outcome }}
+        run: >-
+          python -c "import json, os; print(json.dumps({'optionalEvidenceUploadOutcome': os.environ['EVIDENCE_UPLOAD_OUTCOME']}))"
+
+  probe-quality:
+    name: probe / quality/ubuntu-latest-py${{ matrix.python }}
+    needs: candidate
+    if: github.event_name == 'push' && needs.candidate.outputs.status == 'CANDIDATE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    strategy: *quality_matrix
+    env:
+      CI_CELL: ubuntu-latest-py${{ matrix.python }}
+      QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
+      CANDIDATE_STATUS: ${{ needs.candidate.outputs.status }}
+      CANDIDATE_GENERATION_OUTCOME: ${{ needs.candidate.outputs.generation_outcome }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role quality
+      - name: Restore versioned release test fixture
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
+      - name: Check compatibility and current quality
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py probe --role quality --cell "$CI_CELL"
+          --candidate work/ci/reuse-candidate.json --out work/ci/probe/probe.json
+      - name: Show failed quality command diagnostics
+        if: failure() && env.CELL_VENV_PYTHON != ''
+        run: *quality_diagnostics
+      - name: Upload compatibility observation
+        id: evidence-upload
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-probe-${{ github.run_id }}-${{ github.run_attempt }}-quality-${{ env.CI_CELL }}
+          path: work/ci/probe/
+          if-no-files-found: error
+          retention-days: 2
+      - name: Record optional upload ${{ steps.evidence-upload.outcome }}
+        if: always()
+        env:
+          EVIDENCE_UPLOAD_OUTCOME: ${{ steps.evidence-upload.outcome }}
+        run: >-
+          python -c "import json, os; print(json.dumps({'optionalEvidenceUploadOutcome': os.environ['EVIDENCE_UPLOAD_OUTCOME']}))"
+
+  decide:
+    name: Main CI mode
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [candidate, probe-ci, probe-foundation, probe-quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      mode: ${{ steps.decision.outputs.mode }}
+      sha256: ${{ steps.decision.outputs.sha256 }}
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Decide one main CI mode
+        id: decision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+          QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
+          CANDIDATE_STATUS: ${{ needs.candidate.outputs.status }}
+          CANDIDATE_GENERATION_OUTCOME: ${{ needs.candidate.outputs.generation_outcome }}
+        run: >-
+          python tools/ci/qualify_pr_evidence.py decide --candidate work/ci/reuse-candidate.json
+          --probes work/ci/probes --out work/ci/reuse-decision.json
+      - name: Upload immutable main decision
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-decision-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/ci/reuse-decision.json
+          if-no-files-found: error
+          retention-days: 2
+
+  main-checks:
+    name: Main integration and packaging
+    needs: control
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+        (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        id: python
+        with:
+          python-version: "3.14"
+      - name: Install pinned quality runner
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.1"
+      - name: Prepare sealed cell environment
+        env:
+          SETUP_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: python tools/ci/qualify_pr_evidence.py prepare --setup-python "$SETUP_PYTHON" --role main
+      - name: Restore versioned release test fixture
+        run: '"$CELL_VENV_PYTHON" -m zipfile -e fixtures/release-2-16-tests.zip tasks/release-2-16'
+      - name: Validate repository hygiene
+        run: >-
+          "$CELL_VENV_PYTHON" tools/release/validate_repository_hygiene.py --root .
+          --policy policy/repository-hygiene.json --ref HEAD --require-history
+          --evidence work/ci/main-repository-hygiene.json
+      - name: Require Node projection syntax and export smoke
+        env:
+          ALK_REQUIRE_NODE: "1"
+        run: *main_gate_1
+      - name: Run security tests directly
+        run: *main_gate_2
+      - name: Validate model routing profile
+        run: *main_gate_3
+      - name: Run neutrality scan
+        run: *main_gate_4
+      - name: Validate module and package architecture
+        run: *main_gate_5
+      - name: Validate workflow transition contract
+        run: *main_gate_6
+      - name: Validate standard-library runtime boundary
+        run: *main_gate_7
+      - name: Validate architecture complexity
+        run: *main_gate_8
+      - name: Validate CI security and test discovery
+        run: >-
+          "$CELL_VENV_PYTHON" tools/release/validate_ci_security.py --workflow-root .github/workflows
+          --tests-root tests --evidence work/ci/main-ci-security.json
+      - name: Validate skill parity
+        run: '"$CELL_VENV_PYTHON" tools/release/validate_skill_parity.py --root . --evidence work/ci/main-skill-parity.json'
+      - name: Build exact main distributions
+        run: >-
+          "$CELL_VENV_PYTHON" tools/ci/qualify_pr_evidence.py build-package
+          --out work/ci/main-package-build.json
+      - name: Smoke-test those distributions
+        run: >-
+          "$CELL_VENV_PYTHON" tests/package/run_packaging_smoke.py --dist-dir work/ci/main-dist
+          --python "$CELL_VENV_PYTHON" --evidence work/ci/main-packaging-smoke.json
+          --prebuilt-receipt work/ci/main-package-build.json --source-sha "$GITHUB_SHA"
+      - name: Upload main checks evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            work/ci/main-package-build.json
+            work/ci/main-packaging-smoke.json
+          if-no-files-found: error
+          retention-days: 2
+
+  main-qualification:
+    name: Main CI qualification
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [candidate, decide, main-checks, test, foundation, quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Download exact main decision
+        if: needs.decide.result == 'success'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: alk-main-decision-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/ci
+      - name: Download fresh package producer and smoke receipts
+        if: needs.main-checks.result == 'success'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: alk-main-checks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/ci/main-checks
+      - name: Validate main CI outcome
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+          MAIN_MODE: ${{ needs.decide.outputs.mode }}
+          MAIN_DECISION_SHA256: ${{ needs.decide.outputs.sha256 }}
+          QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
+          CANDIDATE_STATUS: ${{ needs.candidate.outputs.status }}
+          CANDIDATE_GENERATION_OUTCOME: ${{ needs.candidate.outputs.generation_outcome }}
+        run: >-
+          python tools/ci/qualify_pr_evidence.py terminal --decision work/ci/reuse-decision.json
+          --checks work/ci/main-checks --out work/ci/qualification.json
+      - name: Upload main CI qualification
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: alk-main-qualification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: work/ci/qualification.json
+          if-no-files-found: error
+          retention-days: 2
+
+  control:
+    name: Validate full timing control input
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set git line ending policy
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Require exact main control commit
+        run: python tools/ci/qualify_pr_evidence.py verify-control

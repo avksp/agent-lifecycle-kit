@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.47.0
+
+- Keep all 25 full test cells on pull requests. On main, reuse successful PR evidence only after verifying the exact source, attempt, artifacts and environment. Run all 25 cells when the evidence is unavailable or does not apply.
+- Run current main integration, package, security and quality checks. Report reused evidence separately from fresh tests and bind both publication jobs to the verified commit.
+- Give the process cleanup test fixture enough time to reach its intended fault injection. Keep the production timeout and existing assertions.
+
 ## 2.46.0
 
 - Add an optional, disabled-by-default Review Mesh remedy profile with bounded proposals, attributed coordinator choices, and independently qualified rechecks. Choices remain inert and never grant execution, acceptance, or finding closure.

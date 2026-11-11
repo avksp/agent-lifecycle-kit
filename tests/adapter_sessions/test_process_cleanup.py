@@ -326,7 +326,7 @@ class ProcessCleanupTests(unittest.TestCase):
                     fault() as injected_fault,
                 ):
                     result = run_process([sys.executable, '-c', 'import time; time.sleep(30)'],
-                        env=dict(os.environ), timeout_seconds=0.12, cleanup_grace_seconds=0.15,
+                        env=dict(os.environ), timeout_seconds=1.0, cleanup_grace_seconds=0.15,
                         stdin_text='private', on_started=lambda _event: None, on_input=lambda _event: None)
                 self.assertLess(time.monotonic() - began, 3)
                 self.assertEqual(len(children), 1)
