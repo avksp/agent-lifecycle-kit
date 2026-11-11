@@ -14,7 +14,7 @@ import urllib.parse
 import warnings
 import zipfile
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest import mock
 
 from tools.ci import qualify_pr_evidence as ci
@@ -769,6 +769,25 @@ class CiEvidenceReuseTests(unittest.TestCase):
             needs["probe-ci"]["result"] = "success"
             with self.assertRaises(ci.ProofError):
                 self.decide_fixture(fixture, root, "bad.json", needs)
+
+    def test_remote_quality_interpreter_uses_posix_semantics_on_both_hosts(self):
+        fixture = CurrentFixture()
+        key = "quality/ubuntu-latest-py3.14"
+        report = fixture.reports[key]
+        invalid = ("runner/.venv/bin/python", "C:/runner/.venv/bin/python", r"C:\runner\.venv\bin\python")
+        for native_path in (PurePosixPath, PureWindowsPath):
+            with self.subTest(host_path_parser=native_path.__name__), mock.patch.object(ci, "Path", native_path):
+                self.assertTrue(ci.probe_result(report, key, fixture.index, fixture.digest))
+                ci.validate_probe_without_index(report, key, MAIN, SOURCE, fixture.digest)
+                for python in invalid:
+                    with self.subTest(interpreter=python):
+                        altered = copy.deepcopy(report)
+                        for command in altered["quality"]["commands"]:
+                            command["argv"][0] = python
+                        with self.assertRaisesRegex(ci.ProofError, "quality interpreter"):
+                            ci.probe_result(altered, key, fixture.index, fixture.digest)
+                        with self.assertRaisesRegex(ci.ProofError, "quality interpreter"):
+                            ci.validate_probe_without_index(altered, key, MAIN, SOURCE, fixture.digest)
 
     def test_complete_probes_choose_reuse_and_one_late_mismatch_selects_global_full(self):
         fixture = CurrentFixture()

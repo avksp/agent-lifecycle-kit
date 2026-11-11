@@ -24,7 +24,7 @@ import zipfile
 import zlib
 from collections import Counter
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, TypeGuard, cast
 
 REPOSITORY = "avksp/agent-lifecycle-kit"
@@ -1796,7 +1796,7 @@ def validate_probe_without_index(
         isinstance(first, list)
         and first
         and isinstance(first[0], str)
-        and Path(first[0]).is_absolute()
+        and PurePosixPath(first[0]).is_absolute()
         and first[0].endswith("/.venv/bin/python"),
         "observed quality interpreter invalid",
     )
@@ -1985,7 +1985,7 @@ def probe_result(payload: Any, key: str, index: dict[str, Any], digest: str) -> 
         isinstance(first, list)
         and first
         and isinstance(first[0], str)
-        and Path(first[0]).is_absolute()
+        and PurePosixPath(first[0]).is_absolute()
         and first[0].endswith("/.venv/bin/python"),
         "invalid current quality interpreter",
     )
