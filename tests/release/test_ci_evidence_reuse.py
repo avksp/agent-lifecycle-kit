@@ -5,6 +5,7 @@ import http.client
 import io
 import os
 import re
+import shutil
 import stat
 import tempfile
 import unittest
@@ -444,6 +445,108 @@ def quality_binding(index: dict, digest: str, key: str) -> dict:
 
 
 class CiEvidenceReuseTests(unittest.TestCase):
+    def test_prepare_publishes_console_scripts_for_later_step_lookup(self):
+        real_run = ci.subprocess.run
+        for role in ("ci", "foundation", "quality", "main"):
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder).resolve()
+                venv = ci.cell_python(root)
+                console = venv.parent / ("agent-lifecycle.exe" if ci.os.name == "nt" else "agent-lifecycle")
+                env_file, path_file = root / "github-env", root / "github-path"
+                env_file.write_text("PRIOR=yes\n", encoding="utf-8")
+                path_file.write_text("prior-registered\n", encoding="utf-8")
+                calls = []
+
+                def install(argv, **kwargs):
+                    calls.append(argv)
+                    self.assertEqual(env_file.read_text(encoding="utf-8"), "PRIOR=yes\n")
+                    self.assertEqual(path_file.read_text(encoding="utf-8"), "prior-registered\n")
+                    if argv[:2] == ["uv", "sync"]:
+                        venv.parent.mkdir(parents=True)
+                        venv.write_text("prepared interpreter", encoding="utf-8")
+                    if "-e" in argv:
+                        console.write_text("prepared console script", encoding="utf-8")
+                        console.chmod(0o700)
+
+                expected_uv = "0.12.5" if role == "quality" else "0.13.1"
+                with (
+                    mock.patch.dict(os.environ, {"GITHUB_ENV": str(env_file), "GITHUB_PATH": str(path_file)}),
+                    mock.patch.object(ci, "command_output", return_value="uv " + expected_uv),
+                    mock.patch.object(ci.subprocess, "run", side_effect=install),
+                ):
+                    ci.prepare(root, ci.sys.executable, role)
+                self.assertEqual(
+                    calls[-1],
+                    ["uv", "pip", "install", "--python", str(venv), "--no-deps", "--no-build-isolation", "-e", "."],
+                )
+                self.assertEqual(path_file.read_text(encoding="utf-8"), "prior-registered\n" + str(venv.parent) + "\n")
+                self.assertEqual(env_file.read_text(encoding="utf-8"), "PRIOR=yes\nCELL_VENV_PYTHON=" + str(venv) + "\n")
+                child_env = dict(os.environ)
+                child_env.pop("ALK_EXTERNAL_CONSUMER_EXECUTABLE", None)
+                child_env.pop("PYTHONPATH", None)
+                child_env["PATH"] = str(venv.parent) + os.pathsep + child_env.get("PATH", "")
+                checked = real_run(
+                    [ci.sys.executable, "-I", "-c", "import shutil; print(shutil.which('agent-lifecycle') or '')"],
+                    cwd=root, env=child_env, text=True, capture_output=True, check=True, timeout=10,
+                )
+                self.assertEqual(Path(checked.stdout.strip()).resolve(), console.resolve())
+                self.assertEqual(Path(shutil.which("agent-lifecycle", path=child_env["PATH"])).resolve(), console.resolve())
+
+    def test_prepare_rejects_missing_cli_and_failed_install_before_native_exports(self):
+        for defect in ("missing-cli", "editable-failure"):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder).resolve()
+                venv = ci.cell_python(root)
+                env_file, path_file = root / "github-env", root / "github-path"
+                env_file.write_text("PRIOR=yes\n", encoding="utf-8")
+                path_file.write_text("prior-registered\n", encoding="utf-8")
+
+                def install(argv, **kwargs):
+                    if argv[:2] == ["uv", "sync"]:
+                        venv.parent.mkdir(parents=True)
+                        venv.write_text("prepared interpreter", encoding="utf-8")
+                    if "-e" in argv and defect == "editable-failure":
+                        raise ci.subprocess.CalledProcessError(1, argv)
+
+                expected = ci.subprocess.CalledProcessError if defect == "editable-failure" else ci.ProofError
+                with (
+                    mock.patch.dict(os.environ, {"GITHUB_ENV": str(env_file), "GITHUB_PATH": str(path_file)}),
+                    mock.patch.object(ci, "command_output", return_value="uv 0.13.1"),
+                    mock.patch.object(ci.subprocess, "run", side_effect=install),
+                    self.assertRaises(expected),
+                ):
+                    ci.prepare(root, ci.sys.executable, "ci")
+                self.assertEqual(env_file.read_text(encoding="utf-8"), "PRIOR=yes\n")
+                self.assertEqual(path_file.read_text(encoding="utf-8"), "prior-registered\n")
+
+    def test_prepare_rejects_reported_line_breaks_before_native_exports(self):
+        for separator in ("\n", "\r"):
+            with self.subTest(separator=repr(separator)), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder).resolve()
+                actual_venv = ci.cell_python(root)
+                env_file, path_file = root / "github-env", root / "github-path"
+                env_file.write_text("PRIOR=yes\n", encoding="utf-8")
+                path_file.write_text("prior-registered\n", encoding="utf-8")
+                reported_scripts = mock.MagicMock(spec=Path)
+                reported_scripts.is_absolute.return_value = True
+                reported_scripts.__str__.return_value = str(actual_venv.parent) + separator + "reported"
+                reported_venv = mock.MagicMock(spec=Path)
+                reported_venv.parent = reported_scripts
+                reported_venv.is_file.return_value = True
+                reported_venv.__str__.return_value = str(actual_venv) + separator + "reported"
+                with (
+                    mock.patch.dict(os.environ, {"GITHUB_ENV": str(env_file), "GITHUB_PATH": str(path_file)}),
+                    mock.patch.object(ci, "cell_python", return_value=reported_venv),
+                    mock.patch.object(ci, "command_output", return_value="uv 0.13.1"),
+                    mock.patch.object(ci.subprocess, "run", return_value=mock.Mock(returncode=0)),
+                    self.assertRaisesRegex(ci.ProofError, "invalid sealed cell script directory"),
+                ):
+                    ci.prepare(root, ci.sys.executable, "ci")
+                self.assertEqual(env_file.read_text(encoding="utf-8"), "PRIOR=yes\n")
+                self.assertEqual(path_file.read_text(encoding="utf-8"), "prior-registered\n")
+                reported_scripts.__truediv__.assert_not_called()
+                self.assertFalse((root / ".venv").exists())
+
     def test_positive_exact_attempt_squash_empty_run_association_and_budget(self) -> None:
         fixture = ProviderFixture()
         evidence, coverages = ci.find_candidate(fixture.api, MAIN, SOURCE)

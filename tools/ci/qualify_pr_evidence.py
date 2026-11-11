@@ -316,7 +316,17 @@ def prepare(root: Path, setup_python: str, role: str) -> None:
         cwd=root,
         check=True,
     )
+    scripts = venv.parent
+    scripts_value = str(scripts)
+    require(
+        scripts.is_absolute() and "\n" not in scripts_value and "\r" not in scripts_value,
+        "invalid sealed cell script directory",
+    )
+    console_script = scripts / ("agent-lifecycle.exe" if os.name == "nt" else "agent-lifecycle")
+    require(console_script.is_file(), "sealed cell console script is absent")
     native_env("CELL_VENV_PYTHON", str(venv))
+    with Path(os.environ["GITHUB_PATH"]).open("a", encoding="utf-8") as stream:
+        stream.write(scripts_value + "\n")
 
 
 def env_snapshot(root: Path, role: str, cell: str) -> dict[str, Any]:
