@@ -12,12 +12,11 @@ from typing import Any
 
 from release_common import digest_value, file_identity, write_json
 
-
 VALIDATION_SCHEMA = "agent-ci-security-validation.v1"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 USES_RE = re.compile(r"^\s*(?:-\s+)?uses:\s*([^\s#]+)(?:\s+#\s*(.*))?\s*$")
 VERSION_COMMENT_RE = re.compile(r"\bv\d+(?:\.\d+){0,2}\b")
-REQUIRED_WORKFLOWS = ("ci.yml", "matrix.yml", "neutrality.yml", "release.yml", "publish.yml", "codeql.yml")
+REQUIRED_WORKFLOWS = ("ci.yml", "matrix.yml", "release.yml", "publish.yml", "codeql.yml")
 REQUIRED_TEST_PACKAGES = (
     "tests",
     "tests/security",
@@ -63,6 +62,31 @@ def validate_ci_security(
     return {**body, "validationDigest": digest_value(body)}
 
 
+def _ci_discovery_blockers(text: str, relative: str) -> list[dict[str, str]]:
+    jobs = {}
+    for role in ("test", "foundation", "quality"):
+        block = re.search(rf"(?ms)^  {role}:\n(.*?)(?=^  [\w-]+:\n|\Z)", text)
+        jobs[role] = " ".join(block.group(1).split()) if block else ""
+    markers = {
+        "test": "tools/ci/run_unittest.py --start tests --top . --pattern 'test*.py'",
+        "foundation": "tools/ci/run_unittest.py --start tests --top . --pattern 'test_*.py'",
+        "quality": (
+            "tools/release/run_python_quality.py --policy policy/python-quality.json "
+            "--package-root src/agent_lifecycle --tests-root tests --test-top-level ."
+        ),
+    }
+    blockers = [
+        {"code": "canonical-test-top-level-missing", "path": relative, "job": role}
+        for role, marker in markers.items()
+        if marker not in jobs[role]
+    ]
+    if "--qualified-coverage" in jobs["quality"]:
+        blockers.append({"code": "full-quality-uses-reuse-proof", "path": relative, "job": "quality"})
+    if "-m unittest discover -s tests/security -t . -v" not in jobs["test"]:
+        blockers.append({"code": "security-suite-not-directly-run", "path": relative, "job": "test"})
+    return blockers
+
+
 def _validate_workflows(workflow_root: Path, repository_root: Path) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     blockers: list[dict[str, Any]] = []
@@ -84,7 +108,9 @@ def _validate_workflows(workflow_root: Path, repository_root: Path) -> dict[str,
         workflow_blockers: list[dict[str, Any]] = []
         if "pull_request_target" in text:
             workflow_blockers.append({"code": "unsafe-pull-request-trigger", "path": relative})
-        if "permissions:" not in text or not re.search(r"permissions:\s*\n(?:[^\n]*\n){0,8}?\s+contents:\s+read\b", text):
+        if "permissions:" not in text or not re.search(
+            r"permissions:\s*\n(?:[^\n]*\n){0,8}?\s+contents:\s+read\b", text
+        ):
             workflow_blockers.append({"code": "workflow-permissions-not-explicit", "path": relative})
 
         action_checks = []
@@ -98,7 +124,9 @@ def _validate_workflows(workflow_root: Path, repository_root: Path) -> dict[str,
             action_check = {"action": action, "revision": revision, "versionComment": comment or ""}
             if not separator or not SHA_RE.fullmatch(revision):
                 action_check["status"] = "FAIL"
-                workflow_blockers.append({"code": "action-reference-not-immutable", "path": relative, "action": action_ref})
+                workflow_blockers.append(
+                    {"code": "action-reference-not-immutable", "path": relative, "action": action_ref}
+                )
             elif not comment or not VERSION_COMMENT_RE.search(comment):
                 action_check["status"] = "FAIL"
                 workflow_blockers.append({"code": "action-version-comment-missing", "path": relative, "action": action})
@@ -112,16 +140,19 @@ def _validate_workflows(workflow_root: Path, repository_root: Path) -> dict[str,
             action_checks.append(action_check)
         if "persist-credentials: true" in text:
             workflow_blockers.append({"code": "checkout-credentials-enabled", "path": relative})
-        if path.name in {"ci.yml", "matrix.yml", "neutrality.yml", "release.yml"}:
-            if "python -m unittest discover" not in text or "-t ." not in text:
-                workflow_blockers.append({"code": "canonical-test-top-level-missing", "path": relative})
-        if path.name == "ci.yml" and "tests/security" not in text:
-            workflow_blockers.append({"code": "security-suite-not-directly-run", "path": relative})
+        if path.name in {"matrix.yml", "release.yml"} and (
+            "python -m unittest discover" not in text or "-t ." not in text
+        ):
+            workflow_blockers.append({"code": "canonical-test-top-level-missing", "path": relative})
+        if path.name == "ci.yml":
+            workflow_blockers.extend(_ci_discovery_blockers(text, relative))
         if path.name == "codeql.yml":
             codeql_actions = ("github/codeql-action/init", "github/codeql-action/analyze")
             for action in codeql_actions:
                 if not any(item["action"] == action and item["status"] == "PASS" for item in action_checks):
-                    workflow_blockers.append({"code": "codeql-action-missing-or-unpinned", "path": relative, "action": action})
+                    workflow_blockers.append(
+                        {"code": "codeql-action-missing-or-unpinned", "path": relative, "action": action}
+                    )
             revisions = {
                 item["revision"]
                 for item in action_checks
@@ -164,7 +195,9 @@ def _validate_test_loader(repository_root: Path, tests_root: Path) -> dict[str, 
         discovered = 0
         loader_errors = [type(exc).__name__]
     expected = inventory["expectedCaseCount"]
-    loader_status = "PASS" if not loader_errors and discovered >= expected and inventory["topLevelFunctionCount"] == 0 else "FAIL"
+    loader_status = (
+        "PASS" if not loader_errors and discovered >= expected and inventory["topLevelFunctionCount"] == 0 else "FAIL"
+    )
     checks.append({"id": "canonical-test-loader", "status": loader_status})
     if loader_errors:
         blockers.append({"code": "test-loader-failure", "errors": loader_errors})
@@ -236,7 +269,9 @@ def _mutation_checks() -> list[dict[str, Any]]:
         tests = root / "tests"
         package = tests / "pkg"
         package.mkdir(parents=True)
-        (package / "test_missing_marker.py").write_text("class Sample:\n    def test_case(self):\n        pass\n", encoding="utf-8")
+        (package / "test_missing_marker.py").write_text(
+            "class Sample:\n    def test_case(self):\n        pass\n", encoding="utf-8"
+        )
         results.append(_mutation_result("missing-package-marker", tests, expected=1, require_error=False))
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -269,9 +304,7 @@ def _mutation_result(identifier: str, tests_root: Path, *, expected: int, requir
         discovered = 0
     inventory = _test_inventory(sorted(tests_root.rglob("test*.py")))
     detected = (
-        bool(loader.errors)
-        if require_error
-        else discovered != expected or inventory["topLevelFunctionCount"] > 0
+        bool(loader.errors) if require_error else discovered != expected or inventory["topLevelFunctionCount"] > 0
     )
     return {
         "id": identifier,

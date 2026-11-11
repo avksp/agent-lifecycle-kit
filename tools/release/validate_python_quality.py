@@ -8,6 +8,8 @@ import hashlib
 import json
 import math
 import re
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path, PurePosixPath
 from typing import Any, TypeGuard
@@ -19,6 +21,7 @@ else:
     from release_common import digest_value, write_json
     from run_python_quality import quality_command_argv, source_inventory
 
+from tools.ci import qualify_pr_evidence as ci_proof
 
 SCHEMA = "agent-python-quality-validation.v1"
 POLICY_SCHEMA = "agent-python-quality-policy.v1"
@@ -31,6 +34,7 @@ def validate_quality(
     policy_path: Path,
     run_receipt_path: Path,
     work_root: Path,
+    qualified: ci_proof.QualityInputs | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     try:
@@ -40,6 +44,19 @@ def validate_quality(
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         body = _body([*blockers, {"code": "quality-input-invalid", "message": str(exc)}])
         return {**body, "validationDigest": digest_value(body)}
+
+    binding = None
+    if qualified is None:
+        if "qualifiedCoverage" in run:
+            blockers.append({"code": "quality-qualified-inputs-required"})
+    else:
+        try:
+            _, binding = ci_proof.qualification_binding(repository_root, policy_path, qualified)
+            blockers.extend(_qualified_run_blockers(repository_root, run, binding))
+        except ci_proof.EnvironmentMismatch:
+            raise
+        except (ci_proof.ProofError, OSError, subprocess.SubprocessError) as exc:
+            blockers.append({"code": "quality-qualified-input-invalid", "message": str(exc)})
 
     if run.get("schemaVersion") != "agent-python-quality-run.v1":
         blockers.append({"code": "quality-run-schema-invalid"})
@@ -70,7 +87,7 @@ def validate_quality(
     format_path = _artifact_path(repository_root, run, "ruffFormat")
     format_current = _format_counts(format_path, repository_root, blockers)
     blockers.extend(_format_command_blockers(run, format_current))
-    blockers.extend(_run_directory_blockers(repository_root, work_root, run))
+    blockers.extend(_run_directory_blockers(repository_root, work_root, run, qualified=qualified is not None))
     format_items = ruff.get("formatBaseline", [])
     format_baseline = _baseline_counts(format_items, repository_root, blockers, "format")
     blockers.extend(_source_digest_blockers(format_items, format_current, repository_root, changed_paths, "format"))
@@ -106,7 +123,24 @@ def validate_quality(
             },
         }
     )
+    if binding is not None:
+        body["qualifiedCoverage"] = binding
     return {**body, "validationDigest": digest_value(body)}
+
+
+def _qualified_run_blockers(root: Path, run: dict[str, Any], binding: dict[str, Any]) -> list[dict[str, Any]]:
+    if (
+        run.get("qualifiedCoverage") != binding
+        or run.get("sourceRevision") != binding["main"]["sha"]
+        or not ci_proof.release_digest(run, "runDigest")
+    ):
+        return [{"code": "quality-qualified-run-binding-invalid"}]
+    if any(isinstance(row, dict) and row.get("id") in {"coverage", "coverage-json"} for row in run.get("commands", [])):
+        return [{"code": "quality-qualified-coverage-command-present"}]
+    path = _artifact_path(root, run, "coverage")
+    if path is None or ci_proof.sha256(ci_proof.read_bytes(path)) != binding["coverageSha256"]:
+        return [{"code": "quality-qualified-coverage-bytes-differ"}]
+    return []
 
 
 def _validate_policy(policy: dict[str, Any]) -> list[dict[str, Any]]:
@@ -415,11 +449,13 @@ def _format_command_blockers(run: dict[str, Any], counts: Counter[tuple[str, str
     return []
 
 
-def _run_directory_blockers(root: Path, work_root: Path, run: dict[str, Any]) -> list[dict[str, Any]]:
+def _run_directory_blockers(
+    root: Path, work_root: Path, run: dict[str, Any], *, qualified: bool = False
+) -> list[dict[str, Any]]:
     # Known historical v1 receipts have no run-directory metadata. Current
     # runner receipts must keep every artifact in their unique invocation.
     if "runDirectory" not in run:
-        return []
+        return [{"code": "quality-run-directory-invalid"}] if qualified else []
     value = run["runDirectory"]
     if not isinstance(value, str) or not value or Path(value).is_absolute() or ".." in Path(value).parts:
         return [{"code": "quality-run-directory-invalid"}]
@@ -435,7 +471,12 @@ def _run_directory_blockers(root: Path, work_root: Path, run: dict[str, Any]) ->
         path = _artifact_path(root, run, key)
         if path is None or path.parent != directory.resolve():
             return [{"code": "quality-artifact-outside-current-run", "artifact": key}]
-    if _artifact_path(root, run, "coverageData") != directory.resolve() / "coverage.data":
+    if qualified:
+        if "coverageData" in run.get("artifacts", {}) or any(directory.glob("coverage.data*")):
+            return [{"code": "quality-qualified-coverage-database-present"}]
+        if _artifact_path(root, run, "coverage") != directory.resolve() / "coverage.json":
+            return [{"code": "quality-qualified-coverage-path-invalid"}]
+    elif _artifact_path(root, run, "coverageData") != directory.resolve() / "coverage.data":
         return [{"code": "quality-coverage-database-identity-invalid"}]
     return []
 
@@ -823,13 +864,22 @@ def main() -> int:
     parser.add_argument("--run-receipt", type=Path, required=True)
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    ci_proof.add_quality_arguments(parser)
     args = parser.parse_args()
-    result = validate_quality(
-        repository_root=Path.cwd().resolve(),
-        policy_path=args.policy,
-        run_receipt_path=args.run_receipt,
-        work_root=args.work_root,
-    )
+    try:
+        result = validate_quality(
+            repository_root=Path.cwd().resolve(),
+            policy_path=args.policy,
+            run_receipt_path=args.run_receipt,
+            work_root=args.work_root,
+            qualified=ci_proof.quality_arguments(args),
+        )
+    except ci_proof.EnvironmentMismatch as exc:
+        print(str(exc), file=sys.stderr)
+        return 3
+    except ci_proof.ProofError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     write_json(args.evidence, result)
     print(json.dumps(result, ensure_ascii=False, separators=(",", ":"), sort_keys=True))
     return 0 if result["status"] == "PASS" else 1

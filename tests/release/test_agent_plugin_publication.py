@@ -23,7 +23,13 @@ class AgentPluginPublicationTests(unittest.TestCase):
         publish_job = _job_block(workflow, "publish")
         plugin_job = _job_block(workflow, "agent-plugin")
 
-        self.assertIn("ref: ${{ github.event.release.tag_name }}", publish_job)
+        proof_job = _job_block(workflow, "main-proof")
+        self.assertIn("verify-main", proof_job)
+        self.assertIn("ref: refs/heads/main", proof_job)
+        for publisher in (publish_job, plugin_job):
+            self.assertIn("needs: main-proof", publisher)
+            self.assertIn("ref: ${{ needs.main-proof.outputs.verified_sha }}", publisher)
+            self.assertNotIn("ref: ${{ github.event.release.tag_name }}", publisher)
         self.assertIn("validate_publication_adoption.py", publish_job)
         self.assertNotIn("contents: write", publish_job)
         self.assertIn("contents: write", plugin_job)

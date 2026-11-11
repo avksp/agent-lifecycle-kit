@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import stat
 import subprocess
@@ -21,32 +22,38 @@ def main() -> int:
     parser.add_argument("--dist-dir", required=True)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--evidence", required=True)
+    parser.add_argument("--prebuilt-receipt", type=Path)
+    parser.add_argument("--source-sha")
     args = parser.parse_args()
+    if (args.prebuilt_receipt is None) != (args.source_sha is None):
+        parser.error("--prebuilt-receipt and --source-sha must be supplied together")
 
     dist_dir = Path(args.dist_dir)
     evidence_path = Path(args.evidence)
     blockers: list[dict[str, Any]] = []
     commands: list[dict[str, Any]] = []
     artifact_checks: list[dict[str, Any]] = []
-    if dist_dir.exists():
-        shutil.rmtree(dist_dir)
-    dist_dir.mkdir(parents=True)
-
-    _run_command(
-        [
-            args.python,
-            "-m",
-            "build",
-            "--outdir",
-            str(dist_dir.resolve()),
-            str(ROOT),
-        ],
-        commands,
-        blockers,
-        cwd=ROOT.parent,
-    )
-    wheels = sorted(dist_dir.glob("*.whl"))
-    source_distributions = sorted([*dist_dir.glob("*.tar.gz"), *dist_dir.glob("*.zip")])
+    prebuilt = args.prebuilt_receipt is not None
+    before = None
+    if prebuilt:
+        try:
+            before = _prebuilt_identity(dist_dir, args.prebuilt_receipt, args.source_sha, args.python)
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            blockers.append({"code": "prebuilt-package-invalid", "message": str(exc)})
+        wheels = [dist_dir / before["artifacts"]["wheel"]["name"]] if before else []
+        source_distributions = [dist_dir / before["artifacts"]["sdist"]["name"]] if before else []
+    else:
+        if dist_dir.exists():
+            shutil.rmtree(dist_dir)
+        dist_dir.mkdir(parents=True)
+        _run_command(
+            [args.python, "-m", "build", "--outdir", str(dist_dir.resolve()), str(ROOT)],
+            commands,
+            blockers,
+            cwd=ROOT.parent,
+        )
+        wheels = sorted(dist_dir.glob("*.whl"))
+        source_distributions = sorted([*dist_dir.glob("*.tar.gz"), *dist_dir.glob("*.zip")])
     if not wheels:
         blockers.append({"code": "wheel-not-built", "message": "build did not produce a wheel"})
     if not source_distributions:
@@ -63,12 +70,25 @@ def main() -> int:
                     blockers.append({"code": "packaging-runtime-members-differ", "artifactKind": kind, **inventory})
                     artifact_checks.append({"kind": kind, "status": "FAIL", "runtimeInventory": inventory})
                     continue
+                install_options = {"prebuilt": True} if prebuilt else {}
                 result = _check_artifact(
-                    kind, artifacts[0], args.python, artifact_root / f"{kind}-venv", commands, blockers
+                    kind,
+                    artifacts[0],
+                    args.python,
+                    artifact_root / f"{kind}-venv",
+                    commands,
+                    blockers,
+                    **install_options,
                 )
                 result["runtimeInventory"] = inventory
                 artifact_checks.append(result)
 
+    if before:
+        try:
+            if _prebuilt_identity(dist_dir, args.prebuilt_receipt, args.source_sha, args.python) != before:
+                raise ValueError("Prebuilt input changed during consumption")
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            blockers.append({"code": "prebuilt-package-changed", "message": str(exc)})
     status = "PASS" if not blockers else "FAIL"
     evidence = {
         "schemaVersion": "agent-packaging-smoke-evidence.v1",
@@ -80,9 +100,20 @@ def main() -> int:
         "blockers": blockers,
         "productionPromotionClaimed": False,
     }
+    if prebuilt:
+        evidence["prebuilt"] = before
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return 0 if status == "PASS" else 1
+
+
+def _prebuilt_identity(dist_dir: Path, receipt_path: Path, source_sha: str, python: str) -> dict[str, Any]:
+    # The repository root is on sys.path when imported as a module, but not when run as a script.
+    if __package__ in {None, ""}:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from tools.ci.qualify_pr_evidence import load_package_build
+
+    return load_package_build(ROOT, dist_dir, receipt_path, source_sha, python)
 
 
 def _runtime_inventory(root: Path) -> dict[str, str]:
@@ -161,25 +192,61 @@ def _check_artifact(
     venv_dir: Path,
     commands: list[dict[str, Any]],
     blockers: list[dict[str, Any]],
+    *,
+    prebuilt: bool = False,
 ) -> dict[str, Any]:
     command_start = len(commands)
     blocker_start = len(blockers)
     created = _run_command([python_executable, "-m", "venv", str(venv_dir)], commands, blockers) == 0
     if created:
         python = _venv_python(venv_dir)
-        _run_command([str(python), "-m", "pip", "install", "--force-reinstall", str(artifact)], commands, blockers)
+        environment = os.environ.copy() if prebuilt else None
+        if environment is not None:
+            for key in ("PYTHONPATH", "PYTHONHOME"):
+                environment.pop(key, None)
+        install = [str(python), "-m", "pip", "install", "--force-reinstall"]
+        if prebuilt and kind == "sdist":
+            _run_command(
+                [
+                    "uv",
+                    "pip",
+                    "install",
+                    "--python",
+                    str(python),
+                    "--no-deps",
+                    "--require-hashes",
+                    "--only-binary=:all:",
+                    "-r",
+                    str(ROOT / "tools/ci/build-requirements.txt"),
+                ],
+                commands,
+                blockers,
+                env=environment,
+            )
+            install.extend(("--no-deps", "--no-build-isolation"))
+        _run_command([*install, str(artifact)], commands, blockers, env=environment)
         outside = venv_dir.parent / f"{kind}-outside"
         outside.mkdir(parents=True, exist_ok=True)
         lifecycle = _venv_script(venv_dir, "agent-lifecycle")
-        _run_command([str(lifecycle), "version"], commands, blockers, cwd=outside)
+        _run_command([str(lifecycle), "version"], commands, blockers, cwd=outside, env=environment)
         _run_command(
-            [str(_venv_script(venv_dir, "agent-lifecycle-neutrality")), "--help"], commands, blockers, cwd=outside
+            [str(_venv_script(venv_dir, "agent-lifecycle-neutrality")), "--help"],
+            commands,
+            blockers,
+            cwd=outside,
+            env=environment,
         )
         request = outside / "model-route-request.json"
         request.write_text(json.dumps(_model_route_request()), encoding="utf-8")
-        _run_command([str(lifecycle), "model", "route", "--request", str(request)], commands, blockers, cwd=outside)
-        _run_command([str(lifecycle), "project", "preset", "list"], commands, blockers, cwd=outside)
-        marker = _probe_type_marker(python)
+        _run_command(
+            [str(lifecycle), "model", "route", "--request", str(request)],
+            commands,
+            blockers,
+            cwd=outside,
+            env=environment,
+        )
+        _run_command([str(lifecycle), "project", "preset", "list"], commands, blockers, cwd=outside, env=environment)
+        marker = _probe_type_marker(python, outside=outside if prebuilt else None, env=environment)
         commands.append(
             {"argv": _portable_argv([str(python), "-c", "py.typed probe"]), "returncode": 0 if marker else 1}
         )
@@ -201,8 +268,9 @@ def _run_command(
     blockers: list[dict[str, Any]],
     *,
     cwd: Path = ROOT,
+    env: dict[str, str] | None = None,
 ) -> int:
-    result = subprocess.run(argv, cwd=cwd, text=True, capture_output=True, check=False)
+    result = subprocess.run(argv, cwd=cwd, env=env, text=True, capture_output=True, check=False)
     portable_argv = _portable_argv(argv)
     commands.append({"argv": portable_argv, "returncode": result.returncode})
     if result.returncode != 0:
@@ -265,12 +333,14 @@ def _model_route_request() -> dict[str, Any]:
     }
 
 
-def _probe_type_marker(python: Path) -> bool:
+def _probe_type_marker(python: Path, *, outside: Path | None = None, env: dict[str, str] | None = None) -> bool:
     code = (
         "import importlib.resources as r; "
         "raise SystemExit(0 if (r.files('agent_lifecycle') / 'py.typed').is_file() else 1)"
     )
-    result = subprocess.run([str(python), "-c", code], text=True, capture_output=True, check=False)
+    result = subprocess.run(
+        [str(python), "-c", code], cwd=outside, env=env, text=True, capture_output=True, check=False
+    )
     return result.returncode == 0
 
 

@@ -102,15 +102,16 @@ class FoundationTests(unittest.TestCase):
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         self.assertNotIn("pytest", pyproject.get("tool", {}))
         self.assertNotIn("optional-dependencies", pyproject["project"])
-        workflow = (ROOT / ".github/workflows/neutrality.yml").read_text(encoding="utf-8")
-        self.assertIn("python -m unittest discover", workflow)
-        self.assertIn("-t .", workflow)
-        self.assertNotIn("pytest", workflow)
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        foundation = workflow.split("\n  foundation:\n", 1)[1].split("\n  quality:\n", 1)[0]
+        self.assertIn('"$CELL_VENV_PYTHON" tools/ci/run_unittest.py', foundation)
+        self.assertIn("--start tests --top . --pattern 'test_*.py'", foundation)
+        self.assertNotIn("pytest", foundation)
 
     def test_ci_runs_security_suite_and_codeql_workflow_is_pinned(self) -> None:
         ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
         codeql = (ROOT / ".github/workflows/codeql.yml").read_text(encoding="utf-8")
-        self.assertIn("python -m unittest discover -s tests/security -t . -v", ci)
+        self.assertIn('-m unittest discover -s tests/security -t . -v', ci)
         self.assertIn("github/codeql-action/init@", codeql)
         self.assertIn("github/codeql-action/analyze@", codeql)
 
