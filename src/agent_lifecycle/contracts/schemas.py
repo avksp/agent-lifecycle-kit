@@ -55,6 +55,7 @@ from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMA
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
 from agent_lifecycle.contracts.plan_manifest_schemas import PLAN_MANIFEST_SCHEMAS
 from agent_lifecycle.contracts.planning_launch_schemas import PLANNING_LAUNCH_SCHEMAS
+from agent_lifecycle.contracts.plugin_update_schemas import PLUGIN_UPDATE_SCHEMAS
 from agent_lifecycle.contracts.policy_schemas import POLICY_SCHEMAS
 from agent_lifecycle.contracts.progress_bridge_schemas import PROGRESS_BRIDGE_SCHEMAS
 from agent_lifecycle.contracts.progress_hook_schemas import PROGRESS_HOOK_SCHEMAS
@@ -737,6 +738,7 @@ _LIFECYCLE_CONTROL_SCHEMAS: dict[str, dict[str, Any]] = {
 populate_scoped_usage_schema_fields(RISK_EXECUTION_SCHEMAS["agent-risk-execution-profile.v1"])
 
 _SCHEMA_GROUPS: tuple[dict[str, dict[str, Any]], ...] = (
+    PLUGIN_UPDATE_SCHEMAS,
     CORE_SCHEMAS,
     AUDIT_SCHEMAS,
     AUDIT_OPTIMIZATION_SCHEMAS,

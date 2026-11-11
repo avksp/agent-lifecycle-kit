@@ -289,7 +289,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.47.0
+python -m pip install agent-lifecycle-kit==2.48.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -1142,3 +1142,20 @@ agent-lifecycle plan review-packet --repository-root . --manifest tasks/my-plan-
 проверки. [Контракт хранения и полномочий](workflow-state-storage.md)
 определяет required-only marker, v6 state, совместимость и неподдерживаемые пути.
 Установка новой ALK сама не мигрирует старый план и не включает профиль.
+
+## Рекомендации по обновлению плагина
+
+Читайте [полный контракт обновлений](plugin-updates.md) и [матрицу возможностей хостов](../adapters/plugin-updates.md).
+Все FILE — явные пути относительно репозитория. Запускайте CLI из его корня; `assess --repository-root DIR` задаёт другой корень чтения и записи. Выход создаётся только в новый файл. Отделяйте отчёт и кэш от планов, state, lock и конфигурации хоста.
+
+```sh
+agent-lifecycle plugin-update check --request update-request.json --cache updates.cache.json --out discovery.json
+agent-lifecycle plugin-update assess --request update-request.json --release release-impact.json --inventory plans.json --out impact.json
+agent-lifecycle plugin-update offer --request update-request.json --assessment impact.json --out offer.json
+agent-lifecycle plugin-update install --request update-request.json --offer offer.json --out install-refusal.json
+agent-lifecycle plugin-update reconcile --request update-request.json --out identity.json
+```
+
+`check` использует фиксированный официальный источник: максимум восемь HTTP-запросов за десять секунд. Кэш фикстуры не подтверждает реальный хост. `assess` поддерживает ограниченные плоские lock v1/v2; scoped/v3 получает отказ до чтения расширенного evidence. Локальный descriptor содержит заявленные данные; sourceCommit=null не удовлетворяет trustedTargetCommit. Опубликованный commit связывается отдельно через provenance discovery, без выдуманного самоссылочного SHA.
+
+`offer` показывает только неисполняемый рецепт после повторной сверки файлов. `install` возвращает UNSUPPORTED без native dispatch. Автообновление и уведомления по триггеру не квалифицированы. `reconcile` возвращает UNKNOWN или DRIFT: совпадение заявленных версий не подтверждает загруженные инструкции. Рекомендация и отказ — JSON с exit 0; неверные входы и небезопасные пути — exit 2. Модель и native installer не запускаются. Сохраняются native authorization и отдельное разрешение для операции хоста.

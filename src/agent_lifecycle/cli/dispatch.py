@@ -41,6 +41,10 @@ def dispatch_research(args: argparse.Namespace) -> dict[str, Any] | str | None:
     return _lazy_call("agent_lifecycle.cli.dispatch_research", "dispatch_research", args)
 
 
+def dispatch_plugin_updates(args: argparse.Namespace) -> dict[str, Any] | str | None:
+    return _lazy_call("agent_lifecycle.cli.plugin_updates", "dispatch_plugin_updates", args)
+
+
 def dispatch_contracts(args: argparse.Namespace) -> dict[str, Any] | str | None:
     return _lazy_call("agent_lifecycle.cli.dispatch_contracts", "dispatch_contracts", args)
 

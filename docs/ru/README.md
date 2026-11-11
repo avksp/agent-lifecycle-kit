@@ -11,7 +11,7 @@ Agent Lifecycle Kit (ALK) координирует работу кодового
 
 Проект работает поверх разных CLI: Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build и других. Ядро не зависит от конкретного провайдера или модели; команды, настройки окружения и работа с секретами выносятся в адаптеры или локальные профили хоста.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.47.0 · Python 3.11-3.15
+**Лицензия:** Apache-2.0 · **Версия:** 2.48.0 · Python 3.11-3.15
 
 Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -23,7 +23,7 @@ Agent Lifecycle Kit (ALK) координирует работу кодового
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.47.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.48.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
 
 Для быстрого старта выполните:
 
@@ -188,3 +188,5 @@ OpenInterpreter, Pi и Qwen Code.
 ## Выбор маршрутов по этапам
 
 Необязательная локальная настройка задаёт адаптер, модель и effort для каждого этапа. Проверьте предложение перед сохранением; найденная конфигурация ещё не подтверждает доступ к модели. Фактическая проба расходует модельный вызов и требует действующего разрешения ALK. См. [маршруты](reference/model-routing.md), [профиль проекта](reference/project-workflow-profile.md) и [детерминированные рецепты](guides/deterministic-workflow-recipes.md).
+
+- [Обновления плагина и существующие планы](reference/plugin-updates.md): ограниченные проверки, рекомендации без записи и явные отказы неподдерживаемых режимов.

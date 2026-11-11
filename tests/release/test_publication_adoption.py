@@ -18,6 +18,18 @@ TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 
 
 class PublicationAdoptionTests(unittest.TestCase):
+    def test_plugin_update_advice_is_reachable_and_does_not_claim_installation(self):
+        for prefix in ("docs", "docs/ru"):
+            for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):
+                self.assertIn("plugin-updates.md", (ROOT / prefix / page).read_text())
+            cli = (ROOT / prefix / "reference/cli.md").read_text()
+            for action in ("check", "assess", "offer", "install", "reconcile"):
+                self.assertIn(f"plugin-update {action}", cli)
+            for marker in ("UNSUPPORTED", "UNKNOWN", "DRIFT", "exit 0", "exit 2", "sourceCommit=null"):
+                self.assertIn(marker, cli)
+            for page in ("reference/plugin-updates.md", "adapters/plugin-updates.md"):
+                self.assertTrue((ROOT / prefix / page).is_file())
+
     def test_compact_authoring_is_reachable_and_discloses_required_draft_completion(self):
         for prefix in ("docs", "docs/ru"):
             for page in (

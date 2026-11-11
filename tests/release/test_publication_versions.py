@@ -23,6 +23,22 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_plugin_update_descriptor_matches_release_and_is_packaged(self) -> None:
+        from agent_lifecycle.contracts.plugin_update_validation import validate_release_impact
+
+        descriptor = json.loads((ROOT / "src/agent_lifecycle/data/plugin-updates/release-impact.v1.json").read_bytes())
+        validate_release_impact(descriptor)
+        self.assertEqual(descriptor["version"], TARGET_VERSION)
+        self.assertIsNone(descriptor["sourceCommit"])
+        self.assertTrue(descriptor["exclusions"])
+        self.assertEqual(
+            set(descriptor["domains"]),
+            {"schema", "cli", "path", "profile", "host", "quality", "review", "evidence", "authority"},
+        )
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+        patterns = project["tool"]["setuptools"]["package-data"]["agent_lifecycle"]
+        self.assertIn("data/plugin-updates/*.json", patterns)
+
     def test_current_consumer_version_is_required_by_publication(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

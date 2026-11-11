@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.47.0
+python -m pip install agent-lifecycle-kit==2.48.0
 ```
 
 ## Task evidence identity
@@ -1075,3 +1075,20 @@ then separate authorization/start and ordinary task/final gates.
 The [storage authority contract](workflow-state-storage.md#required-remedy-authority-246)
 defines the required-only marker, v6 state, compatibility and refused routes.
 Installing a newer ALK alone does not migrate or opt in an existing plan.
+
+## Plugin update advice
+
+Use [the full update contract](plugin-updates.md) and [host capability matrix](../adapters/plugin-updates.md).
+All FILE arguments are explicit repository-relative paths. Run from that repository; `assess --repository-root DIR` changes its read/write root. Outputs are create-only. Use a separate report/cache file, outside plan, state, lock and host configuration paths.
+
+```sh
+agent-lifecycle plugin-update check --request update-request.json --cache updates.cache.json --out discovery.json
+agent-lifecycle plugin-update assess --request update-request.json --release release-impact.json --inventory plans.json --out impact.json
+agent-lifecycle plugin-update offer --request update-request.json --assessment impact.json --out offer.json
+agent-lifecycle plugin-update install --request update-request.json --offer offer.json --out install-refusal.json
+agent-lifecycle plugin-update reconcile --request update-request.json --out identity.json
+```
+
+`check` uses only the fixed official source and at most eight HTTP requests within ten seconds. Cached fixture results do not qualify a live host. `assess` supports bounded flat v1/v2 plan locks; scoped/v3 verification refuses before unbounded evidence reads. A local descriptor is declared data; sourceCommit=null cannot satisfy a trustedTargetCommit. The published commit is bound separately by discovery provenance; do not invent a self-referential commit hash.
+
+`offer` only shows an inert operator recipe after rechecking assessed files. `install` returns UNSUPPORTED, with zero native dispatch. Automatic updates and notification triggers are unqualified. `reconcile` reports UNKNOWN or DRIFT; matching caller labels do not attest loaded instructions. Advisory/refusal statuses are JSON reports with exit 0; malformed inputs and unsafe output paths return exit 2. No model call or native installer is started. Keep existing native authorization and separate host permission.
