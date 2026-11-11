@@ -95,13 +95,12 @@ def provider_job(name: str, identifier: int, steps: list[str], run: dict, head: 
     }
 
 
-def provider_artifact(name: str, identifier: int, raw: bytes, run: dict, head: str, job: int) -> dict:
+def provider_artifact(name: str, identifier: int, raw: bytes, run: dict, head: str, _job: int) -> dict:
     return {
         "name": name,
         "id": identifier,
         "expired": False,
         "size_in_bytes": len(raw),
-        "job_id": job,
         "created_at": UPLOADED,
         "expires_at": "2026-10-13T11:00:00Z",
         "digest": "sha256:" + ci.sha256(raw),
@@ -113,6 +112,20 @@ def provider_artifact(name: str, identifier: int, raw: bytes, run: dict, head: s
             "head_sha": head,
         },
     }
+
+
+def bind_artifact_origin(job: dict, upload: str, artifact: dict) -> None:
+    steps = job["steps"]
+    selected = next(index for index, step in enumerate(steps) if step["name"] == upload)
+    name = f"{ci.ORIGIN_PREFIX} {artifact['id']} {artifact['digest'][7:]}"
+    existing = [step for step in steps if step["name"].startswith(ci.ORIGIN_PREFIX)]
+    if existing:
+        assert len(existing) == 1
+        existing[0]["name"] = name
+    else:
+        steps.insert(selected + 1, provider_step(name, selected + 2))
+    for number, step in enumerate(steps, 1):
+        step["number"] = number
 
 
 class ProviderFixture:
@@ -219,8 +232,7 @@ class ProviderFixture:
         members["cell-evidence.json"] = ci.json_bytes(receipt)
         raw = zipped(list(members.items()))
         identifier = 2000 + number
-        self.artifacts.append(
-            provider_artifact(
+        artifact = provider_artifact(
                 ci.artifact_name("pr-ci", PR["run"], PR["attempt"], key),
                 identifier,
                 raw,
@@ -228,7 +240,8 @@ class ProviderFixture:
                 HEAD,
                 job["id"],
             )
-        )
+        bind_artifact_origin(job, ci.CELL_UPLOAD, artifact)
+        self.artifacts.append(artifact)
         self.archives[str(identifier)] = raw
 
     def open(self, request, *, timeout):
@@ -356,7 +369,9 @@ class CurrentFixture(ProviderFixture):
     def add_artifact(self, key, identifier, members, job):
         raw = zipped([(name, ci.json_bytes(body)) for name, body in members.items()])
         self.archives[str(identifier)] = raw
-        self.current_artifacts.append(provider_artifact(self.name(key), identifier, raw, MAIN, MAIN["sha"], job["id"]))
+        artifact = provider_artifact(self.name(key), identifier, raw, MAIN, MAIN["sha"], job["id"])
+        bind_artifact_origin(job, ci.CANDIDATE_UPLOAD if key is None else ci.PROBE_UPLOAD, artifact)
+        self.current_artifacts.append(artifact)
 
     def remove(self, key):
         self.current_artifacts.remove(self.artifact(key))
@@ -367,6 +382,7 @@ class CurrentFixture(ProviderFixture):
         raw = zipped([("probe.json", ci.json_bytes(self.reports[key]))])
         row.update(digest="sha256:" + ci.sha256(raw), size_in_bytes=len(raw))
         self.archives[str(row["id"])] = raw
+        bind_artifact_origin(self.job(key), ci.PROBE_UPLOAD, row)
 
     def open(self, request, *, timeout):
         if request.full_url in self.blocked:
@@ -389,8 +405,7 @@ class CurrentFixture(ProviderFixture):
             job = provider_job(name, 9000 + number, steps, MAIN, MAIN["sha"])
             self.current_jobs.append(job)
             raw = zipped([("fresh.json", b"{}")])
-            self.current_artifacts.append(
-                provider_artifact(
+            artifact = provider_artifact(
                     ci.artifact_name("main-full", MAIN["run"], MAIN["attempt"], key),
                     10000 + number,
                     raw,
@@ -398,7 +413,8 @@ class CurrentFixture(ProviderFixture):
                     MAIN["sha"],
                     job["id"],
                 )
-            )
+            bind_artifact_origin(job, ci.CELL_UPLOAD, artifact)
+            self.current_artifacts.append(artifact)
         for name, identifier, steps in (
             (ci.DECISION_JOB, 12000, [ci.DECISION_STEP]),
             (
@@ -416,11 +432,13 @@ class CurrentFixture(ProviderFixture):
         ):
             self.current_jobs.append(provider_job(name, identifier, steps, MAIN, MAIN["sha"]))
         raw = zipped([("main-package-build.json", b"{}"), ("main-packaging-smoke.json", b"{}")])
-        self.current_artifacts.append(
-            provider_artifact(
+        artifact = provider_artifact(
                 ci.artifact_name("main-checks", MAIN["run"], MAIN["attempt"]), 12002, raw, MAIN, MAIN["sha"], 12001
             )
-        )
+        checks = next(job for job in self.current_jobs if job["name"] == ci.MAIN_CHECKS_JOB)
+        bind_artifact_origin(checks, ci.MAIN_CHECKS_UPLOAD, artifact)
+        self.current_artifacts.append(artifact)
+        self.archives[str(artifact["id"])] = raw
         self.sync_counts()
 
 
@@ -445,6 +463,199 @@ def quality_binding(index: dict, digest: str, key: str) -> dict:
 
 
 class CiEvidenceReuseTests(unittest.TestCase):
+    def test_native_origin_accepts_creation_outside_upload_interval_without_job_id(self):
+        for created in ("2026-10-12T11:02:23Z", "2026-10-12T10:59:37Z"):
+            with self.subTest(created=created):
+                fixture = ProviderFixture()
+                artifact = fixture.artifacts[0]
+                self.assertNotIn("job_id", artifact)
+                self.assertNotIn("job_id", artifact["workflow_run"])
+                artifact["created_at"] = created
+                evidence, _ = ci.find_candidate(fixture.api, MAIN, SOURCE)
+                self.assertEqual(evidence["status"], "CANDIDATE")
+                self.assertEqual(evidence["provider"], {"authenticated": 36, "total": 61})
+
+    def test_native_origin_rejects_replacement_and_invalid_provider_markers(self):
+        cases = ("replacement-id", "wrong-digest", "other-job-id", "wrong-job", "wrong-attempt", "wrong-cell",
+                 "missing", "duplicate", "malformed", "empty-id", "zero-id", "negative-id", "bad-hash",
+                 "failed", "skipped", "running", "before-upload", "before-upload-in-list", "upload-name-collision")
+        for case in cases:
+            with self.subTest(case=case):
+                fixture = ProviderFixture()
+                artifact, job = fixture.artifacts[0], fixture.jobs[0]
+                marker = next(step for step in job["steps"] if step["name"].startswith(ci.ORIGIN_PREFIX))
+                if case == "replacement-id":
+                    artifact["id"] += 100000
+                elif case == "wrong-digest":
+                    artifact["digest"] = "sha256:" + "0" * 64
+                elif case == "other-job-id":
+                    marker["name"] = f"{ci.ORIGIN_PREFIX} {fixture.artifacts[1]['id']} {artifact['digest'][7:]}"
+                elif case == "wrong-job":
+                    artifact["workflow_run"]["job_id"] = fixture.jobs[1]["id"]
+                elif case == "wrong-attempt":
+                    job["run_attempt"] = 1
+                elif case == "wrong-cell":
+                    artifact["name"] = fixture.artifacts[1]["name"]
+                elif case == "missing":
+                    job["steps"].remove(marker)
+                elif case == "duplicate":
+                    job["steps"].append(dict(marker))
+                elif case in {"malformed", "empty-id", "zero-id", "negative-id", "bad-hash"}:
+                    identifier = "" if case == "empty-id" else "0" if case == "zero-id" else "-1" if case == "negative-id" else str(artifact["id"])
+                    digest = "invalid" if case == "bad-hash" else artifact["digest"][7:]
+                    marker["name"] = "malformed " + ci.ORIGIN_PREFIX if case == "malformed" else f"{ci.ORIGIN_PREFIX} {identifier} {digest}"
+                elif case in {"failed", "skipped"}:
+                    marker["conclusion"] = "failure" if case == "failed" else "skipped"
+                elif case == "running":
+                    marker["status"] = "in_progress"
+                elif case == "before-upload":
+                    marker["number"] = 1
+                elif case == "before-upload-in-list":
+                    job["steps"].remove(marker)
+                    job["steps"].insert(0, marker)
+                elif case == "upload-name-collision":
+                    next(step for step in job["steps"] if step["name"] == ci.CELL_UPLOAD)["conclusion"] = "failure"
+                with self.assertRaises(ci.ProofError):
+                    ci.find_candidate(fixture.api, MAIN, SOURCE)
+
+    def test_native_origin_preserves_creation_and_expiry_policy(self):
+        changes = ({"created_at": "2026-10-11T10:00:00Z"}, {"created_at": "2026-10-12T12:00:01Z"},
+                   {"created_at": "invalid"}, {"expired": True}, {"expires_at": "2026-10-12T12:00:00Z"})
+        for change in changes:
+            with self.subTest(change=change):
+                fixture = ProviderFixture()
+                fixture.artifacts[0].update(change)
+                with self.assertRaises(ci.ProofError):
+                    ci.find_candidate(fixture.api, MAIN, SOURCE)
+
+    def test_origin_optional_eligibility_cannot_bypass_required_or_raw_success(self):
+        fixture = ProviderFixture()
+        artifact, job = fixture.artifacts[0], fixture.jobs[0]
+        with self.assertRaises(ci.ProofError):
+            ci.joined_artifact({artifact["name"]: artifact}, artifact["name"], job, ci.CELL_UPLOAD,
+                               run=PR["run"], repository=REPO["id"], head=HEAD, now=NOW, optional_sender=False)
+        fixture = CurrentFixture()
+        with self.assertRaises(ci.ProofError):
+            ci.joined_artifact({row["name"]: row for row in fixture.current_artifacts}, fixture.name(None),
+                               fixture.job(None), ci.CANDIDATE_UPLOAD, run=MAIN["run"], repository=REPO["id"],
+                               head=MAIN["sha"], now=NOW, optional_sender=False)
+
+    def test_optional_failed_sender_without_origin_still_inspects_available_corruption(self):
+        for key in (None, next(iter(ci.CELLS))):
+            for corrupt in ("none", "archive", "body"):
+                with self.subTest(key=key, corrupt=corrupt), tempfile.TemporaryDirectory() as folder:
+                    fixture = CurrentFixture()
+                    job = fixture.job(key)
+                    job["steps"][-1]["name"] = ci.UPLOAD_LOG + "failure"
+                    job["steps"] = [step for step in job["steps"] if not step["name"].startswith(ci.ORIGIN_PREFIX)]
+                    if corrupt == "archive":
+                        fixture.artifact(key)["digest"] = "sha256:" + "0" * 64
+                    elif corrupt == "body":
+                        invalid = copy.deepcopy(fixture.index if key is None else fixture.reports[key])
+                        if key is None:
+                            invalid["source"]["sha"] = "0" * 40
+                        else:
+                            invalid["main"]["sha"] = "0" * 40
+                        raw = zipped([("reuse-candidate.json" if key is None else "probe.json", ci.json_bytes(invalid))])
+                        row = fixture.artifact(key)
+                        row.update(digest="sha256:" + ci.sha256(raw), size_in_bytes=len(raw))
+                        fixture.archives[str(row["id"])] = raw
+                    if corrupt == "none":
+                        self.assertEqual(self.decide_fixture(fixture, Path(folder))["mode"], "FULL")
+                    else:
+                        with self.assertRaises(ci.ProofError):
+                            self.decide_fixture(fixture, Path(folder))
+
+    def test_main_graph_and_publication_receiver_require_native_origin(self):
+        fixture = CurrentFixture()
+        with tempfile.TemporaryDirectory() as folder:
+            decision = self.decide_fixture(fixture, Path(folder))
+        fixture.add_main_full()
+        suite_names = {name for _, _, name in ci.CELLS.values()}
+        fixture.current_jobs[:] = [job for job in fixture.current_jobs if job["name"] not in suite_names]
+        full_prefix = ci.artifact_name("main-full", MAIN["run"], MAIN["attempt"]) + "-"
+        fixture.current_artifacts[:] = [row for row in fixture.current_artifacts if not row["name"].startswith(full_prefix)]
+        fixture.sync_counts()
+        jobs = {job["name"]: job for job in fixture.current_jobs}
+        artifacts = {row["name"]: row for row in fixture.current_artifacts}
+        fixture.reset_api()
+        graph = ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
+        self.assertEqual(graph["freshSuites"], {})
+        checks_job = jobs[ci.MAIN_CHECKS_JOB]
+        checks_marker = next(step for step in checks_job["steps"] if step["name"].startswith(ci.ORIGIN_PREFIX))
+        saved = checks_marker["name"]
+        checks_marker["name"] = ci.ORIGIN_PREFIX + " 1 " + "0" * 64
+        fixture.reset_api()
+        with self.assertRaises(ci.ProofError):
+            ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
+        checks_marker["name"] = saved
+        proof = {"schemaVersion": "alk-ci-main-qualification.v1", "status": "PASS", "main": MAIN, "source": SOURCE,
+                 "decision": decision, "decisionSha256": ci.sha256(ci.json_bytes(decision)),
+                 "outcomes": {"candidate": "success", "decide": "success", "main-checks": "success",
+                              **{name: "skipped" for name in ci.JOB_IDS.values()}},
+                 "graph": graph, "checks": {"unit": "package proof separately validated"}, "completeSuitesRun": 0}
+        terminal = provider_job(ci.TERMINAL_JOB, 14000, [ci.TERMINAL_STEP, ci.TERMINAL_UPLOAD], MAIN, MAIN["sha"])
+        raw = zipped([("qualification.json", ci.json_bytes(proof))])
+        artifact = provider_artifact(ci.artifact_name("main-qualification", MAIN["run"], MAIN["attempt"]), 14001,
+                                     raw, MAIN, MAIN["sha"], terminal["id"])
+        bind_artifact_origin(terminal, ci.TERMINAL_UPLOAD, artifact)
+        jobs[ci.TERMINAL_JOB] = terminal
+        artifacts[artifact["name"]] = artifact
+        fixture.archives[str(artifact["id"])] = raw
+        codeql_run = {"run": 16000, "attempt": 1}
+        codeql_job = provider_job("CodeQL / Python", 16001,
+                                 ["Run github/codeql-action/analyze@1fc58d04a4d4374f921bdac573c3811c240f9c26"], codeql_run, MAIN["sha"])
+        for run_id, attempt, workflow in ((MAIN["run"], MAIN["attempt"], 120), (16000, 1, 121)):
+            fixture.routes[f"/actions/runs/{run_id}"] = {**fixture.run, "id": run_id, "run_attempt": attempt,
+                "workflow_id": workflow, "event": "push", "head_sha": MAIN["sha"], "head_branch": "main",
+                "path": ci.WORKFLOW if workflow == 120 else ".github/workflows/codeql.yml"}
+        terminal_marker = next(step for step in terminal["steps"] if step["name"].startswith(ci.ORIGIN_PREFIX))
+        for corrupt in (False, True):
+            with self.subTest(corrupt=corrupt):
+                fixture.reset_api()
+                if corrupt:
+                    terminal_marker["name"] = ci.ORIGIN_PREFIX + " 1 " + artifact["digest"][7:]
+                with (mock.patch.object(ci, "repository_identity"),
+                      mock.patch.object(ci, "workflow_id", side_effect=[120, 121] if not corrupt else [120]),
+                      mock.patch.object(ci, "verified_push_run", side_effect=[(MAIN["run"], MAIN["attempt"]), (16000, 1)] if not corrupt else [(MAIN["run"], MAIN["attempt"])]),
+                      mock.patch.object(ci, "provider_jobs", side_effect=lambda api, run, attempt: jobs if run == MAIN["run"] else {"CodeQL / Python": codeql_job}),
+                      mock.patch.object(ci, "artifact_rows", return_value=artifacts),
+                      mock.patch.object(ci, "main_checks_evidence", return_value=proof["checks"])):
+                    if corrupt:
+                        with self.assertRaises(ci.ProofError):
+                            ci.verified_main(fixture.api, SOURCE, REPO["id"])
+                    else:
+                        self.assertEqual(ci.verified_main(fixture.api, SOURCE, REPO["id"])["verifiedSha"], MAIN["sha"])
+
+    def test_all_nine_producers_bind_exact_upload_outputs(self):
+        workflow = (ROOT / ci.WORKFLOW).read_text(encoding="utf-8")
+        jobs = dict(re.findall(r"(?ms)^  ([\w-]+):\n(.*?)(?=^  [\w-]+:\n|\Z)", workflow.split("jobs:\n", 1)[1]))
+        producers = {"test": (ci.CELL_UPLOAD, "suite-evidence-upload", False),
+                     "foundation": (ci.CELL_UPLOAD, "suite-evidence-upload", False),
+                     "quality": (ci.CELL_UPLOAD, "suite-evidence-upload", False),
+                     "candidate": (ci.CANDIDATE_UPLOAD, "evidence-upload", True),
+                     **{f"probe-{role}": (ci.PROBE_UPLOAD, "evidence-upload", True) for role in ci.ROLES},
+                     "main-checks": (ci.MAIN_CHECKS_UPLOAD, "main-checks-upload", False),
+                     "main-qualification": (ci.TERMINAL_UPLOAD, "main-qualification-upload", False)}
+        for job, (upload, identifier, optional) in producers.items():
+            with self.subTest(job=job):
+                steps = re.findall(r"(?ms)^      - name: .*?(?=^      - name:|\Z)", jobs[job])
+                position = next(index for index, step in enumerate(steps) if step.startswith("      - name: " + upload + "\n"))
+                uploader, marker = steps[position], steps[position + 1]
+                self.assertIn("        id: " + identifier + "\n", uploader)
+                self.assertIn("actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9", uploader)
+                expected = "      - name: Record artifact origin ${{ steps." + identifier + ".outputs.artifact-id }} ${{ steps." + identifier + ".outputs.artifact-digest }}\n"
+                self.assertTrue(marker.startswith(expected))
+                self.assertIn("        run: 'true'", marker)
+                if optional:
+                    self.assertIn("        if: steps." + identifier + ".outcome == 'success'", marker)
+                    self.assertTrue(steps[position + 2].startswith("      - name: Record optional upload "))
+                    self.assertIn("        if: always()", steps[position + 2])
+                else:
+                    self.assertNotIn("        if:", marker)
+        self.assertEqual(workflow.count("      - name: Record artifact origin "), 9)
+        self.assertNotIn("Record artifact origin", jobs["decide"])
+
     def test_prepare_publishes_console_scripts_for_later_step_lookup(self):
         real_run = ci.subprocess.run
         for role in ("ci", "foundation", "quality", "main"):
@@ -583,7 +794,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
             "wrong-job",
             "duplicate",
             "digest",
-            "upload-window",
+            "origin-id",
             "cancelled",
         ):
             with self.subTest(case=case):
@@ -610,8 +821,9 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     fixture.artifacts[1]["name"] = fixture.artifacts[0]["name"]
                 elif case == "digest":
                     fixture.artifacts[0]["digest"] = "sha256:" + "0" * 64
-                elif case == "upload-window":
-                    fixture.artifacts[0]["created_at"] = "2026-10-12T10:59:59Z"
+                elif case == "origin-id":
+                    marker = next(step for step in fixture.jobs[0]["steps"] if step["name"].startswith(ci.ORIGIN_PREFIX))
+                    marker["name"] = ci.ORIGIN_PREFIX + " 999999 " + fixture.artifacts[0]["digest"][7:]
                 elif case == "cancelled":
                     fixture.run["conclusion"] = "cancelled"
                 with self.assertRaises(ci.ProofError):

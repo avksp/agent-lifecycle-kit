@@ -51,6 +51,7 @@ CANDIDATE_JOB = "Main PR evidence candidate"
 CANDIDATE_UPLOAD = "Upload qualified candidate inputs"
 CANDIDATE_GENERATION = "Qualify exact PR run attempt"
 UPLOAD_LOG = "Record optional upload "
+ORIGIN_PREFIX = "Record artifact origin"
 DECISION_JOB = "Main CI mode"
 DECISION_STEP = "Decide one main CI mode"
 MAIN_CHECKS_JOB = "Main integration and packaging"
@@ -727,6 +728,32 @@ def artifact_rows(api: GitHub, run: int) -> dict[str, dict[str, Any]]:
     return artifacts
 
 
+def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[str, Any]) -> None:
+    steps = job.get("steps")
+    require(isinstance(steps, list) and len(steps) <= 100, "missing bounded artifact origin steps")
+    markers = [
+        obj(step, "artifact origin step")
+        for step in cast(list[Any], steps)
+        if isinstance(obj(step, "artifact origin step").get("name"), str)
+        and obj(step, "artifact origin step")["name"].startswith(ORIGIN_PREFIX)
+    ]
+    marker = only(markers, "artifact origin marker")
+    match = re.fullmatch(re.escape(ORIGIN_PREFIX) + r" ([1-9][0-9]{0,19}) ([0-9a-f]{64})", marker["name"])
+    if match is None:
+        raise ProofError("malformed artifact origin marker")
+    job_step(job, marker["name"])
+    require(
+        positive_id(artifact.get("id")) and int(match.group(1)) == artifact["id"]
+        and "sha256:" + match.group(2) == artifact["digest"],
+        "native artifact origin differs from provider metadata",
+    )
+    require(
+        positive_id(upload.get("number")) and marker["number"] > upload["number"]
+        and cast(list[Any], steps).index(marker) > cast(list[Any], steps).index(upload),
+        "artifact origin marker precedes its uploader",
+    )
+
+
 def joined_artifact(
     artifacts: dict[str, dict[str, Any]],
     name: str,
@@ -737,7 +764,7 @@ def joined_artifact(
     repository: int,
     head: str,
     now: datetime,
-    optional_upload: bool = False,
+    optional_sender: bool | None = None,
 ) -> dict[str, Any]:
     row = obj(artifacts.get(name), "artifact")
     identity = obj(row.get("workflow_run"), "artifact run")
@@ -758,7 +785,12 @@ def joined_artifact(
         and identity.get("job_id") in {None, job["id"]},
         "artifact metadata identity differs",
     )
-    if optional_upload:
+    if optional_sender is not None:
+        require(
+            type(optional_sender) is bool and upload in {CANDIDATE_UPLOAD, PROBE_UPLOAD}
+            and optional_upload_succeeded(job) == optional_sender,
+            "optional sender eligibility differs from the raw upload outcome",
+        )
         steps = job.get("steps")
         require(isinstance(steps, list), "upload steps unavailable")
         step = only(
@@ -775,13 +807,13 @@ def joined_artifact(
         )
     else:
         step = job_step(job, upload)
-    created = utc_time(row.get("created_at"))
     require(
-        fresh(row.get("created_at"), now)
-        and utc_time(row.get("expires_at")) > now
-        and utc_time(step.get("started_at")) <= created <= utc_time(step.get("completed_at")),
-        "artifact is stale or outside its upload step",
+        fresh(row.get("created_at"), now) and utc_time(row.get("expires_at")) > now
+        and utc_time(step.get("started_at")) <= utc_time(step.get("completed_at")),
+        "artifact is stale, expired, or has invalid upload timestamps",
     )
+    if optional_sender is not False:
+        artifact_origin(job, step, row)
     return row
 
 
@@ -1654,7 +1686,7 @@ def current_archive(
             repository=main["repository"],
             head=main["sha"],
             now=api.now,
-            optional_upload=True,
+            optional_sender=sender_success,
         )
     expected = {"reuse-candidate.json"} if candidate_input else {"probe.json"}
     return api.archive(row, expected), row, job, sender_success
