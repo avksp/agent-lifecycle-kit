@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 COMMAND_DISPATCH = {
+    "plugin-update": ("agent_lifecycle.cli.plugin_updates", "dispatch_plugin_updates", False),
     "start": ("agent_lifecycle.cli.start", "dispatch_start", True),
     "host-launch": ("agent_lifecycle.cli.host_launch", "dispatch_host_launch", False),
     "strategy": ("agent_lifecycle.cli.strategy", "dispatch_strategy", False),

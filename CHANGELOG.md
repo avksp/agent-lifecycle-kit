@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.48.0
+
+- Add bounded official plugin release discovery, a local cache and read-only impact reports for an explicit plan inventory. Keep installed, loaded and running versions separate.
+- Offer inert manual update instructions and unapplied plan edits. Preserve frozen plans, active runs, clocks, expenses and completed history. Missing semantic coverage remains UNKNOWN.
+- Refuse unqualified native installation, automatic updates and notification triggers before host dispatch. Add five public CLI actions, closed schemas, a packaged release-impact descriptor and paired English/Russian guides.
+- Keep existing independent review, lifecycle, security, quality and publication gates. No new runtime dependency, model default, native installer or measured savings claim is added.
+
 ## 2.47.0
 
 - Keep all 25 full test cells on pull requests. On main, reuse successful PR evidence only after verifying the exact source, attempt, artifacts and environment. Run all 25 cells when the evidence is unavailable or does not apply.

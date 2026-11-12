@@ -9,7 +9,7 @@
 Установка из исходников подходит для изучения и доработки ALK. Пакет из PyPI
 удобен, когда нужна только готовая команда.
 
-Инструкция рассчитана на ALK v2.47.0. Перед исполнением проверьте замороженный
+Инструкция рассчитана на ALK v2.48.0. Перед исполнением проверьте замороженный
 план командой `agent-lifecycle plan check --manifest <manifest> --lock <lock>`.
 
 ## Обновление до 2.18
@@ -103,7 +103,7 @@ Set-Location agent-lifecycle-kit
 python3 -m venv ~/.venvs/alk
 source ~/.venvs/alk/bin/activate
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.47.0
+python -m pip install agent-lifecycle-kit==2.48.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -114,7 +114,7 @@ agent-lifecycle version
 py -m venv "$HOME\venvs\alk"
 & "$HOME\venvs\alk\Scripts\Activate.ps1"
 python -m pip install --upgrade pip
-python -m pip install agent-lifecycle-kit==2.47.0
+python -m pip install agent-lifecycle-kit==2.48.0
 python -m agent_lifecycle version
 agent-lifecycle version
 ```
@@ -212,7 +212,7 @@ agent-lifecycle start \
 Codex:
 
 ```bash
-codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.47.0
+codex plugin marketplace add avksp/agent-lifecycle-kit --ref v2.48.0
 codex plugin add agent-lifecycle-kit@agent-lifecycle-kit
 codex plugin list
 ```
@@ -354,3 +354,7 @@ ALK сохраняет накопленные расходы задачи/зап
 ## Выбор маршрутов по этапам
 
 Необязательная локальная настройка задаёт адаптер, модель и effort для каждого этапа. Проверьте предложение перед сохранением; найденная конфигурация ещё не подтверждает доступ к модели. Фактическая проба расходует модельный вызов и требует действующего разрешения ALK. См. [маршруты](../reference/model-routing.md), [профиль проекта](../reference/project-workflow-profile.md) и [детерминированные рецепты](deterministic-workflow-recipes.md).
+
+Перед сменой runtime для существующих планов прочитайте [обновления плагина и совместимость планов](../reference/plugin-updates.md).
+
+Первоначальная установка marketplace и ручное обновление плагина используют разные формы команд хоста. Применяйте [явный рецепт обновления и производного дескриптора](../reference/plugin-updates.md); рекомендация не запускает установщик хоста.

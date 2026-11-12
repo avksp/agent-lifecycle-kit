@@ -261,6 +261,9 @@ _EXACT_NON_SECRET_LITERALS = {
         ),
         "token": ("cc0e7608b73ea73b08fd28b582c21ba4ce5a0b1c9202bf7d2dcc85366205b622",),
     },
+    "tests/diagnostics/test_plugin_update_network.py": {
+        "@marker": ("891b3d6a114f0814623d73608f6e58ad0ad72fccf28bb0d60d027e0b5682201b",),
+    },
     "tests/security/test_secret_guard_encodings.py": {
         "@marker": (
             "2b06660b6874dfc6671925e58b064c68b6a9b7b3ce62c529b9c6dc6742028c39",
