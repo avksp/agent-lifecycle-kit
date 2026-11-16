@@ -795,6 +795,8 @@ def _operator_remedy_policy(
     blocking: bool,
 ) -> tuple[dict[str, Any] | None, bool]:
     policy = remedy_policy(source.get("reviewMesh"), phase=phase)
+    if authority_manifest is not None and policy != remedy_policy(authority_manifest.get("reviewMesh"), phase=phase):
+        raise LifecycleError("review-remedy-source-mismatch", "Source remedy policy differs from the bound manifest")
     if policy is not None and len(reviewers) > 32:
         raise LifecycleError("review-remedy-invalid", "Remedy preparation supports at most 32 reviewers")
     if policy is not None and policy["mode"] == "required":

@@ -76,3 +76,19 @@ The default migration policy is `required-for-new-runs`:
 
 This keeps historical runs readable while making new proof evidence
 append-only and digest-checked.
+
+## Repository root and evidence indexes
+
+Run commands with repository-relative artifact paths from the repository root.
+For `evidence index`, `--project-root .` refers to that root. Relative paths do
+not automatically resolve from a plan folder or the directory of this manual.
+
+```sh
+agent-lifecycle evidence index --project-root . --artifact evidence/final-proof.json --out evidence-index.json
+agent-lifecycle evidence search --index evidence-index.json --query final --out evidence-search.json
+```
+
+Use real retained artifacts and fresh output paths. See the
+[evidence-index contract](evidence-imports.md#evidence-index-and-imports) for
+input limits and import behavior. The disposable index helps locate receipts;
+it does not replace their original bytes, native validation or authorization.

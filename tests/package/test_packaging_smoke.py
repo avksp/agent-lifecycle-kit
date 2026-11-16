@@ -180,6 +180,67 @@ class PackagingSmokePortabilityTests(unittest.TestCase):
                 result = json.loads(evidence.read_bytes())
                 self.assertEqual(result["status"], "FAIL" if inject_stale else "PASS")
 
+    def test_prebuilt_missing_uv_writes_failure_before_later_sdist_probes(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            files = self._export(root)
+            dist = root / ci.MAIN_DIST
+            dist.mkdir(parents=True)
+            self._archives(dist, files)
+            receipt, evidence = root / "build.json", root / "smoke.json"
+            python = str(root / ".venv/bin/python")
+            ci.write_object(
+                receipt,
+                {
+                    "schemaVersion": "alk-ci-main-build.v1",
+                    "status": "PASS",
+                    "source": SOURCE,
+                    "environment": ENV,
+                    "argv": ci.package_argv(python),
+                    "returncode": 0,
+                    "artifacts": ci.package_artifacts(root, dist),
+                },
+            )
+            seen = []
+
+            def execute(argv, commands, blockers, **kwargs):
+                seen.append(argv)
+                if argv[0] == "uv":
+                    raise FileNotFoundError("uv")
+                commands.append({"argv": smoke._portable_argv(argv), "returncode": 0})
+                return 0
+
+            argv = [
+                "smoke",
+                "--dist-dir",
+                str(dist),
+                "--python",
+                python,
+                "--evidence",
+                str(evidence),
+                "--prebuilt-receipt",
+                str(receipt),
+                "--source-sha",
+                SOURCE["sha"],
+            ]
+            with (
+                mock.patch.object(smoke, "ROOT", root),
+                mock.patch.object(sys, "argv", argv),
+                mock.patch.object(ci, "source", return_value=SOURCE),
+                mock.patch.object(ci, "env_snapshot", return_value=ENV),
+                mock.patch.object(smoke, "_run_command", side_effect=execute),
+                mock.patch.object(smoke, "_probe_type_marker", return_value=True),
+            ):
+                self.assertEqual(smoke.main(), 1)
+            result = json.loads(evidence.read_bytes())
+            self.assertEqual(result["status"], "FAIL")
+            self.assertEqual([item["status"] for item in result["artifactChecks"]], ["PASS", "FAIL"])
+            self.assertIn("packaging-build-tool-unavailable", {item["code"] for item in result["blockers"]})
+            self.assertEqual(seen[-1][0], "uv")
+            self.assertEqual(sum(call[0] == "uv" for call in seen), 1)
+            self.assertEqual(result["commands"][-1]["status"], "NOT_STARTED")
+            self.assertIsNone(result["commands"][-1]["returncode"])
+
     def test_prebuilt_consumes_exact_unchanged_files_without_a_distribution_build(self) -> None:
         for case in ("pass", "missing", "extra", "linked", "changed", "wrong-source", "changed-during-install"):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:

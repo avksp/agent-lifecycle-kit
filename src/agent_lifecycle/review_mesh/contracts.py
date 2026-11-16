@@ -488,12 +488,7 @@ def _imported_independence_claimed(result: dict[str, Any]) -> bool:
         or explicitly_unproven
     )
     independence = result.get("independence")
-    return (
-        imported
-        and "remedyQualification" not in result
-        and isinstance(independence, dict)
-        and independence.get("status") == "INDEPENDENT"
-    )
+    return imported and isinstance(independence, dict) and independence.get("status") == "INDEPENDENT"
 
 
 def validate_review_mesh_result(
@@ -643,7 +638,9 @@ def build_review_mesh_quorum_receipt(
 ) -> dict[str, Any]:
     """Build a quorum receipt without enforcing it outside explicit opt-in."""
 
-    min_reviewers = quorum_policy.get("minReviewers") if isinstance(quorum_policy, dict) else None
+    if not isinstance(quorum_policy, dict):
+        raise LifecycleError("invalid-review-mesh-quorum", "Quorum policy must be an object")
+    min_reviewers = quorum_policy.get("minReviewers")
     quorum_satisfied = isinstance(min_reviewers, int) and reviewer_count >= min_reviewers and required_roles_satisfied
     blockers: list[dict[str, Any]] = []
     if not quorum_satisfied:
@@ -867,6 +864,8 @@ def _remedy_contract_blockers(value: dict[str, Any], *, profile: dict[str, Any] 
         selected = value if value.get("schemaVersion", "").startswith("agent-review-mesh-profile.") else profile
         policy = selected.get("remedyProfile") if isinstance(selected, dict) else None
         opted = value.get("schemaVersion", "").endswith(".v2")
+        if not opted and "remedyQualification" in value:
+            raise LifecycleError("review-remedy-version-mismatch", "Legacy contracts cannot carry remedy qualification")
         if policy is not None:
             require_remedy_policy(policy)
         if selected is not None and opted is not (policy is not None):

@@ -246,7 +246,7 @@ def _relocated_candidate(
     workstreams = candidate.get("workstreams")
     if isinstance(workstreams, list):
         for workstream in workstreams:
-            if not isinstance(workstream, dict) or "decisionResearch" not in workstream:
+            if not isinstance(workstream, dict):
                 continue
             references = workstream.get("contextRefs")
             if isinstance(references, list):
