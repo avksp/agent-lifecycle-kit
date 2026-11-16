@@ -153,14 +153,18 @@ class DecisionResearchFreezeTests(unittest.TestCase):
             self.assertEqual(current["schemaVersion"], "agent-workflow-state.v4")
             self.assertEqual(current["tasks"][0]["status"], "RUNNING")
 
-    def test_legacy_opt_out_references_are_unchanged(self) -> None:
+    def test_legacy_opt_out_relocates_context_without_adding_research(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             path, manifest = _write_draft(root)
             manifest["workstreams"][0]["contextRefs"] = ["plan/acceptance-criteria.md"]
             path.write_bytes(canonical_bytes(manifest) + b"\n")
             _, candidate = _prepare(root, path)
-            self.assertEqual(candidate["workstreams"], manifest["workstreams"])
+            expected = [{
+                **manifest["workstreams"][0],
+                "contextRefs": ["candidates/research/acceptance-criteria.md"],
+            }]
+            self.assertEqual(candidate["workstreams"], expected)
             self.assertNotIn("decisionResearch", candidate["workstreams"][0])
 
     def test_changed_json_bytes_remain_stale_without_hash_normalization(self) -> None:

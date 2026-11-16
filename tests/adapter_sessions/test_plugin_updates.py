@@ -46,7 +46,7 @@ class PluginUpdateHostAdviceTests(unittest.TestCase):
             from agent_lifecycle.diagnostics.plugin_updates import check_plugin_updates
             from tests.diagnostics.test_plugin_update_network import fixture_client, publication_metadata
 
-            rows = publication_metadata()
+            rows = publication_metadata(version=descriptor["version"])
             key = next(key for key in rows if key.endswith("release-impact.v1.json"))
             rows[key] = descriptor
             client, _ = fixture_client(rows)
