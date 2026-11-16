@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.49.0
+
+- Keep imported reviewer independence conservative unless the existing evidence-bundle reconstruction proves it. Reject unsupported qualification extensions and mismatched source/manifest remedy policies with typed errors.
+- Relocate freeze context references for every dictionary workstream, including those without a decision-research profile. Preserve existing frozen packages and opaque research metadata.
+- Write a failed packaging smoke receipt when the prebuilt source installer cannot start uv. Require both GitHub command-file paths before setup or exports, and bind optional CI upload tolerance to the exact enclosing step.
+- Clarify repository-root evidence paths and the two-day reuse artifact retention window in English and Russian. Retain existing authority behavior after a bounded fixture measurement; add no runtime dependency, model default or speedup claim.
+
 ## 2.48.0
 
 - Add bounded official plugin release discovery, a local cache and read-only impact reports for an explicit plan inventory. Keep installed, loaded and running versions separate.

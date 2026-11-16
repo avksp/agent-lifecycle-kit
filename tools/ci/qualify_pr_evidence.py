@@ -294,6 +294,10 @@ def build_inputs(python: str) -> list[str]:
 
 
 def prepare(root: Path, setup_python: str, role: str) -> None:
+    require(
+        all(os.environ.get(name, "").strip() for name in ("GITHUB_ENV", "GITHUB_PATH")),
+        "GitHub command files GITHUB_ENV and GITHUB_PATH must both be available",
+    )
     outer = Path(setup_python)
     require(outer.is_absolute() and outer.is_file(), "invalid setup-python interpreter")
     require(outer.resolve() == Path(sys.executable).resolve(), "setup interpreter does not match invocation")

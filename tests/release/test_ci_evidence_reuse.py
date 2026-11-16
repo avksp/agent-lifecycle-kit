@@ -730,6 +730,40 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 self.assertEqual(env_file.read_text(encoding="utf-8"), "PRIOR=yes\n")
                 self.assertEqual(path_file.read_text(encoding="utf-8"), "prior-registered\n")
 
+    def test_prepare_requires_both_command_files_before_install_or_exports(self):
+        for missing in ("GITHUB_ENV", "GITHUB_PATH"):
+            for value in (None, ""):
+                with self.subTest(missing=missing, value=value), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder).resolve()
+                    venv = ci.cell_python(root)
+                    console = venv.parent / ("agent-lifecycle.exe" if ci.os.name == "nt" else "agent-lifecycle")
+                    env_file, path_file = root / "github-env", root / "github-path"
+                    env_file.write_text("PRIOR=yes\n", encoding="utf-8")
+                    path_file.write_text("prior-registered\n", encoding="utf-8")
+
+                    def install(argv, *, venv=venv, console=console, **kwargs):
+                        if argv[:2] == ["uv", "sync"]:
+                            venv.parent.mkdir(parents=True)
+                            venv.write_text("prepared interpreter", encoding="utf-8")
+                        if "-e" in argv:
+                            console.write_text("prepared console script", encoding="utf-8")
+
+                    with (
+                        mock.patch.dict(os.environ, {"GITHUB_ENV": str(env_file), "GITHUB_PATH": str(path_file)}),
+                        mock.patch.object(ci, "command_output", return_value="uv 0.13.1"),
+                        mock.patch.object(ci.subprocess, "run", side_effect=install) as commands,
+                    ):
+                        if value is None:
+                            os.environ.pop(missing, None)
+                        else:
+                            os.environ[missing] = value
+                        with self.assertRaisesRegex(ci.ProofError, "GitHub command files"):
+                            ci.prepare(root, ci.sys.executable, "ci")
+                    commands.assert_not_called()
+                    self.assertFalse((root / ".venv").exists())
+                    self.assertEqual(env_file.read_text(encoding="utf-8"), "PRIOR=yes\n")
+                    self.assertEqual(path_file.read_text(encoding="utf-8"), "prior-registered\n")
+
     def test_prepare_rejects_reported_line_breaks_before_native_exports(self):
         for separator in ("\n", "\r"):
             with self.subTest(separator=repr(separator)), tempfile.TemporaryDirectory() as folder:
@@ -1267,20 +1301,56 @@ class CiEvidenceReuseTests(unittest.TestCase):
             )
         )
 
-    def test_workflow_optional_tolerance_is_an_exact_sender_allowlist(self):
-        workflow = (ROOT / ci.WORKFLOW).read_text(encoding="utf-8")
+    def _assert_optional_upload_tolerance(self, workflow):
         jobs = dict(re.findall(r"(?ms)^  ([\w-]+):\n(.*?)(?=^  [\w-]+:\n|\Z)", workflow.split("jobs:\n", 1)[1]))
-        allowed = {"candidate", "probe-ci", "probe-foundation", "probe-quality"}
+        allowed = {"candidate": ci.CANDIDATE_UPLOAD, **{f"probe-{role}": ci.PROBE_UPLOAD for role in ci.ROLES}}
         for name, block in jobs.items():
-            tolerances = block.count("continue-on-error:")
-            self.assertEqual(tolerances, 1 if name in allowed else 0, name)
+            steps = re.split(r"(?m)^      - ", block)[1:]
+            tolerated = [step for step in steps if "continue-on-error:" in step]
+            self.assertEqual(block.count("continue-on-error:"), len(tolerated), name)
+            self.assertEqual(len(tolerated), 1 if name in allowed else 0, name)
+            for step in tolerated:
+                self.assertTrue(step.startswith("name: " + allowed[name] + "\n"), name)
+                self.assertEqual(step.count("        id: evidence-upload\n"), 1)
+                self.assertEqual(step.count("        continue-on-error: true\n"), 1)
+                self.assertRegex(
+                    step,
+                    r"(?m)^        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9(?:[ \t]+#[^\n]*)?\n",
+                )
             if name in allowed:
-                self.assertIn("        id: evidence-upload\n        continue-on-error: true", block)
                 self.assertIn("steps.evidence-upload.outcome", block)
                 self.assertIn("EVIDENCE_UPLOAD_OUTCOME:", block)
             if name.startswith("probe-") or name == "decide":
                 self.assertNotIn("actions/download-artifact@", block)
         self.assertIn("generation_outcome: ${{ steps.candidate.outcome }}", jobs["candidate"])
+
+    def test_workflow_optional_tolerance_is_an_exact_sender_allowlist(self):
+        self._assert_optional_upload_tolerance((ROOT / ci.WORKFLOW).read_text(encoding="utf-8"))
+
+    def test_workflow_tolerance_rejects_mutated_enclosing_step_or_job(self):
+        workflow = (ROOT / ci.WORKFLOW).read_text(encoding="utf-8")
+        pattern = r"(?ms)^      - name: " + re.escape(ci.CANDIDATE_UPLOAD) + r"\n.*?(?=^      - |\Z)"
+        upload = re.search(pattern, workflow).group()
+        fields = "        id: evidence-upload\n        continue-on-error: true\n"
+        self.assertIn(fields, upload)
+        required = upload.replace(fields, "")
+        mutations = {
+            "preparation": required
+            + "      - name: Prepare unrelated inputs\n"
+            + fields
+            + "        run: echo prepare\n",
+            "static": re.sub(
+                r"(?m)^        uses: actions/upload-artifact@[^\n]+\n", "        run: echo static\n", upload
+            ),
+            "added-required-upload": required + upload.replace(ci.CANDIDATE_UPLOAD, "Upload required evidence"),
+            "job-level": required,
+        }
+        for case, replacement in mutations.items():
+            with self.subTest(case=case), self.assertRaises(AssertionError):
+                changed = workflow.replace(upload, replacement, 1)
+                if case == "job-level":
+                    changed = changed.replace("  candidate:\n", "  candidate:\n    continue-on-error: true\n", 1)
+                self._assert_optional_upload_tolerance(changed)
 
     def test_publication_refuses_control_and_wrong_attempt_even_for_exact_source(self) -> None:
         fixture = ProviderFixture()

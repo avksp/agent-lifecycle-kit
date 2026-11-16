@@ -115,3 +115,13 @@ Declare the comparable workload, sample order and acceptance thresholds before
 changing the candidate. Retain every observation and failed attempt. Report
 targeted wall time separately from full-suite, job, queue and token metrics.
 A local targeted measurement does not prove a CI-wide speedup.
+
+## Reuse evidence availability
+
+Reusable candidate and compatibility evidence artifacts are retained for two
+days. This two-day reuse artifact window is separate from the 14-day retention
+of diagnostic `test-timings-*` reports. Retention does not make evidence eligible:
+the receiver still checks the exact source, run attempt, required suites,
+artifact identity and expiry. Its maximum evidence age is 24 hours. Missing or
+ineligible evidence selects the existing full-check fallback; corrupt evidence
+must not become a pass. A timing report alone never authorizes reuse.

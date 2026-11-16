@@ -206,23 +206,29 @@ def _check_artifact(
                 environment.pop(key, None)
         install = [str(python), "-m", "pip", "install", "--force-reinstall"]
         if prebuilt and kind == "sdist":
-            _run_command(
-                [
-                    "uv",
-                    "pip",
-                    "install",
-                    "--python",
-                    str(python),
-                    "--no-deps",
-                    "--require-hashes",
-                    "--only-binary=:all:",
-                    "-r",
-                    str(ROOT / "tools/ci/build-requirements.txt"),
-                ],
-                commands,
-                blockers,
-                env=environment,
-            )
+            build_tools = [
+                "uv",
+                "pip",
+                "install",
+                "--python",
+                str(python),
+                "--no-deps",
+                "--require-hashes",
+                "--only-binary=:all:",
+                "-r",
+                str(ROOT / "tools/ci/build-requirements.txt"),
+            ]
+            try:
+                _run_command(build_tools, commands, blockers, env=environment)
+            except FileNotFoundError:
+                commands.append({"argv": _portable_argv(build_tools), "returncode": None, "status": "NOT_STARTED"})
+                blockers.append({"code": "packaging-build-tool-unavailable", "artifactKind": kind, "tool": "uv"})
+                return {
+                    "kind": kind,
+                    "status": "FAIL",
+                    "artifactIdentity": _file_identity(artifact),
+                    "commandRange": {"start": command_start, "end": len(commands)},
+                }
             install.extend(("--no-deps", "--no-build-isolation"))
         _run_command([*install, str(artifact)], commands, blockers, env=environment)
         outside = venv_dir.parent / f"{kind}-outside"
