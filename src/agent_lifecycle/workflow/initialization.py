@@ -444,14 +444,7 @@ def _prepare_initialization_inputs(
     selected_output = repository_authority_name(root / (output_dir or default_output), root)
     if selected_output != default_output.as_posix():
         raise LifecycleError("execution-target-selector-mismatch", "Packet output disagrees with adoption's selector")
-    if normalize_context_checkpoint_policy(manifest.get("contextCheckpointPolicy"))["enabled"]:
-        raise LifecycleError(
-            "composition-policy-unsupported", "Use explicit operations for checkpoint-enabled adoption"
-        )
-    if "reviewerAttestationAuthority" in manifest:
-        raise LifecycleError(
-            "composition-policy-unsupported", "Use explicit compile, init and adopt for strict reviewer storage"
-        )
+    _require_supported_composition_policy(manifest)
     source = source_revision or manifest.get("baseRevision", {}).get("sha")
     if not isinstance(source, str) or not source or source != manifest.get("baseRevision", {}).get("sha"):
         raise LifecycleError("execution-target-selector-mismatch", "Source selector disagrees with the frozen base")
@@ -481,6 +474,17 @@ def _prepare_initialization_inputs(
         inputs,
         outputs,
     )
+
+
+def _require_supported_composition_policy(manifest: dict[str, Any]) -> None:
+    if normalize_context_checkpoint_policy(manifest.get("contextCheckpointPolicy"))["enabled"]:
+        raise LifecycleError(
+            "composition-policy-unsupported", "Use explicit operations for checkpoint-enabled adoption"
+        )
+    if "reviewerAttestationAuthority" in manifest:
+        raise LifecycleError(
+            "composition-policy-unsupported", "Use explicit compile, init and adopt for strict reviewer storage"
+        )
 
 
 def _project_packet_outputs(

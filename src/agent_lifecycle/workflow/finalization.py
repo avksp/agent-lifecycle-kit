@@ -431,30 +431,7 @@ def finalize_run(
     reason: str,
 ) -> dict[str, Any]:
     state = load_for_update(state_path, operation_id=operation_id, expected_revision=expected_revision)
-    if state.get("phase") != "FINAL_AUDIT":
-        raise LifecycleError("invalid-phase", "run finalization requires FINAL_AUDIT phase")
-    if state.get("sourceRevision") != source_revision:
-        raise LifecycleError("source-revision-mismatch", "source revision mismatch")
-    require_native_closing_action(state, "finalize", now_iso())
-    outcome = state.get("finalAuditOutcome")
-    if has_current_workflow_semantics(state) and not isinstance(outcome, dict):
-        raise LifecycleError("final-audit-outcome-required", "v4 finalization requires an applied final-audit outcome")
-    if isinstance(outcome, dict) and outcome.get("verdict") not in {None, "ACCEPTED"}:
-        raise LifecycleError("final-audit-outcome-not-accepted", "final audit outcome does not permit finalization")
-    missing = [
-        str(task.get("id"))
-        for task in state.get("tasks", [])
-        if task.get("required", True) and task.get("status") != "ACCEPTED"
-    ]
-    if missing:
-        raise LifecycleError("finalization-precondition-failed", "required tasks are not accepted", {"tasks": missing})
-    missing_implementation_audits = missing_required_implementation_audits(state_path, state)
-    if missing_implementation_audits:
-        raise LifecycleError(
-            "implementation-audit-required",
-            "required implementation audit reports are missing",
-            {"tasks": missing_implementation_audits},
-        )
+    _require_finalization_ready(state_path, state, source_revision)
     root = package_root(state_path, state)
     final_audit_rel = normalize_repo_path(final_audit_path)
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
@@ -564,6 +541,33 @@ def finalize_run(
         },
     )
     return status(state_path)
+
+
+def _require_finalization_ready(state_path: Path, state: dict[str, Any], source_revision: str) -> None:
+    if state.get("phase") != "FINAL_AUDIT":
+        raise LifecycleError("invalid-phase", "run finalization requires FINAL_AUDIT phase")
+    if state.get("sourceRevision") != source_revision:
+        raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    require_native_closing_action(state, "finalize", now_iso())
+    outcome = state.get("finalAuditOutcome")
+    if has_current_workflow_semantics(state) and not isinstance(outcome, dict):
+        raise LifecycleError("final-audit-outcome-required", "v4 finalization requires an applied final-audit outcome")
+    if isinstance(outcome, dict) and outcome.get("verdict") not in {None, "ACCEPTED"}:
+        raise LifecycleError("final-audit-outcome-not-accepted", "final audit outcome does not permit finalization")
+    missing = [
+        str(task.get("id"))
+        for task in state.get("tasks", [])
+        if task.get("required", True) and task.get("status") != "ACCEPTED"
+    ]
+    if missing:
+        raise LifecycleError("finalization-precondition-failed", "required tasks are not accepted", {"tasks": missing})
+    missing_implementation_audits = missing_required_implementation_audits(state_path, state)
+    if missing_implementation_audits:
+        raise LifecycleError(
+            "implementation-audit-required",
+            "required implementation audit reports are missing",
+            {"tasks": missing_implementation_audits},
+        )
 
 
 def _prepare_final_proof(

@@ -299,9 +299,7 @@ def reviewer_attestation_authority(policy: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def require_reviewer_attestation_authority(
-    container: dict[str, Any], *, state: bool = False
-) -> dict[str, Any] | None:
+def require_reviewer_attestation_authority(container: dict[str, Any], *, state: bool = False) -> dict[str, Any] | None:
     policy = (
         validate_reviewer_attestation_policy(container["reviewerAttestationPolicy"])
         if "reviewerAttestationPolicy" in container

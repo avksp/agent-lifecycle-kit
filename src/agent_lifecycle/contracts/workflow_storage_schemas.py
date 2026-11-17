@@ -20,7 +20,10 @@ WORKFLOW_STATE_V7 = "agent-workflow-state.v7"
 def uses_reference_storage(state: dict[str, Any]) -> bool:
     """Native v5 and required-remedy v6 share the same immutable storage."""
     return state.get("schemaVersion") in {
-        WORKFLOW_STATE_V5, WORKFLOW_STATE_V6, WORKFLOW_STATE_V7, REVIEWER_REQUIRED_STATE,
+        WORKFLOW_STATE_V5,
+        WORKFLOW_STATE_V6,
+        WORKFLOW_STATE_V7,
+        REVIEWER_REQUIRED_STATE,
     }
 
 

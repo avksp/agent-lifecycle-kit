@@ -12,12 +12,8 @@ from agent_lifecycle.review.provenance import reviewer_observed_at, verify_revie
 from agent_lifecycle.workflow.artifacts import package_root, require_artifact_identity
 
 
-def reviewer_decision_lineage(
-    state: dict[str, Any], task: dict[str, Any] | None = None
-) -> dict[str, Any]:
-    lineage = {
-        key: state.get(key) for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")
-    }
+def reviewer_decision_lineage(state: dict[str, Any], task: dict[str, Any] | None = None) -> dict[str, Any]:
+    lineage = {key: state.get(key) for key in ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")}
     if task is not None:
         lineage.update(
             taskId=task["id"],
@@ -114,10 +110,9 @@ def final_reviewer_decision(
     if not isinstance(manifest_path, str):
         raise LifecycleError("reviewer-authority-changed", "Strict review requires the adopted manifest")
     manifest = read_json_object(root / normalize_repo_path(manifest_path), label="reviewed manifest")
-    if (
-        canonical_digest(manifest) != state.get("planDigest")
-        or manifest.get("reviewerAttestationAuthority") != state.get("reviewerAttestationAuthority")
-    ):
+    if canonical_digest(manifest) != state.get("planDigest") or manifest.get(
+        "reviewerAttestationAuthority"
+    ) != state.get("reviewerAttestationAuthority"):
         raise LifecycleError("reviewer-authority-changed", "Reviewer authority differs from the adopted plan")
     author = manifest.get("author")
     if not isinstance(author, dict):

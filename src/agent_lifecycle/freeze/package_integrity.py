@@ -58,7 +58,9 @@ def verify_plan_lock_envelope(manifest: dict[str, Any], lock: dict[str, Any]) ->
     if (schema == REVIEWER_REQUIRED_LOCK) != required or (
         required and lock.get("reviewerAttestationAuthority") != manifest["reviewerAttestationAuthority"]
     ):
-        raise LifecycleError("reviewer-lock-authority-mismatch", "Strict reviewer lock authority does not match the plan")
+        raise LifecycleError(
+            "reviewer-lock-authority-mismatch", "Strict reviewer lock authority does not match the plan"
+        )
     if _scope_lock_required(manifest) and schema != PLAN_LOCK_SCOPE_SCHEMA:
         raise LifecycleError("plan-lock-scope-required", "Review policy needs v3")
     if schema == PLAN_LOCK_V1_SCHEMA:
@@ -164,7 +166,9 @@ def build_reviewed_plan_lock_v2(
     required = policy is not None and policy["mode"] == "required"
     if review.get("schemaVersion") in {"agent-plan-review.v2", "agent-plan-composite-review.v1"}:
         if required:
-            raise LifecycleError("reviewer-lock-kind-unsupported", "Strict reviewer mode requires a full v1 plan review")
+            raise LifecycleError(
+                "reviewer-lock-kind-unsupported", "Strict reviewer mode requires a full v1 plan review"
+            )
         return _build_scope_lock(manifest, review, normalized_review_path, review_sha256, repository_root)
     if review.get("schemaVersion") != "agent-plan-review.v1":
         raise LifecycleError("invalid-review", "plan review schemaVersion is unsupported")
@@ -197,9 +201,7 @@ def build_reviewed_plan_lock_v2(
     return lock
 
 
-def _validate_full_plan_review(
-    manifest: dict[str, Any], review: dict[str, Any], *, attested: bool
-) -> None:
+def _validate_full_plan_review(manifest: dict[str, Any], review: dict[str, Any], *, attested: bool) -> None:
     if review.get("schemaVersion") != "agent-plan-review.v1":
         raise LifecycleError("invalid-review", "plan review schemaVersion is unsupported")
     validate_independent_review(
@@ -259,11 +261,22 @@ def _verify_locked_reviewer_admission(
         raise LifecycleError("reviewer-lock-admission-mismatch", "Signed review bytes differ from the lock inventory")
     review = load_json_object(review_data, label="locked attested plan review")
     observed = admission.get("observedAt")
-    if not isinstance(observed, str) or _verify_frozen_reviewer_decision(manifest, review, policy, observed) != admission:
+    if (
+        not isinstance(observed, str)
+        or _verify_frozen_reviewer_decision(manifest, review, policy, observed) != admission
+    ):
         raise LifecycleError("reviewer-lock-admission-mismatch", "Strict reviewer lock admission changed")
     _validate_full_plan_review(manifest, review, attested=True)
     if require_current:
         _verify_frozen_reviewer_decision(manifest, review, policy, reviewer_observed_at())
+
+
+def verify_archived_reviewer_package(
+    manifest: dict[str, Any], lock: dict[str, Any], package_root: Path, *, repository_root: Path
+) -> None:
+    """Verify archived package closure after checking the anchored lock and declared file bytes."""
+    _reject_undeclared_top_level_files(manifest, package_root, lock["entries"], repository_root=repository_root)
+    _verify_locked_reviewer_admission(manifest, lock, repository_root, require_current=False)
 
 
 def verify_plan_package_integrity(
@@ -347,7 +360,9 @@ def verify_plan_package_integrity(
     policy = require_reviewer_attestation_authority(manifest)
     if policy is not None and policy["mode"] == "advisory":
         body["reviewerAttestation"] = {
-            "mode": "advisory", "status": "NOT_CHECKED", "guarantee": "DECLARED",
+            "mode": "advisory",
+            "status": "NOT_CHECKED",
+            "guarantee": "DECLARED",
         }
     return {**body, "verificationDigest": canonical_digest(body)}
 

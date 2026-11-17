@@ -215,8 +215,7 @@ def reviewer_decision_context(
     if (
         author != (assignment["authorActorId"], assignment["authorSessionId"])
         or not isinstance(actor, dict)
-        or (actor.get("id"), actor.get("runId"))
-        != (assignment["reviewerActorId"], assignment["reviewerSessionId"])
+        or (actor.get("id"), actor.get("runId")) != (assignment["reviewerActorId"], assignment["reviewerSessionId"])
     ):
         raise LifecycleError("reviewer-assignment-mismatch", "Decision actors do not match the frozen assignment")
     issuer = next(
@@ -276,11 +275,15 @@ def verify_reviewer_decision(
 ) -> dict[str, Any]:
     """Authenticate one native decision and return an archival admission receipt."""
     envelope = report.get("reviewerProvenance")
-    if not isinstance(envelope, dict) or set(envelope) != {"guarantee", "attestation"} or (
-        envelope["guarantee"] != "ATTESTED"
+    if (
+        not isinstance(envelope, dict)
+        or set(envelope) != {"guarantee", "attestation"}
+        or (envelope["guarantee"] != "ATTESTED")
     ):
         raise LifecycleError("reviewer-attestation-required", "This decision requires an exact signed review")
-    context = reviewer_decision_context(policy, report, phase=phase, lineage=lineage, author=author, observed_at=observed_at)
+    context = reviewer_decision_context(
+        policy, report, phase=phase, lineage=lineage, author=author, observed_at=observed_at
+    )
     validation = verify_reviewer_attestation(envelope["attestation"], trusted_context=context)
     if validation["status"] != "PASS":
         raise LifecycleError("reviewer-attestation-refused", "The signed reviewer decision did not verify", validation)

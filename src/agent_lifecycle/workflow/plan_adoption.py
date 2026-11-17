@@ -78,7 +78,9 @@ def adopt_plan(
     reviewer_policy = require_reviewer_attestation_authority(manifest)
     if reviewer_policy is not None and reviewer_policy["mode"] == "required":
         if start_mode != "approval-required":
-            raise LifecycleError("reviewer-authorization-required", "Required reviewer policy needs separate authorization")
+            raise LifecycleError(
+                "reviewer-authorization-required", "Required reviewer policy needs separate authorization"
+            )
         if state.get("planDigest") or state.get("manifestPath") or state.get("tasks"):
             raise LifecycleError("reviewer-refreeze-unsupported", "Required reviewer policy needs a new unbound run")
     _require_remedy_adoption(state, manifest, preserve_accepted_compatible)

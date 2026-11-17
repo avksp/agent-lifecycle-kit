@@ -337,7 +337,8 @@ def _require_reviewer_assignments(manifest: dict[str, Any], policy: dict[str, An
     missing = sorted(assignments - policy["assignments"].keys())
     if missing:
         raise LifecycleError(
-            "reviewer-assignment-required", "Required reviewer policy has missing phase or task assignments",
+            "reviewer-assignment-required",
+            "Required reviewer policy has missing phase or task assignments",
             {"assignments": missing},
         )
 
