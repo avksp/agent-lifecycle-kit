@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +20,27 @@ from tests.diagnostics.test_plugin_update_network import fixture_client, publica
 
 
 class PluginUpdatesTests(unittest.TestCase):
+    def test_shipped_advice_is_base249_relative_without_compatibility_promotion(self):
+        import importlib.resources
+
+        descriptor = json.loads(
+            importlib.resources.files("agent_lifecycle")
+            .joinpath("data/plugin-updates/release-impact.v1.json")
+            .read_bytes()
+        )
+        self.assertEqual(descriptor["baseVersions"], ["2.49.0"])
+        self.assertEqual(descriptor["version"], agent_lifecycle.__version__)
+        self.assertIsNone(descriptor["sourceCommit"])
+        changes = {(r["domain"], r["identifier"]) for r in descriptor["changes"]}
+        self.assertIn(("schema", "agent-workflow-state.v7"), changes)
+        self.assertIn(("cli", "operator-signature verify"), changes)
+        self.assertNotIn(("cli", "plugin-update check"), changes)
+        self.assertTrue(all(r["impact"] == "UNKNOWN" for r in descriptor["changes"]))
+        for domain in descriptor["domains"].values():
+            self.assertEqual(domain["coverage"], "PARTIAL")
+            self.assertEqual(domain["semanticReview"], "UNVERIFIED")
+            self.assertEqual(domain["evidenceRefs"], [])
+
     def test_retained_target_channel_and_descriptor_mismatches_refuse_before_network(self):
         cases = ("pin", "explicit", "prerelease", "descriptor-version", "descriptor-commit", "publication")
         for case in cases:

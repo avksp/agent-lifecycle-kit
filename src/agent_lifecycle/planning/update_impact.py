@@ -25,7 +25,9 @@ _DYNAMIC_COMMAND = re.compile(r"[$`{};<>]|&&|\|\|")
 _ACTIVE_PHASES = frozenset(
     {"RUNNING", "VERIFYING", "FINAL_AUDIT", "PAUSED", "BLOCKED", "READY", "AWAITING_AUTHORIZATION"}
 )
-_STATE_SCHEMAS = frozenset({"agent-workflow-state.v4", "agent-workflow-state.v5", "agent-workflow-state.v6"})
+_STATE_SCHEMAS = frozenset(
+    {"agent-workflow-state.v4", "agent-workflow-state.v5", "agent-workflow-state.v6", "agent-workflow-state.v7"}
+)
 _SAFE_ASSESSMENT_REASONS = {
     "plugin-update-input-budget": "Explicit plan inputs exceed the supported byte or file budget",
     "plugin-update-state-identity": "Supplied state does not bind to this plan identity",

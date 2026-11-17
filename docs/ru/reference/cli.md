@@ -289,7 +289,7 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 [проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.49.0
+python -m pip install agent-lifecycle-kit==2.50.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -1161,3 +1161,15 @@ agent-lifecycle plugin-update reconcile --request update-request.json --out iden
 `offer` показывает только неисполняемый рецепт после повторной сверки файлов. `install` возвращает UNSUPPORTED без native dispatch. Автообновление и уведомления по триггеру не квалифицированы. `reconcile` возвращает UNKNOWN или DRIFT: совпадение заявленных версий не подтверждает загруженные инструкции. Рекомендация и отказ — JSON с exit 0; неверные входы и небезопасные пути — exit 2. Модель и native installer не запускаются. Сохраняются native authorization и отдельное разрешение для операции хоста.
 
 Неполный `assess` с `--out` возвращает exit 2 до записи любого выхода, включая отсутствующий объявленный вход плана. Уберите `--out`, чтобы прочитать диагностику UNKNOWN в stdout. Поставляемый дескриптор с `sourceCommit: null` остаётся неразрешённым; отдельно наблюдаемый коммит и создание производной копии описаны в [контракте обновлений](plugin-updates.md). Канонический дескриптор не меняется, доверие остаётся DECLARED.
+
+
+## Подписи оператора
+
+`operator-signature request` готовит открытые подписываемые байты; `operator-signature verify` сверяет отсоединённый конверт с фактическим манифестом либо состоянием и предметом решения. Эти команды не выдают native-разрешение. Ошибка обязательной подписи завершает verify с отказом до создания выхода; advisory возвращает диагностический результат. Режимы, флаги, имена файлов, сроки, совместимость и границы доверия описаны в [справочнике подписей оператора](operator-signatures.md).
+
+```bash
+agent-lifecycle operator-signature request --kind freeze --manifest plans/example/plan.manifest.json --signer-fingerprint ed25519:PUBLIC_KEY_SHA256 --valid-from 2026-11-17T00:00:00.000000Z --expires-at 2026-11-18T00:00:00.000000Z
+agent-lifecycle operator-signature verify --kind freeze --manifest plans/example/plan.manifest.json --signature plans/example/operator-freeze-signature.json
+```
+
+Отпечаток в примере — заполнитель, а не допустимый ключ. Подписывание выполняется вне ALK.

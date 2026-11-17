@@ -52,6 +52,7 @@ from agent_lifecycle.contracts.workflow_storage_schemas import (
     STORAGE_VERSION,
     WORKFLOW_STATE_V5,
     WORKFLOW_STATE_V6,
+    WORKFLOW_STATE_V7,
     capacity_error,
     is_initial_snapshot_lineage,
     is_storage_reference,
@@ -284,8 +285,9 @@ def prepare_storage(
         "agent-workflow-state.v4",
         WORKFLOW_STATE_V5,
         WORKFLOW_STATE_V6,
+        WORKFLOW_STATE_V7,
     }:
-        raise storage_error("Storage preparation requires v4, v5 or v6 input")
+        raise storage_error("Storage preparation requires v4, v5, v6 or v7 input")
     operation = operation or StorageOperation.current()
     if operation is not None:
         operation, _ = choose_operation(operation.root, operation)
@@ -301,7 +303,9 @@ def prepare_storage(
     if storage_root is not None and metadata["root"] != storage_root:
         raise storage_error("Existing immutable storage root cannot change")
     compact["schemaVersion"] = (
-        WORKFLOW_STATE_V6 if state.get("schemaVersion") == WORKFLOW_STATE_V6 else WORKFLOW_STATE_V5
+        state["schemaVersion"]
+        if state.get("schemaVersion") in {WORKFLOW_STATE_V6, WORKFLOW_STATE_V7}
+        else WORKFLOW_STATE_V5
     )
     compact["storage"] = metadata
     objects: dict[str, bytes] = {}

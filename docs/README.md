@@ -1,5 +1,9 @@
 # Agent Lifecycle Kit documentation
 
+## Operator signatures and threat model
+
+[Operator signatures](reference/operator-signatures.md) are optional and off by default. [The threat model](architecture/threat-model.md) explains public-root selection, local checks and unobserved key custody. A verified signature alone grants no execution or acceptance permission.
+
 Imports refuse unsafe file reads and incomplete critical requirements. Existing host authority limits remain documented.
 
 ALK documents the [external AI SDLC CLI contract](guides/ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include full EN/RU guides and case JSON; the plugin ships the paired CLI contract. Fixtures do not qualify a live host.
@@ -71,7 +75,7 @@ updating existing plans and runtime output layouts.
 - [Commands by task](guides/commands-by-task.md)
 - [Runner migration for 2.x](guides/runner-migration-2.md)
 - Official PyPI package for Python 3.11-3.15:
-  `python -m pip install agent-lifecycle-kit==2.49.0` from
+  `python -m pip install agent-lifecycle-kit==2.50.0` from
   [agent-lifecycle-kit](https://pypi.org/project/agent-lifecycle-kit/).
 - One safe entrypoint: `agent-lifecycle start --adapter <adapter-id> --file task.md`.
 - [Quickstart](guides/quickstart.md)

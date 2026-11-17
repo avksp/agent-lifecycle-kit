@@ -25,6 +25,7 @@ def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     )
     from agent_lifecycle.cli.metrics_parser import add_metrics_parser
     from agent_lifecycle.cli.observability_parsers import _add_report_parser
+    from agent_lifecycle.cli.operator_signature_parsers import add_operator_signature_parser
     from agent_lifecycle.cli.planning_parsers import _add_plan_parser, _add_task_parser
     from agent_lifecycle.cli.plugin_updates import add_plugin_update_parser
     from agent_lifecycle.cli.policy import add_policy_parser
@@ -52,6 +53,7 @@ def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     _add_report_parser(subparsers)
     add_policy_parser(subparsers)
     add_plugin_update_parser(subparsers)
+    add_operator_signature_parser(subparsers)
     _add_workflow_parser(subparsers)
     _add_audit_parser(subparsers)
     _add_context_parser(subparsers)
