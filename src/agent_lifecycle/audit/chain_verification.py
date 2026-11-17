@@ -147,7 +147,12 @@ def verify_chain(
 
         phase = "operator-signatures"
         applicable = _verify_operator_receipts(snapshot, bundle, manifest, lock, state, events)
-        checks.append({"check": phase, "status": "VERIFIED" if applicable else "NOT_APPLICABLE"})
+        if applicable:
+            checks.append({"check": phase, "status": "VERIFIED"})
+        else:
+            checks.append({
+                "check": phase, "status": "NOT_APPLICABLE", "reason": "operator-signature-profile-disabled",
+            })
 
         phase = "receipt-membership"
         required = set(snapshot.files) - {bundle_path, bundle["chain"]}
@@ -170,7 +175,8 @@ def verify_chain(
         return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
                        checks, phase, "chain-input-missing")
     except OSError:
-        return _report("INVALID_INPUT", 2, checks, phase, "chain-input-unreadable")
+        return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
+                       checks, phase, "chain-input-unreadable")
     except (TypeError, KeyError, ValueError, RecursionError):
         return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
                        checks, phase, "chain-input-malformed")

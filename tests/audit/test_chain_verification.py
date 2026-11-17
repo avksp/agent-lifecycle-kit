@@ -15,6 +15,7 @@ from agent_lifecycle.contracts.chain_verification_schemas import ANCHOR, BUNDLE,
 from agent_lifecycle.contracts.proof_validation import build_receipt_hash_chain
 from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE, reviewer_attestation_authority
 from agent_lifecycle.freeze.package_integrity import build_reviewed_plan_lock_v2
+from agent_lifecycle.review.provenance import verify_reviewer_decision
 from agent_lifecycle.workflow.finalization import apply_final_audit_outcome, finalize_run
 from agent_lifecycle.workflow.reviewer_gate import reviewer_decision_lineage
 from tests.contracts.test_operator_signature import envelope, inventory, state
@@ -28,7 +29,8 @@ LINEAGE = ("runId", "packageId", "planRevision", "planDigest", "sourceRevision")
 class AnchoredRunFixture:
     """Synthetic selected public roots, native final decisions, no external custody claim."""
 
-    def __init__(self, root: Path, *, operator_required: bool) -> None:
+    def __init__(self, root: Path, *, operator_required: bool, task_bearing: bool = False,
+                 operator_advisory: bool = False) -> None:
         self.repo = root / "evidence"
         self.trust = root / "verifier" / "trust.json"
         self.anchor = self.trust.with_name("anchor.json")
@@ -38,10 +40,16 @@ class AnchoredRunFixture:
                        "journal": "events.jsonl", "chain": "receipts/chain.json"}
         self.state_path = self.repo / self.bundle["state"]
         value = state(phase="FINAL_AUDIT")
-        if not operator_required:
+        if operator_advisory:
+            value["operatorSignaturePolicy"]["mode"] = "advisory"
+            value.pop("operatorSignatureAuthority")
+        elif not operator_required:
             value.pop("operatorSignaturePolicy")
             value.pop("operatorSignatureAuthority")
-        policy = policy_for("freeze", "final-audit")
+        roles = ["freeze", "final-audit"]
+        if task_bearing:
+            roles += ["task-review:WS-01", "implementation-audit:WS-01", "final-implementation-audit"]
+        policy = policy_for(*roles)
         marker = reviewer_attestation_authority(policy)
         manifest = {
             "schemaVersion": "agent-plan-manifest.v1",
@@ -57,6 +65,10 @@ class AnchoredRunFixture:
             "reviewerAttestationPolicy": policy,
             "reviewerAttestationAuthority": marker,
         }
+        if task_bearing:
+            manifest["implementationAudit"] = {"required": True, "finalRequired": True}
+        if operator_advisory:
+            manifest["operatorSignaturePolicy"] = value["operatorSignaturePolicy"]
         if operator_required:
             for field in ("operatorSignaturePolicy", "operatorSignatureAuthority"):
                 manifest[field] = value[field]
@@ -84,33 +96,37 @@ class AnchoredRunFixture:
                      reviewerAttestationPolicy=policy, reviewerAttestationAuthority=marker,
                      manifestPath=self.bundle["manifest"], packetSet={"planLockSha256": self.digest(self.bundle["lock"])})
         value["storage"]["root"] = "state.json.storage"
-        names = ("plan-adopted", "execution-authorized")
         auth = self._authorization(value, operator_required)
+        payloads = {"plan-adopted": {"planDigest": digest}, "execution-authorized": auth}
+        task_paths = set()
+        if task_bearing:
+            task_paths = self._typed_task(value, payloads)
+            value["stateRevision"] += 2
         value["operationLedger"] = {
             action: {"stateRevision": revision, "eventType": action, "recordedAt": OBSERVED}
-            for revision, action in enumerate(names, 2)
+            for revision, action in enumerate(payloads, 2)
         }
         journal = self.repo / "events.jsonl"
         with journal.open("wb") as f:
-            for revision, action in enumerate(names, 2):
-                payload = auth if revision == 3 else {"planDigest": digest}
+            for revision, (action, payload) in enumerate(payloads.items(), 2):
                 f.write(canonical_bytes({
                     "schemaVersion": "agent-workflow-event.v1", "runId": value["runId"], "packageId": value["packageId"],
                     "stateRevision": revision, "operationId": action, "eventType": action,
                     "payload": payload, "recordedAt": OBSERVED,
                 }) + b"\n")
         write(self.state_path, value)
-        self._finish(value, operator_required)
+        self._finish(value, operator_required, task_bearing)
         self.value = self.read(self.bundle["state"])
         write(self.repo / self.bundle_name, self.bundle)
         write(self.trust, {"schemaVersion": TRUST, "reviewerPolicyDigest": canonical_digest(policy),
-              "operatorPolicyDigest": canonical_digest(manifest["operatorSignaturePolicy"]) if operator_required else None})
+              "operatorPolicyDigest": canonical_digest(manifest["operatorSignaturePolicy"])
+              if operator_required or operator_advisory else None})
         paths = set(manifest["planFiles"]) | {self.bundle[k] for k in ("state", "lock", "journal")}
         paths |= {"receipts/authorization.json", "receipts/final-review.json", "receipts/proof.json"}
         if operator_required:
             paths |= {"plan/operator-freeze-signature.json", "receipts/authorization.json.operator-signature.json",
                       "receipts/final-review.json.operator-signature.json"}
-        self.paths = paths
+        self.paths = paths | task_paths
         self.rebuild_chain()
         self.refresh_anchor()
 
@@ -137,7 +153,34 @@ class AnchoredRunFixture:
             value["authorization"]["operatorSignature"] = verified
         return payload
 
-    def _finish(self, value: dict, operator_required: bool) -> None:
+    def _identity(self, path: str, body: dict) -> dict:
+        write(self.repo / path, body)
+        return {"path": path, "sha256": canonical_digest(body), "bytes": (self.repo / path).stat().st_size}
+
+    def _typed_task(self, value: dict, payloads: dict) -> set[str]:
+        policy = value["reviewerAttestationPolicy"]
+        actor = {"actor": WORKER[0], "actorRunId": WORKER[1]}
+        task = {"id": "WS-01", "owner": WORKER[0], "attempt": 1, "status": "ACCEPTED",
+                "required": True, "dependsOn": [], "writes": [], "packet": {"sha256": "c" * 64},
+                "result": self._identity("receipts/result.json", actor)}
+        lineage = reviewer_decision_lineage(value, task)
+        for phase, name, body, key in (
+            ("task-review", "receipts/task-review.json", {"reviewer": REVIEWER, "verdict": "ACCEPTED"}, "review"),
+            ("implementation-audit", "receipts/task-audit.json",
+             {"auditor": REVIEWER, "verdict": "ACCEPTED"}, "implementationAuditReport"),
+        ):
+            report = attest(policy, body, phase=phase, lineage=lineage)
+            admission = verify_reviewer_decision(
+                policy, report, phase=phase, lineage=lineage, author=WORKER, observed_at=OBSERVED,
+            )
+            task[key] = {**self._identity(name, report), "verdict": "ACCEPTED", "reviewerAdmission": admission}
+        value["tasks"] = [task]
+        payloads["task-result-committed"] = {"taskId": task["id"], "attempt": 1, "result": task["result"]}
+        payloads["task-accepted"] = {"taskId": task["id"], "attempt": 1, "review": task["review"]}
+        return {"receipts/result.json", "receipts/task-review.json", "receipts/task-audit.json",
+                "receipts/final-implementation.json"}
+
+    def _finish(self, value: dict, operator_required: bool, task_bearing: bool) -> None:
         audit = _final_audit()
         lineage = {key: value[key] for key in LINEAGE}
         audit.update(**lineage, verdict="ACCEPTED", taskIds=[], findingIds=[], auditor=REVIEWER)
@@ -148,15 +191,25 @@ class AnchoredRunFixture:
         write(self.repo / path, audit)
         with patch("agent_lifecycle.workflow.reviewer_gate.reviewer_observed_at", return_value=OBSERVED):
             apply_final_audit_outcome(self.state_path, operation_id="outcome",
-                expected_revision=3, source_revision=value["sourceRevision"], final_audit_path=path,
+                expected_revision=value["stateRevision"], source_revision=value["sourceRevision"], final_audit_path=path,
                 verdict="ACCEPTED", reason="Fixture independent review")
         current = self.read("state.json")
         if operator_required:
             write(self.repo / (path + ".operator-signature.json"),
                   envelope(current, "accept", operation_id="finish", subject=audit))
-        finalize_run(self.state_path, operation_id="finish", expected_revision=4,
-            source_revision=value["sourceRevision"], final_audit_path=path,
-            proof_path="receipts/proof.json", reason="Finish fixture")
+        typed_path = None
+        if task_bearing:
+            typed_path = "receipts/final-implementation.json"
+            typed = {**lineage, "schemaVersion": "agent-final-implementation-audit.v1", "status": "PASS",
+                     "findings": [], "blockers": [], "auditor": REVIEWER, "productionPromotionClaimed": False}
+            typed = attest(value["reviewerAttestationPolicy"], typed, phase="final-implementation-audit",
+                           lineage=reviewer_decision_lineage(current))
+            typed["auditDigest"] = canonical_digest(typed)
+            write(self.repo / typed_path, typed)
+        with patch("agent_lifecycle.workflow.reviewer_gate.reviewer_observed_at", return_value=OBSERVED):
+            finalize_run(self.state_path, operation_id="finish", expected_revision=current["stateRevision"],
+                source_revision=value["sourceRevision"], final_audit_path=path, final_implementation_audit_path=typed_path,
+                proof_path="receipts/proof.json", reason="Finish fixture")
 
     def read(self, path: str) -> dict:
         return json.loads((self.repo / path).read_bytes())
@@ -190,7 +243,7 @@ class ChainVerificationTests(TestCase):
     def test_both_roots_are_verified_with_zero_writes(self):
         with TemporaryDirectory() as temp:
             root = Path(temp).resolve(strict=True)
-            fixture = AnchoredRunFixture(root, operator_required=True)
+            fixture = AnchoredRunFixture(root, operator_required=True, task_bearing=True)
             before = inventory(root)
             with (
                 patch("subprocess.Popen", side_effect=AssertionError("offline verifier launched a process")),
@@ -206,4 +259,7 @@ class ChainVerificationTests(TestCase):
             fixture = AnchoredRunFixture(Path(temp).resolve(strict=True), operator_required=False)
             result = fixture.verify()
             self.assertEqual(result["exitCode"], 0, result)
-            self.assertIn({"check": "operator-signatures", "status": "NOT_APPLICABLE"}, result["checks"])
+            self.assertIn({
+                "check": "operator-signatures", "status": "NOT_APPLICABLE",
+                "reason": "operator-signature-profile-disabled",
+            }, result["checks"])
