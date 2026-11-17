@@ -28,11 +28,7 @@ from agent_lifecycle.contracts.reviewer_identity_schemas import (
 )
 from agent_lifecycle.contracts.workflow_state_authority import decode_workflow_authority
 from agent_lifecycle.contracts.workflow_storage_context import StorageOperation
-from agent_lifecycle.freeze.package_integrity import (
-    _reject_undeclared_top_level_files,
-    _verify_locked_reviewer_admission,
-    verify_plan_lock_envelope,
-)
+from agent_lifecycle.freeze.package_integrity import verify_archived_reviewer_package, verify_plan_lock_envelope
 from agent_lifecycle.workflow.final_proof_integrity import validate_final_proof_integrity
 from agent_lifecycle.workflow.reviewer_gate import final_reviewer_decision, task_reviewer_decision
 
@@ -103,8 +99,9 @@ class _Snapshot:
             raise LifecycleError("chain-artifact-path-missing", "Expected a receipt path")
         raw = self.read(path)
         data = load_json_object(raw, label="native receipt")
-        _ensure(raw == canonical_bytes(data) + b"\n" and len(raw) == selected.get("bytes"),
-                "chain-artifact-bytes-mismatch")
+        _ensure(
+            raw == canonical_bytes(data) + b"\n" and len(raw) == selected.get("bytes"), "chain-artifact-bytes-mismatch"
+        )
         _ensure(canonical_digest(data) == selected.get("sha256"), "chain-artifact-digest-mismatch")
         return path, data
 
@@ -150,9 +147,13 @@ def verify_chain(
         if applicable:
             checks.append({"check": phase, "status": "VERIFIED"})
         else:
-            checks.append({
-                "check": phase, "status": "NOT_APPLICABLE", "reason": "operator-signature-profile-disabled",
-            })
+            checks.append(
+                {
+                    "check": phase,
+                    "status": "NOT_APPLICABLE",
+                    "reason": "operator-signature-profile-disabled",
+                }
+            )
 
         phase = "receipt-membership"
         required = set(snapshot.files) - {bundle_path, bundle["chain"]}
@@ -169,17 +170,33 @@ def verify_chain(
     except _Incomplete as exc:
         return _report("NOT_CHECKED", 1, checks, phase, exc.code)
     except LifecycleError as exc:
-        return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
-                       checks, phase, exc.code)
+        return _report(
+            "INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1, checks, phase, exc.code
+        )
     except FileNotFoundError:
-        return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
-                       checks, phase, "chain-input-missing")
+        return _report(
+            "INVALID_INPUT" if phase == "input" else "MISMATCH",
+            2 if phase == "input" else 1,
+            checks,
+            phase,
+            "chain-input-missing",
+        )
     except OSError:
-        return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
-                       checks, phase, "chain-input-unreadable")
+        return _report(
+            "INVALID_INPUT" if phase == "input" else "MISMATCH",
+            2 if phase == "input" else 1,
+            checks,
+            phase,
+            "chain-input-unreadable",
+        )
     except (TypeError, KeyError, ValueError, RecursionError):
-        return _report("INVALID_INPUT" if phase == "input" else "MISMATCH", 2 if phase == "input" else 1,
-                       checks, phase, "chain-input-malformed")
+        return _report(
+            "INVALID_INPUT" if phase == "input" else "MISMATCH",
+            2 if phase == "input" else 1,
+            checks,
+            phase,
+            "chain-input-malformed",
+        )
     return _report("VERIFIED", 0, checks)
 
 
@@ -219,11 +236,15 @@ def _verify_lock(
     _ensure(_digest(evidence.read(bundle["lock"])) == anchor["lockSha256"], "chain-anchor-lock-mismatch")
     _ensure(joined["packageId"] == anchor["packageId"], "chain-anchor-package-mismatch")
     _ensure(manifest.get("baseRevision", {}).get("sha") == anchor["sourceRevision"], "chain-anchor-source-mismatch")
-    _ensure(canonical_digest(manifest["reviewerAttestationPolicy"]) == trust["reviewerPolicyDigest"],
-            "chain-reviewer-trust-mismatch")
+    _ensure(
+        canonical_digest(manifest["reviewerAttestationPolicy"]) == trust["reviewerPolicyDigest"],
+        "chain-reviewer-trust-mismatch",
+    )
     operator = require_operator_authority(manifest)
-    _ensure((canonical_digest(operator) if operator else None) == trust["operatorPolicyDigest"],
-            "chain-operator-trust-mismatch")
+    _ensure(
+        (canonical_digest(operator) if operator else None) == trust["operatorPolicyDigest"],
+        "chain-operator-trust-mismatch",
+    )
     entries = joined["entries"]
     _ensure([entry["path"] for entry in entries] == manifest["planFiles"], "chain-lock-inventory-mismatch")
     _ensure(bundle["manifest"] in manifest["planFiles"], "chain-manifest-unbound")
@@ -233,8 +254,7 @@ def _verify_lock(
     package = evidence.root / root
     with os.scandir(package) as children:
         _ensure(len(list(islice(children, _MAX_FILES + 1))) <= _MAX_FILES, "chain-lock-directory-limit")
-    _reject_undeclared_top_level_files(manifest, package, entries, repository_root=evidence.root)
-    _verify_locked_reviewer_admission(manifest, lock, evidence.root, require_current=False)
+    verify_archived_reviewer_package(manifest, lock, package, repository_root=evidence.root)
     return manifest, lock
 
 
@@ -247,8 +267,9 @@ def _verify_native_state(
     if body.get("schemaVersion") != REVIEWER_REQUIRED_STATE or body.get("phase") != "COMPLETE":
         raise _Incomplete("chain-state-profile-unsupported", "Expected one terminal strict native run")
     with StorageOperation(evidence.root, state_path=evidence.root / bundle["state"]) as operation:
-        state = decode_workflow_authority(raw, root=evidence.root, state_path=evidence.root / bundle["state"],
-                                          operation=operation)
+        state = decode_workflow_authority(
+            raw, root=evidence.root, state_path=evidence.root / bundle["state"], operation=operation
+        )
     expected = {key: anchor[key] for key in ("runId", "packageId", "planDigest", "sourceRevision")}
     expected.update(
         stateRevision=anchor["terminalRevision"],
@@ -260,8 +281,10 @@ def _verify_native_state(
         reviewerAttestationAuthority=manifest["reviewerAttestationAuthority"],
     )
     _ensure(all(state.get(field) == value for field, value in expected.items()), "chain-state-lineage-mismatch")
-    _ensure(require_operator_authority(state, state=True) == require_operator_authority(manifest),
-            "chain-state-operator-policy-mismatch")
+    _ensure(
+        require_operator_authority(state, state=True) == require_operator_authority(manifest),
+        "chain-state-operator-policy-mismatch",
+    )
     _ensure(state.get("packetSet", {}).get("planLockSha256") == anchor["lockSha256"], "chain-state-lock-mismatch")
     _ensure(lock["manifestHash"] == state["planDigest"], "chain-state-plan-mismatch")
     journal = evidence.read(bundle["journal"])
@@ -282,13 +305,19 @@ def _events(raw: bytes, state: dict[str, Any]) -> list[dict[str, Any]]:
         op = row.get("operationId")
         if not isinstance(op, str) or not op or op in found:
             raise LifecycleError("chain-journal-operation-duplicate", "Missing or repeated operation")
-        _ensure(row.get("schemaVersion") == "agent-workflow-event.v1" and row.get("stateRevision") == revision,
-                "chain-journal-order-mismatch")
-        _ensure(row.get("packageId") == state["packageId"] and row.get("runId") == state["runId"],
-                "chain-journal-lineage-mismatch")
+        _ensure(
+            row.get("schemaVersion") == "agent-workflow-event.v1" and row.get("stateRevision") == revision,
+            "chain-journal-order-mismatch",
+        )
+        _ensure(
+            row.get("packageId") == state["packageId"] and row.get("runId") == state["runId"],
+            "chain-journal-lineage-mismatch",
+        )
         recorded = _object(ledger.get(op), "chain-journal-operation-unbound")
-        _ensure(recorded.get("stateRevision") == revision and recorded.get("eventType") == row.get("eventType"),
-                "chain-journal-ledger-mismatch")
+        _ensure(
+            recorded.get("stateRevision") == revision and recorded.get("eventType") == row.get("eventType"),
+            "chain-journal-ledger-mismatch",
+        )
         found.add(op)
         events.append(row)
     _ensure(found == set(ledger) and events[-1]["eventType"] == "run-finalized", "chain-journal-terminal-mismatch")
@@ -321,8 +350,11 @@ def _verify_chain_artifacts(
 
 
 def _verify_reviewer_receipts(
-    evidence: _Snapshot, bundle: dict[str, Any], manifest: dict[str, Any],
-    state: dict[str, Any], events: list[dict[str, Any]],
+    evidence: _Snapshot,
+    bundle: dict[str, Any],
+    manifest: dict[str, Any],
+    state: dict[str, Any],
+    events: list[dict[str, Any]],
 ) -> None:
     state_path = evidence.root / bundle["state"]
     implementation = manifest.get("implementationAudit")
@@ -332,32 +364,44 @@ def _verify_reviewer_receipts(
     _, proof = evidence.identity(state.get("finalProof"))
     outcome = _object(state.get("finalAuditOutcome"), "chain-final-outcome-missing")
     final = _object(events[-1].get("payload"), "chain-final-event-missing")
-    _ensure(outcome.get("verdict") == "ACCEPTED" and outcome.get("finalAudit") == state["finalAudit"],
-            "chain-final-outcome-mismatch")
+    _ensure(
+        outcome.get("verdict") == "ACCEPTED" and outcome.get("finalAudit") == state["finalAudit"],
+        "chain-final-outcome-mismatch",
+    )
     _verify_outcome_event(outcome, events)
     _ensure(final.get("finalAudit") == state["finalAudit"] == proof.get("finalAudit"), "chain-final-review-mismatch")
     _ensure(final.get("proof") == state["finalProof"], "chain-final-proof-mismatch")
-    _ensure(proof.get("operationId") == events[-1]["operationId"] and
-            proof.get("stateRevisionBeforeFinalization") == state["stateRevision"] - 1,
-            "chain-final-proof-revision-mismatch")
-    _ensure(proof.get("bodyDigest") == canonical_digest({k: v for k, v in proof.items() if k != "bodyDigest"}),
-            "chain-final-proof-digest-mismatch")
+    _ensure(
+        proof.get("operationId") == events[-1]["operationId"]
+        and proof.get("stateRevisionBeforeFinalization") == state["stateRevision"] - 1,
+        "chain-final-proof-revision-mismatch",
+    )
+    _ensure(
+        proof.get("bodyDigest") == canonical_digest({k: v for k, v in proof.items() if k != "bodyDigest"}),
+        "chain-final-proof-digest-mismatch",
+    )
     _ensure(all(proof.get(key) == state[key] for key in _LINEAGE), "chain-final-proof-lineage")
     actual_tasks = proof.get("acceptedTasks")
-    _ensure(isinstance(actual_tasks, list) and [
-        {key: task.get(key) for key in ("id", "attempt", "review")} for task in actual_tasks
-    ] == [
-        {key: task.get(key) for key in ("id", "attempt", "review")}
-        for task in state["tasks"] if task["status"] == "ACCEPTED"
-    ], "chain-proof-task-inventory-mismatch")
+    _ensure(
+        isinstance(actual_tasks, list)
+        and [{key: task.get(key) for key in ("id", "attempt", "review")} for task in actual_tasks]
+        == [
+            {key: task.get(key) for key in ("id", "attempt", "review")}
+            for task in state["tasks"]
+            if task["status"] == "ACCEPTED"
+        ],
+        "chain-proof-task-inventory-mismatch",
+    )
     _final_attestation(state_path, state, report, state["finalAudit"], "final-audit")
     typed = state.get("finalImplementationAudit")
     _ensure(typed is not None or policy.get("finalRequired") is not True, "chain-final-implementation-missing")
     if typed is not None:
         typed_proof = _object(proof.get("finalImplementationAudit"), "chain-final-implementation-missing")
         identity = _object(typed, "chain-final-implementation-missing")
-        _ensure(typed_proof == final.get("finalImplementationAudit") and typed_proof.get("audit") == identity,
-                "chain-final-implementation-mismatch")
+        _ensure(
+            typed_proof == final.get("finalImplementationAudit") and typed_proof.get("audit") == identity,
+            "chain-final-implementation-mismatch",
+        )
         _, typed_report = evidence.identity(identity)
         _final_attestation(state_path, state, typed_report, identity, "final-implementation-audit")
     integrity = proof.get("proofIntegrity")
@@ -370,19 +414,25 @@ def _verify_outcome_event(outcome: dict[str, Any], events: list[dict[str, Any]])
     if len(observed) != 1:
         raise _Incomplete("chain-outcome-history-unsupported", "Expected exactly one final outcome")
     payload = _object(observed[0].get("payload"), "chain-final-outcome-event-missing")
-    _ensure(all(payload.get(field) == outcome[field] for field in ("verdict", "finalAudit", "taskIds", "findingIds")),
-            "chain-final-outcome-event-mismatch")
-    _ensure(outcome.get("outcomeDigest") == canonical_digest(
-        {name: value for name, value in outcome.items() if name != "outcomeDigest"}
-    ), "chain-final-outcome-digest-mismatch")
+    _ensure(
+        all(payload.get(field) == outcome[field] for field in ("verdict", "finalAudit", "taskIds", "findingIds")),
+        "chain-final-outcome-event-mismatch",
+    )
+    _ensure(
+        outcome.get("outcomeDigest")
+        == canonical_digest({name: value for name, value in outcome.items() if name != "outcomeDigest"}),
+        "chain-final-outcome-digest-mismatch",
+    )
 
 
 def _final_attestation(
     state_path: Path, state: dict[str, Any], report: dict[str, Any], identity: dict[str, Any], phase: str
 ) -> None:
     archived = _object(identity.get("reviewerAdmission"), "chain-reviewer-admission-missing")
-    _ensure(final_reviewer_decision(state_path, state, report, phase=phase, archived=archived) == archived,
-            "chain-final-attestation-mismatch")
+    _ensure(
+        final_reviewer_decision(state_path, state, report, phase=phase, archived=archived) == archived,
+        "chain-final-attestation-mismatch",
+    )
 
 
 def _verify_task_reviews(
@@ -407,46 +457,61 @@ def _verify_task_reviews(
                 raise LifecycleError("chain-required-task-missing", "Terminal state has an unaccepted required task")
             continue
         event = _object(accepted.pop(task["id"], None), "chain-task-acceptance-unbound")
-        _ensure(event.get("attempt") == task["attempt"] and event.get("review") == task["review"],
-                "chain-task-acceptance-mismatch")
+        _ensure(
+            event.get("attempt") == task["attempt"] and event.get("review") == task["review"],
+            "chain-task-acceptance-mismatch",
+        )
         commit = _object(results.get(task["id"]), "chain-task-result-unbound")
-        _ensure(commit.get("result") == task["result"] and commit.get("attempt") == task["attempt"],
-                "chain-task-result-mismatch")
+        _ensure(
+            commit.get("result") == task["result"] and commit.get("attempt") == task["attempt"],
+            "chain-task-result-mismatch",
+        )
         _, result = evidence.identity(task.get("result"))
         _, report = evidence.identity(task.get("review"))
         archived = _object(task["review"].get("reviewerAdmission"), "chain-reviewer-admission-missing")
-        _ensure(task_reviewer_decision(state, task, report, result, phase="task-review", archived=archived) == archived,
-                "chain-task-attestation-mismatch")
+        _ensure(
+            task_reviewer_decision(state, task, report, result, phase="task-review", archived=archived) == archived,
+            "chain-task-attestation-mismatch",
+        )
         typed = task.get("implementationAuditReport")
         _ensure(typed is not None or not typed_required, "chain-task-audit-missing")
         if typed is not None:
             _, audit = evidence.identity(typed)
             archived = _object(typed.get("reviewerAdmission"), "chain-reviewer-admission-missing")
-            _ensure(task_reviewer_decision(state, task, audit, result, phase="implementation-audit",
-                                           archived=archived) == archived, "chain-task-audit-attestation-mismatch")
+            _ensure(
+                task_reviewer_decision(state, task, audit, result, phase="implementation-audit", archived=archived)
+                == archived,
+                "chain-task-audit-attestation-mismatch",
+            )
     _ensure(not accepted, "chain-task-acceptance-extra")
 
 
-def _verify_authorization_receipts(
-    evidence: _Snapshot, state: dict[str, Any], events: list[dict[str, Any]]
-) -> None:
+def _verify_authorization_receipts(evidence: _Snapshot, state: dict[str, Any], events: list[dict[str, Any]]) -> None:
     auth = [row for row in events if row.get("eventType") in _AUTHORIZATION_EVENTS]
-    _ensure(bool(auth) and auth[0]["eventType"] == "execution-authorized" and
-            sum(row["eventType"] == "execution-authorized" for row in auth) == 1,
-            "chain-authorization-history-mismatch")
+    _ensure(
+        bool(auth)
+        and auth[0]["eventType"] == "execution-authorized"
+        and sum(row["eventType"] == "execution-authorized" for row in auth) == 1,
+        "chain-authorization-history-mismatch",
+    )
     for row in auth:
         payload = _object(row.get("payload"), "chain-authorization-event-missing")
         _, receipt = evidence.identity(payload.get("authorizationReceipt"))
         _ensure(all(receipt.get(key) == state[key] for key in _LINEAGE), "chain-authorization-lineage")
-        _ensure(receipt.get("decision") == "ALLOW" and receipt.get("status") == "PASS",
-                "chain-authorization-decision")
-    _ensure(state["authorization"].get("authorizationReceipt") == auth[-1]["payload"].get("authorizationReceipt"),
-            "chain-authorization-terminal-mismatch")
+        _ensure(receipt.get("decision") == "ALLOW" and receipt.get("status") == "PASS", "chain-authorization-decision")
+    _ensure(
+        state["authorization"].get("authorizationReceipt") == auth[-1]["payload"].get("authorizationReceipt"),
+        "chain-authorization-terminal-mismatch",
+    )
 
 
 def _verify_operator_receipts(
-    evidence: _Snapshot, bundle: dict[str, Any], manifest: dict[str, Any], lock: dict[str, Any],
-    state: dict[str, Any], events: list[dict[str, Any]],
+    evidence: _Snapshot,
+    bundle: dict[str, Any],
+    manifest: dict[str, Any],
+    lock: dict[str, Any],
+    state: dict[str, Any],
+    events: list[dict[str, Any]],
 ) -> bool:
     policy = require_operator_authority(manifest)
     if policy is None:
@@ -454,8 +519,14 @@ def _verify_operator_receipts(
     if policy["mode"] != "required":
         raise _Incomplete("chain-advisory-operator-not-checked", "Advisory signatures do not bind native admission")
     signature = (Path(bundle["lock"]).parent / FREEZE_SIGNATURE_NAME).as_posix()
-    _signature(evidence, signature, policy, expected_operator_decision(manifest, "freeze"),
-               lock["reviewerAdmission"]["observedAt"], lock.get("operatorSignature"))
+    _signature(
+        evidence,
+        signature,
+        policy,
+        expected_operator_decision(manifest, "freeze"),
+        lock["reviewerAdmission"]["observedAt"],
+        lock.get("operatorSignature"),
+    )
     for event in events:
         if event.get("eventType") not in _AUTHORIZATION_EVENTS:
             continue
@@ -463,21 +534,37 @@ def _verify_operator_receipts(
         subject_path, receipt = evidence.identity(payload.get("authorizationReceipt"))
         before = {**state, "stateRevision": event["stateRevision"] - 1}
         expected = expected_operator_decision(before, "authorize", operation_id=event["operationId"], subject=receipt)
-        _signature(evidence, subject_path + ".operator-signature.json", policy, expected,
-                   event["recordedAt"], payload.get("operatorSignature"))
+        _signature(
+            evidence,
+            subject_path + ".operator-signature.json",
+            policy,
+            expected,
+            event["recordedAt"],
+            payload.get("operatorSignature"),
+        )
     terminal = events[-1]
     final_path, audit = evidence.identity(state["finalAudit"])
     _, proof = evidence.identity(state["finalProof"])
     before = {**state, "stateRevision": terminal["stateRevision"] - 1}
     expected = expected_operator_decision(before, "accept", operation_id=terminal["operationId"], subject=audit)
-    _signature(evidence, final_path + ".operator-signature.json", policy, expected,
-               terminal["recordedAt"], proof.get("operatorSignature"))
+    _signature(
+        evidence,
+        final_path + ".operator-signature.json",
+        policy,
+        expected,
+        terminal["recordedAt"],
+        proof.get("operatorSignature"),
+    )
     return True
 
 
 def _signature(
-    evidence: _Snapshot, path: str, policy: dict[str, Any], expected: dict[str, Any],
-    observed_at: str, admitted: Any,
+    evidence: _Snapshot,
+    path: str,
+    policy: dict[str, Any],
+    expected: dict[str, Any],
+    observed_at: str,
+    admitted: Any,
 ) -> None:
     raw = evidence.read(path)
     envelope = load_json_object(raw, label="operator signature")
@@ -485,12 +572,8 @@ def _signature(
     # Require validity across the complete observed second.
     start = parse_reviewer_utc(observed_at)
     end = start + timedelta(microseconds=999_999)
-    result = verify_operator_envelope(
-        policy, envelope, expected, observed_at=start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    )
-    end_result = verify_operator_envelope(
-        policy, envelope, expected, observed_at=end.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    )
+    result = verify_operator_envelope(policy, envelope, expected, observed_at=start.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
+    end_result = verify_operator_envelope(policy, envelope, expected, observed_at=end.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
     if result["signatureVerified"] != end_result["signatureVerified"]:
         raise _Incomplete("chain-operator-time-precision", "Archived time does not establish exact key validity")
     result["artifact"] = {"path": path, "bytes": len(raw), "sha256": _digest(raw)}

@@ -16,7 +16,13 @@ REPORT = "agent-chain-verification-report.v1"
 _DIGEST = re.compile(r"[a-f0-9]{64}\Z")
 _PATH_FIELDS = ("manifest", "lock", "state", "journal", "chain")
 _ANCHOR_DIGESTS = (
-    "planDigest", "bundleSha256", "lockSha256", "stateSha256", "journalSha256", "chainSha256", "trustConfigSha256",
+    "planDigest",
+    "bundleSha256",
+    "lockSha256",
+    "stateSha256",
+    "journalSha256",
+    "chainSha256",
+    "trustConfigSha256",
 )
 
 
@@ -35,26 +41,35 @@ _TEXT = {"type": "string", "minLength": 1, "maxLength": 128}
 _HEX = {"type": "string", "pattern": "^[a-f0-9]{64}$"}
 CHAIN_VERIFICATION_SCHEMAS = {
     BUNDLE: _closed(BUNDLE, {field: {"type": "string", "minLength": 1} for field in _PATH_FIELDS}),
-    TRUST: _closed(TRUST, {
-        "reviewerPolicyDigest": _HEX,
-        "operatorPolicyDigest": {"anyOf": [_HEX, {"type": "null"}]},
-    }),
-    ANCHOR: _closed(ANCHOR, {
-        "runId": _TEXT,
-        "packageId": _TEXT,
-        "sourceRevision": _TEXT,
-        "terminalRevision": {"type": "integer", "minimum": 2},
-        "terminalPhase": {"const": "COMPLETE"},
-        **{field: _HEX for field in _ANCHOR_DIGESTS},
-    }),
-    REPORT: _closed(REPORT, {
-        "status": {"enum": ["VERIFIED", "MISMATCH", "NOT_CHECKED", "INVALID_INPUT"]},
-        "exitCode": {"enum": [0, 1, 2]},
-        "checks": {"type": "array", "items": {"type": "object"}},
-        "firstFailure": {"type": ["object", "null"]},
-        "scope": {"type": "string"},
-        "authorityGranted": {"const": False},
-    }),
+    TRUST: _closed(
+        TRUST,
+        {
+            "reviewerPolicyDigest": _HEX,
+            "operatorPolicyDigest": {"anyOf": [_HEX, {"type": "null"}]},
+        },
+    ),
+    ANCHOR: _closed(
+        ANCHOR,
+        {
+            "runId": _TEXT,
+            "packageId": _TEXT,
+            "sourceRevision": _TEXT,
+            "terminalRevision": {"type": "integer", "minimum": 2},
+            "terminalPhase": {"const": "COMPLETE"},
+            **{field: _HEX for field in _ANCHOR_DIGESTS},
+        },
+    ),
+    REPORT: _closed(
+        REPORT,
+        {
+            "status": {"enum": ["VERIFIED", "MISMATCH", "NOT_CHECKED", "INVALID_INPUT"]},
+            "exitCode": {"enum": [0, 1, 2]},
+            "checks": {"type": "array", "items": {"type": "object"}},
+            "firstFailure": {"type": ["object", "null"]},
+            "scope": {"type": "string"},
+            "authorityGranted": {"const": False},
+        },
+    ),
 }
 
 
@@ -82,8 +97,10 @@ def validate_chain_input(value: dict[str, Any], schema: str) -> dict[str, Any]:
             value["terminalPhase"] != "COMPLETE"
             or type(value["terminalRevision"]) is not int
             or value["terminalRevision"] < 2
-            or any(not isinstance(value[key], str) or not 1 <= len(value[key]) <= 128
-                   for key in ("runId", "packageId", "sourceRevision"))
+            or any(
+                not isinstance(value[key], str) or not 1 <= len(value[key]) <= 128
+                for key in ("runId", "packageId", "sourceRevision")
+            )
         ):
             raise LifecycleError("chain-terminal-anchor-invalid", "Invalid terminal anchor lineage")
     return value
