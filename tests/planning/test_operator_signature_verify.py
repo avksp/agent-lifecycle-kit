@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
@@ -178,14 +179,27 @@ class OperatorSignaturePlanTests(unittest.TestCase):
             def attempt():
                 try:
                     create_reviewed_plan_lock(manifest_path=name, review_path=review, repository_root=root)
-                    return "created"
+                    return {"code": "created", "details": {}}
                 except LifecycleError as exc:
-                    return exc.code
+                    return {"code": exc.code, "details": exc.details}
 
             with ThreadPoolExecutor(max_workers=2) as workers:
                 outcomes = list(workers.map(lambda _: attempt(), range(2)))
-            self.assertEqual(outcomes.count("created"), 1)
-            self.assertEqual(outcomes.count("plan-lock-exists"), 1)
+            self.assertEqual(sum(item["code"] == "created" for item in outcomes), 1, outcomes)
+            loser = next(item for item in outcomes if item["code"] != "created")
+            if sys.platform == "win32" and loser["code"] == "authority-input-unavailable":
+                # Windows may refuse a competing held-directory/file capability.
+                # This is a bounded fail-closed sharing refusal, never a winner.
+                self.assertEqual(loser["details"].get("winerror"), 32, outcomes)
+                self.assertIn(loser["details"].get("operation"), {"read", "sync", "create"}, outcomes)
+            else:
+                self.assertEqual(loser["code"], "plan-lock-exists", outcomes)
+            lock = json.loads((root / "plans/release-test/plan.lock.json").read_bytes())
+            before = inventory(root)
+            verified = verify_plan_package_integrity(_m, lock, repository_root=root)
+            self.assertEqual(verified["status"], "PASS", verified)
+            self.assertTrue(lock["operatorSignature"]["signatureVerified"])
+            self.assertEqual(inventory(root), before)
 
     def test_off_never_reads_or_adds_signature_receipts(self):
         with tempfile.TemporaryDirectory() as tmp:
