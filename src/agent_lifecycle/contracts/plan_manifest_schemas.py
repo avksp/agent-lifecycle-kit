@@ -14,6 +14,11 @@ from agent_lifecycle.contracts.operator_signature_schemas import (
     POLICY as OPERATOR_POLICY,
 )
 from agent_lifecycle.contracts.review_remedy_schemas import AUTHORITY_VERSION, REMEDY_SCHEMAS
+from agent_lifecycle.contracts.reviewer_identity_schemas import (
+    REVIEWER_ATTESTATION_AUTHORITY_V1,
+    REVIEWER_ATTESTATION_POLICY_V1,
+    REVIEWER_IDENTITY_SCHEMAS,
+)
 
 MANIFEST_SCHEMA = "agent-plan-manifest.v1"
 MANIFEST_VALIDATION_SCHEMA = "agent-plan-manifest-validation.v1"
@@ -87,6 +92,8 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "reviewRemedyAuthority": REMEDY_SCHEMAS[AUTHORITY_VERSION],
             "operatorSignaturePolicy": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_POLICY],
             "operatorSignatureAuthority": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_AUTHORITY],
+            "reviewerAttestationPolicy": REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_POLICY_V1],
+            "reviewerAttestationAuthority": REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_AUTHORITY_V1],
             "contextCheckpointPolicy": _OBJECT,
             "controllerGates": _OBJECT,
             "planReview": _OBJECT,

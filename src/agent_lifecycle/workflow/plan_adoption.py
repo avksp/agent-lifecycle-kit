@@ -17,6 +17,10 @@ from agent_lifecycle.contracts.operator_signature import require_operator_adopti
 from agent_lifecycle.contracts.operator_signature_schemas import require_operator_authority
 from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
+from agent_lifecycle.contracts.reviewer_identity_schemas import (
+    REVIEWER_REQUIRED_STATE,
+    require_reviewer_attestation_authority,
+)
 from agent_lifecycle.freeze import verify_plan_lock_envelope, verify_plan_package_integrity
 from agent_lifecycle.planning.completeness import require_plan_completeness_pass, validate_plan_completeness
 from agent_lifecycle.planning.prerequisites import validate_prerequisite_acceptance
@@ -71,6 +75,12 @@ def adopt_plan(
     root = package_root(state_path, state)
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
     require_operator_adoption(state, manifest, start_mode=start_mode)
+    reviewer_policy = require_reviewer_attestation_authority(manifest)
+    if reviewer_policy is not None and reviewer_policy["mode"] == "required":
+        if start_mode != "approval-required":
+            raise LifecycleError("reviewer-authorization-required", "Required reviewer policy needs separate authorization")
+        if state.get("planDigest") or state.get("manifestPath") or state.get("tasks"):
+            raise LifecycleError("reviewer-refreeze-unsupported", "Required reviewer policy needs a new unbound run")
     _require_remedy_adoption(state, manifest, preserve_accepted_compatible)
     digest = _verify_frozen_manifest(root, manifest)
     validate_prerequisite_acceptance(manifest, repository_root=root)
@@ -201,6 +211,8 @@ def start_execution(
 
 
 def _require_adoptable(state: dict[str, Any], *, reset_tasks: bool) -> None:
+    if state.get("schemaVersion") == REVIEWER_REQUIRED_STATE:
+        raise LifecycleError("reviewer-refreeze-unsupported", "A strict reviewer run cannot adopt another plan")
     if state["phase"] in TERMINAL_PHASES:
         raise LifecycleError("terminal-run", "terminal workflow state cannot adopt a plan")
     task_started = any(task.get("attempt") or task.get("status") not in {"PENDING", "READY"} for task in state["tasks"])
@@ -660,6 +672,15 @@ def _replace_plan_state(
     else:
         state.pop("operatorSignaturePolicy", None)
         state.pop("operatorSignatureAuthority", None)
+    reviewer_policy = require_reviewer_attestation_authority(manifest)
+    if reviewer_policy is not None and reviewer_policy["mode"] == "required":
+        state["schemaVersion"] = REVIEWER_REQUIRED_STATE
+        state["reviewerAttestationPolicy"] = copy.deepcopy(reviewer_policy)
+        state["reviewerAttestationAuthority"] = copy.deepcopy(manifest["reviewerAttestationAuthority"])
+        state.setdefault(
+            "storage",
+            {"schemaVersion": "agent-workflow-storage.v1", "root": storage_root_for_state(state_path, state)},
+        )
     state["planRevision"] = revision
     state["planDigest"] = digest
     state["sourceRevision"] = source_revision

@@ -33,6 +33,7 @@ from agent_lifecycle.contracts.ownership_paths import (
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import create_private_json
 from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE
 from agent_lifecycle.contracts.workflow_state_authority import workflow_package_root
 from agent_lifecycle.contracts.workflow_state_schemas import (
     WORKFLOW_STATE_MIGRATION_RECEIPT,
@@ -113,6 +114,8 @@ def migrate_workflow_state(
     )
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    if state.get("schemaVersion") == REVIEWER_REQUIRED_STATE:
+        raise LifecycleError("reviewer-attestation-downgrade-unsupported", "Required v8 cannot be downgraded")
     if state.get("schemaVersion") == "agent-workflow-state.v7":
         raise LifecycleError("operator-signature-downgrade-unsupported", "Required v7 authority cannot be downgraded")
     if state.get("schemaVersion") == "agent-workflow-state.v6":
@@ -444,6 +447,10 @@ def _prepare_initialization_inputs(
     if normalize_context_checkpoint_policy(manifest.get("contextCheckpointPolicy"))["enabled"]:
         raise LifecycleError(
             "composition-policy-unsupported", "Use explicit operations for checkpoint-enabled adoption"
+        )
+    if "reviewerAttestationAuthority" in manifest:
+        raise LifecycleError(
+            "composition-policy-unsupported", "Use explicit compile, init and adopt for strict reviewer storage"
         )
     source = source_revision or manifest.get("baseRevision", {}).get("sha")
     if not isinstance(source, str) or not source or source != manifest.get("baseRevision", {}).get("sha"):

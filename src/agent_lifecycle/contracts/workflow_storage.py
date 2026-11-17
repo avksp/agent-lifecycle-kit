@@ -23,6 +23,7 @@ from agent_lifecycle.contracts.canonical import (
     sha256_hex,
 )
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE
 from agent_lifecycle.contracts.workflow_storage_context import (
     CheckedStorageWrites,
     StorageOperation,
@@ -286,8 +287,9 @@ def prepare_storage(
         WORKFLOW_STATE_V5,
         WORKFLOW_STATE_V6,
         WORKFLOW_STATE_V7,
+        REVIEWER_REQUIRED_STATE,
     }:
-        raise storage_error("Storage preparation requires v4, v5, v6 or v7 input")
+        raise storage_error("Storage preparation requires a supported native state")
     operation = operation or StorageOperation.current()
     if operation is not None:
         operation, _ = choose_operation(operation.root, operation)
@@ -304,7 +306,7 @@ def prepare_storage(
         raise storage_error("Existing immutable storage root cannot change")
     compact["schemaVersion"] = (
         state["schemaVersion"]
-        if state.get("schemaVersion") in {WORKFLOW_STATE_V6, WORKFLOW_STATE_V7}
+        if state.get("schemaVersion") in {WORKFLOW_STATE_V6, WORKFLOW_STATE_V7, REVIEWER_REQUIRED_STATE}
         else WORKFLOW_STATE_V5
     )
     compact["storage"] = metadata

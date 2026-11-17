@@ -24,6 +24,7 @@ from agent_lifecycle.review.validation import require_supported_review_provenanc
 from agent_lifecycle.review_mesh.remediation import evidence_values, load_remedy_evidence, native_remedy_context
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.implementation_audit_gate import (
+    implementation_audit_reviewer_admission,
     validate_final_task_evidence_reports,
     validate_task_evidence_paths,
 )
@@ -264,11 +265,13 @@ def validate_implementation_audit_report(
     state: dict[str, Any] | None = None,
     task: dict[str, Any] | None = None,
     report_identity: dict[str, Any] | None = None,
+    reviewer_admission: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     compatibility_validation: dict[str, Any] | None = None
     require_review_text(report)
-    require_supported_review_provenance(report, native_phase="implementation-audit")
+    if reviewer_admission is None or reviewer_admission.get("reportDigest") != canonical_digest(report):
+        require_supported_review_provenance(report, native_phase="implementation-audit")
     if report.get("schemaVersion") != IMPLEMENTATION_AUDIT_SCHEMA:
         blockers.append(
             {"code": "implementation-audit-schema", "message": "unsupported implementation audit schemaVersion"}
@@ -381,11 +384,13 @@ def build_final_implementation_audit(
         report = read_json_object(root / rel, label="implementation audit report")
         task = find_task(state, str(report.get("taskId"))) if isinstance(report.get("taskId"), str) else None
         identity = artifact_identity(root, rel, report)
+        admission = implementation_audit_reviewer_admission(state_path, state, task, report) if task else None
         validation = validate_implementation_audit_report(
             report,
             state=state,
             task=task,
             report_identity=identity,
+            reviewer_admission=admission,
         )
         accepted = (
             validation["status"] == "PASS" and report.get("status") == "PASS" and report.get("verdict") == "ACCEPTED"

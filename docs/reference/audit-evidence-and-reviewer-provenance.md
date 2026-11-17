@@ -132,3 +132,49 @@ Host and port validation also applies when userinfo is present. A redacted usern
 URL shielding chooses tokens absent from the original text and restores generated spans in one pass. Literal diagnostic tokens and tokens within restored URL paths remain ordinary content.
 
 With an authoritative profile, all Review Mesh receipt validators require a mode enabled by that profile, including result, synthesis and quorum. A globally recognized mode excluded from the supplied profile cannot pass quorum acceptance; standalone validation remains structural.
+
+## Required reviewer attestations
+
+The default is off. Existing plans and runs retain their review behavior.
+Advisory mode keeps declared review guarantees. Required mode checks each
+enabled review phase before it can change native state.
+
+Set `reviewerAttestationPolicy` in the plan before independent review. Use
+`agent-reviewer-attestation-policy.v1` and `mode: required`. The operator
+selects `trustRoot`, pins its canonical digest in `trustRootDigest`, and
+defines `assignments`. Use these assignment names:
+
+- `freeze` for the full plan review.
+- `task-review:<task-id>` for each task decision.
+- `implementation-audit:<task-id>` when the task uses a typed audit.
+- `final-audit` for the final outcome.
+- `final-implementation-audit` when the plan requires the typed final audit.
+
+Each assignment gives the issuer ID, reviewer actor and session IDs, author
+actor and session IDs, author key fingerprint, and the validity window
+`validFrom` to `expiresAt` in UTC. Select the author identity from an
+independent assignment record. The reviewed marker pins the exact public
+policy digest. Store the public input with the reviewed plan. The independent
+signer keeps control of its private key.
+
+The request to the signer includes the full decision, the package and plan
+identity, and the task attempt or accepted task lineage. The signer uses the
+v1 attestation with the subject and assignment digests from
+`reviewer_decision_context`. Attach the resulting proof in
+`reviewerProvenance.attestation` with `guarantee: ATTESTED`. Use a short
+attestation lifetime and submit it during that window. The final audit
+includes the exact `verdict`, `taskIds` and `findingIds` selected for the
+transition. When a submission expires, the independent signer can sign the
+same decision again if its reviewed inputs remain current.
+
+The strict full-package lock uses v4. The strict native state uses v8. An
+older ALK refuses these formats. Required reviewer mode currently uses one
+full plan review per run and refuses composite review, native refreeze, and
+migration. Compile the locked plan, initialize an unbound run, and adopt the
+plan as separate commands. Then authorize execution. An operator-only required
+run keeps v7. A combined strict run
+continues to verify the separate [operator signature](operator-signatures.md).
+
+A valid proof authenticates the decision under the selected public policy.
+Key custody, human identity and operating-system isolation require independent
+evidence from the deployment.

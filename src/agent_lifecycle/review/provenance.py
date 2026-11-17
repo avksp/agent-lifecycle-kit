@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
@@ -14,6 +14,7 @@ from agent_lifecycle.contracts.reviewer_identity_schemas import (
     validate_reviewer_attestation_shape,
     validate_reviewer_trust_root,
 )
+from agent_lifecycle.contracts.security_analysis_schemas import SECURITY_ANALYSIS_AUDIT_SCHEMA
 
 _CONTEXT_FIELDS = {
     "trustRoot",
@@ -35,6 +36,12 @@ _NATIVE_PHASES = {
     "task-review": "task-review",
     "implementation-audit": "task-review",
     "final-audit": "final-review",
+}
+_DECISION_PHASES = {**_NATIVE_PHASES, "final-implementation-audit": "final-review"}
+_DERIVED_REPORT_FIELDS = {
+    "implementation-audit": "reportDigest",
+    "final-implementation-audit": "auditDigest",
+    "final-audit": "completionSignalValidation",
 }
 
 
@@ -186,4 +193,110 @@ def validate_native_reviewer_provenance(
     return _result("UNSUPPORTED", "trustedContext")
 
 
-__all__ = ["validate_native_reviewer_provenance", "verify_reviewer_attestation"]
+def reviewer_observed_at() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def reviewer_decision_context(
+    policy: dict[str, Any],
+    report: dict[str, Any],
+    *,
+    phase: str,
+    lineage: dict[str, Any],
+    author: tuple[Any, Any],
+    observed_at: str,
+) -> dict[str, Any]:
+    """Derive the signed subject from policy and actual effect-bearing inputs."""
+    key = f"{phase}:{lineage['taskId']}" if "taskId" in lineage else phase
+    assignment = policy["assignments"].get(key)
+    if assignment is None or phase not in _DECISION_PHASES:
+        raise LifecycleError("reviewer-assignment-required", "No frozen reviewer assignment for this decision")
+    actor = report.get("reviewer" if phase in {"freeze", "task-review"} else "auditor")
+    if (
+        author != (assignment["authorActorId"], assignment["authorSessionId"])
+        or not isinstance(actor, dict)
+        or (actor.get("id"), actor.get("runId"))
+        != (assignment["reviewerActorId"], assignment["reviewerSessionId"])
+    ):
+        raise LifecycleError("reviewer-assignment-mismatch", "Decision actors do not match the frozen assignment")
+    issuer = next(
+        (entry for entry in policy["trustRoot"]["authorizedIssuers"] if entry["issuerId"] == assignment["issuerId"]),
+        None,
+    )
+    if issuer is None or issuer["fingerprint"] == assignment["authorFingerprint"]:
+        raise LifecycleError("reviewer-key-separation-required", "An independent assigned reviewer key is required")
+    if not (
+        parse_reviewer_utc(assignment["validFrom"])
+        <= parse_reviewer_utc(observed_at)
+        < parse_reviewer_utc(assignment["expiresAt"])
+    ):
+        raise LifecycleError("reviewer-key-expired", "Reviewer key is outside its assigned validity interval")
+    assignment_digest = canonical_digest(
+        {
+            "schemaVersion": "agent-reviewer-decision-assignment.v1",
+            "phase": phase,
+            "lineage": lineage,
+            "assignment": assignment,
+        }
+    )
+    excluded = {"reviewerProvenance", _DERIVED_REPORT_FIELDS.get(phase)}
+    if phase == "implementation-audit" and report.get("schemaVersion") == SECURITY_ANALYSIS_AUDIT_SCHEMA:
+        excluded.add("auditDigest")
+    subject = canonical_digest(
+        {
+            "schemaVersion": "agent-reviewer-decision-subject.v1",
+            "assignmentDigest": assignment_digest,
+            "report": {name: value for name, value in report.items() if name not in excluded},
+        }
+    )
+    return {
+        "trustRoot": policy["trustRoot"],
+        "expectedTrustRootDigest": policy["trustRootDigest"],
+        "expectedIssuerId": assignment["issuerId"],
+        "expectedActorId": assignment["reviewerActorId"],
+        "expectedSessionId": assignment["reviewerSessionId"],
+        "expectedPhase": _DECISION_PHASES[phase],
+        "expectedAssignmentId": f"decision:{assignment_digest}",
+        "expectedAssignmentDigest": assignment_digest,
+        "expectedSubjectDigest": subject,
+        "workerActorId": assignment["authorActorId"],
+        "workerSessionId": assignment["authorSessionId"],
+        "referenceTime": observed_at,
+    }
+
+
+def verify_reviewer_decision(
+    policy: dict[str, Any],
+    report: dict[str, Any],
+    *,
+    phase: str,
+    lineage: dict[str, Any],
+    author: tuple[Any, Any],
+    observed_at: str,
+) -> dict[str, Any]:
+    """Authenticate one native decision and return an archival admission receipt."""
+    envelope = report.get("reviewerProvenance")
+    if not isinstance(envelope, dict) or set(envelope) != {"guarantee", "attestation"} or (
+        envelope["guarantee"] != "ATTESTED"
+    ):
+        raise LifecycleError("reviewer-attestation-required", "This decision requires an exact signed review")
+    context = reviewer_decision_context(policy, report, phase=phase, lineage=lineage, author=author, observed_at=observed_at)
+    validation = verify_reviewer_attestation(envelope["attestation"], trusted_context=context)
+    if validation["status"] != "PASS":
+        raise LifecycleError("reviewer-attestation-refused", "The signed reviewer decision did not verify", validation)
+    return {
+        "phase": phase,
+        "observedAt": observed_at,
+        "reportDigest": canonical_digest(report),
+        "attestationDigest": validation["attestationDigest"],
+        "subjectDigest": validation["subjectDigest"],
+    }
+
+
+__all__ = [
+    "reviewer_decision_context",
+    "reviewer_observed_at",
+    "validate_native_reviewer_provenance",
+    "verify_reviewer_attestation",
+    "verify_reviewer_decision",
+]

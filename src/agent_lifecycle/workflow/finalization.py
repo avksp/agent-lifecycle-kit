@@ -71,6 +71,7 @@ from agent_lifecycle.workflow.review_mesh_gate import (
     require_review_mesh_quorum_gate_pass,
     validate_review_mesh_quorum_path,
 )
+from agent_lifecycle.workflow.reviewer_gate import final_reviewer_decision
 from agent_lifecycle.workflow.selectors import find_task
 from agent_lifecycle.workflow.state import now_iso, validate_typed_blocker
 from agent_lifecycle.workflow.task_transitions import _clear_active_attempt_references
@@ -173,6 +174,15 @@ def apply_final_audit_outcome(
     audit_identity = artifact_identity(root, audit_rel, audit)
     selected_tasks = _sorted_unique(task_ids or [])
     selected_findings = _sorted_unique(finding_ids or [])
+    if "reviewerAttestationAuthority" in state and (
+        audit.get("verdict") != verdict
+        or audit.get("taskIds") != selected_tasks
+        or audit.get("findingIds") != selected_findings
+    ):
+        raise LifecycleError("reviewer-outcome-scope-mismatch", "Signed final audit must bind its exact outcome scope")
+    admission = final_reviewer_decision(state_path, state, audit, phase="final-audit")
+    if admission is not None:
+        audit_identity["reviewerAdmission"] = admission
     validation = validate_final_audit_outcome_report(
         audit,
         state=state,
@@ -450,6 +460,7 @@ def finalize_run(
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
     raw_final_audit = deepcopy(final_audit)
     final_audit_identity = artifact_identity(root, final_audit_rel, final_audit)
+    _require_final_reviewer_admission(state_path, state, raw_final_audit, final_audit_identity)
     operator_signature = verify_operator_subject(
         state,
         "accept",
@@ -824,6 +835,7 @@ def _validate_final_implementation_audit(
         return None
     rel = normalize_repo_path(final_implementation_audit_path, label="final implementation audit")
     audit = read_json_object(root / rel, label="final implementation audit")
+    admission = final_reviewer_decision(state_path, state, audit, phase="final-implementation-audit")
     validation = validate_final_implementation_audit(audit, state=state)
     if validation["status"] != "PASS":
         raise LifecycleError(
@@ -834,7 +846,25 @@ def _validate_final_implementation_audit(
     require_final_implementation_audit_pass(audit)
     validate_final_task_evidence_reports(state_path, state, audit)
     identity = artifact_identity(root, rel, audit)
+    if admission is not None:
+        identity["reviewerAdmission"] = admission
     return {"audit": identity, "validation": validation}
+
+
+def _require_final_reviewer_admission(
+    state_path: Path, state: dict[str, Any], report: dict[str, Any], identity: dict[str, Any]
+) -> None:
+    if "reviewerAttestationAuthority" not in state:
+        return
+    outcome = state.get("finalAuditOutcome")
+    accepted = outcome.get("finalAudit") if isinstance(outcome, dict) else None
+    if not isinstance(accepted, dict) or any(accepted.get(key) != value for key, value in identity.items()):
+        raise LifecycleError("reviewer-final-audit-changed", "Final audit differs from the exact admitted outcome")
+    archived = accepted.get("reviewerAdmission")
+    if not isinstance(archived, dict):
+        raise LifecycleError("reviewer-admission-required", "Final outcome lacks its reviewer admission")
+    admission = final_reviewer_decision(state_path, state, report, phase="final-audit", archived=archived)
+    identity["reviewerAdmission"] = admission
 
 
 def _proof_body(

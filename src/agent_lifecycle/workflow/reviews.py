@@ -13,6 +13,7 @@ from agent_lifecycle.contracts.workflow_state_authority import historical_snapsh
 from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.review.validation import require_supported_review_provenance
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
+from agent_lifecycle.workflow.reviewer_gate import task_reviewer_decision
 from agent_lifecycle.workflow.state import validate_typed_blocker
 
 
@@ -353,10 +354,10 @@ def validate_task_review(
     review: dict[str, Any],
     *,
     result: dict[str, Any] | None = None,
-) -> None:
+) -> dict[str, Any] | None:
     if result is not None:
         _require_review_id(review)
-    _validate_review_lineage(state, task, review)
+    admission = _validate_review_lineage(state, task, review, result)
     if result is not None:
         _require_reviewer_separate_from_worker(review, result)
     if review.get("verdict") != "ACCEPTED":
@@ -378,6 +379,7 @@ def validate_task_review(
             "task review has unresolved MEDIUM+ findings",
             {"findings": open_medium_plus},
         )
+    return admission
 
 
 def validate_task_rework_review(
@@ -390,8 +392,10 @@ def validate_task_rework_review(
     """Validate review lineage and independence for a remediation decision."""
 
     _require_review_id(review)
-    _validate_review_lineage(state, task, review)
+    admission = _validate_review_lineage(state, task, review, result)
     _require_reviewer_separate_from_worker(review, result)
+    if admission is not None and review.get("verdict") != "REWORK":
+        raise LifecycleError("reviewer-outcome-scope-mismatch", "Signed review does not authorize rework")
     if review.get("verdict") not in {"ACCEPTED", "REWORK"}:
         raise LifecycleError("task-review-not-rework-compatible", "task rework review must be ACCEPTED or REWORK")
     findings = review.get("findings")
@@ -409,7 +413,7 @@ def validate_task_outcome_review(
     """Validate the common lineage boundary for every task review outcome."""
 
     _require_review_id(review)
-    _validate_review_lineage(state, task, review)
+    _validate_review_lineage(state, task, review, result)
     _require_reviewer_separate_from_worker(review, result)
     verdict = review.get("verdict")
     if verdict not in {"ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"}:
@@ -446,9 +450,12 @@ def _validate_review_lineage(
     state: dict[str, Any],
     task: dict[str, Any],
     review: dict[str, Any],
-) -> None:
+    artifact: dict[str, Any] | None,
+) -> dict[str, Any] | None:
     require_review_text(review)
-    require_supported_review_provenance(review, native_phase="task-review")
+    admission = task_reviewer_decision(state, task, review, artifact, phase="task-review")
+    if admission is None:
+        require_supported_review_provenance(review, native_phase="task-review")
     result = task.get("result")
     if not isinstance(result, dict):
         raise LifecycleError("missing-task-result", "task review requires committed result")
@@ -469,6 +476,7 @@ def _validate_review_lineage(
     reviewer = review.get("reviewer")
     if not isinstance(reviewer, dict) or reviewer.get("independent") is not True:
         raise LifecycleError("task-review-not-independent", "task review must be independent")
+    return admission
 
 
 def _require_review_id(review: dict[str, Any]) -> None:
