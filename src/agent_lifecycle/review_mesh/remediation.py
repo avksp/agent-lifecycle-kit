@@ -23,6 +23,7 @@ from agent_lifecycle.contracts.review_remedy_schemas import (
     require_decisions,
     require_evidence_index,
     require_recheck,
+    require_remedy_authority,
     require_remedy_policy,
 )
 from agent_lifecycle.contracts.review_round_schemas import (
@@ -76,6 +77,11 @@ def _require_artifact_kind(kind: str, value: dict[str, Any], expected_digest: st
     schema, field = _KINDS[kind]
     actual = value.get("schemaVersion")
     valid_schema = actual == schema
+    if kind == "state" and actual == "agent-workflow-state.v7":
+        from agent_lifecycle.contracts.operator_signature_schemas import require_operator_authority
+
+        require_operator_authority(value, state=True)
+        valid_schema = require_remedy_authority(value, state=True) is not None
     if kind == "lock":
         valid_schema = isinstance(actual, str) and actual in {"agent-plan-lock.v1", "agent-plan-lock.v2"}
     if not valid_schema:

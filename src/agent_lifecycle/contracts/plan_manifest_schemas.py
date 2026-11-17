@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    AUTHORITY as OPERATOR_AUTHORITY,
+)
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    OPERATOR_SIGNATURE_SCHEMAS,
+)
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    POLICY as OPERATOR_POLICY,
+)
 from agent_lifecycle.contracts.review_remedy_schemas import AUTHORITY_VERSION, REMEDY_SCHEMAS
 
 MANIFEST_SCHEMA = "agent-plan-manifest.v1"
@@ -76,6 +85,8 @@ PLAN_MANIFEST_SCHEMAS: dict[str, dict[str, Any]] = {
             "dependsOn": _STRING_LIST,
             "reviewMesh": _OBJECT,
             "reviewRemedyAuthority": REMEDY_SCHEMAS[AUTHORITY_VERSION],
+            "operatorSignaturePolicy": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_POLICY],
+            "operatorSignatureAuthority": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_AUTHORITY],
             "contextCheckpointPolicy": _OBJECT,
             "controllerGates": _OBJECT,
             "planReview": _OBJECT,

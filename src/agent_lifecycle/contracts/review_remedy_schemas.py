@@ -149,6 +149,13 @@ def remedy_policy(config: Any, *, phase: str | None = None) -> dict[str, Any] | 
     return policy if phase is None or native_phase in policy["phases"] else None
 
 
+def _require_remedy_native_version(version: Any, required: bool) -> None:
+    if required and version not in {"agent-workflow-state.v6", "agent-workflow-state.v7"}:
+        raise remedy_error("Required remedy authority needs native v6 or composed v7")
+    if not required and version == "agent-workflow-state.v6":
+        raise remedy_error("Native v6 needs required remedy authority")
+
+
 def require_remedy_authority(container: dict[str, Any], *, state: bool = False) -> dict[str, Any] | None:
     policy = remedy_policy(container.get("reviewMesh"))
     required = policy is not None and policy["mode"] == "required"
@@ -178,8 +185,8 @@ def require_remedy_authority(container: dict[str, Any], *, state: bool = False) 
                 if not isinstance(task_config, dict):
                     raise remedy_error("task cannot erase the inherited required remedy policy")
                 _require_inherited_gate(container["reviewMesh"], task_config)
-    if state and (container.get("schemaVersion") == "agent-workflow-state.v6") is not required:
-        raise remedy_error("required remedy authority and native v6 must occur together")
+    if state:
+        _require_remedy_native_version(container.get("schemaVersion"), required)
     return policy if required else None
 
 

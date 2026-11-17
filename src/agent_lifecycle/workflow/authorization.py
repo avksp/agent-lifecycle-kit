@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, read_json_object
+from agent_lifecycle.contracts.operator_signature import operator_observed_at, verify_operator_subject
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.workflow_authorization_schemas import (
     authorization_renewal_bindings,
@@ -48,6 +49,15 @@ def authorize_execution(
     receipt_rel = normalize_repo_path(receipt_path, label="authorization receipt")
     receipt = read_json_object(root / receipt_rel, label="authorization receipt")
     validation = validate_workflow_authorization_receipt(receipt, state=state)
+    operator_signature = verify_operator_subject(
+        state,
+        "authorize",
+        root=root,
+        signature_path=receipt_rel + ".operator-signature.json",
+        observed_at=operator_observed_at(),
+        operation_id=operation_id,
+        subject=receipt,
+    )
     identity = artifact_identity(root, receipt_rel, receipt)
     state["authorization"] = {
         "required": False,
@@ -58,13 +68,19 @@ def authorize_execution(
         "authorizationReceipt": identity,
     }
     state["phase"] = "READY"
+    if operator_signature is not None:
+        state["authorization"]["operatorSignature"] = operator_signature
     state["lastReason"] = reason
     commit_state(
         state_path,
         state,
         operation_id=operation_id,
         event_type="execution-authorized",
-        payload={"authorizationReceipt": identity, "reason": reason},
+        payload={
+            "authorizationReceipt": identity,
+            **({"operatorSignature": operator_signature} if operator_signature is not None else {}),
+            "reason": reason,
+        },
     )
     return status(state_path)
 
@@ -110,6 +126,15 @@ def renew_execution_authorization(
     validation = validate_workflow_authorization_renewal_receipt(
         receipt, state=state, previous_receipt=previous, used_authorization_ids=used_ids
     )
+    operator_signature = verify_operator_subject(
+        state,
+        "authorize",
+        root=root,
+        signature_path=receipt_rel + ".operator-signature.json",
+        observed_at=operator_observed_at(),
+        operation_id=operation_id,
+        subject=receipt,
+    )
     identity = artifact_identity(root, receipt_rel, receipt)
     bindings = authorization_renewal_bindings(state)
     state["authorization"] = {
@@ -119,6 +144,8 @@ def renew_execution_authorization(
         "expiresAt": validation["expiresAt"],
         "authorizationReceipt": identity,
     }
+    if operator_signature is not None:
+        state["authorization"]["operatorSignature"] = operator_signature
     state["lastReason"] = reason
     commit_state(
         state_path,
@@ -128,6 +155,7 @@ def renew_execution_authorization(
         payload={
             **bindings,
             "previousAuthorization": authorization,
+            **({"operatorSignature": operator_signature} if operator_signature is not None else {}),
             "previousAuthorizationId": previous["authorizationId"],
             "authorizationId": receipt["authorizationId"],
             "authorizationReceipt": identity,

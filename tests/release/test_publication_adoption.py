@@ -18,6 +18,27 @@ TARGET_VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf
 
 
 class PublicationAdoptionTests(unittest.TestCase):
+    def test_operator_signature_guides_are_paired_and_explicit_about_authority_limits(self):
+        for prefix in ("docs", "docs/ru"):
+            index = (ROOT / prefix / "README.md").read_text(encoding="utf-8")
+            cli = (ROOT / prefix / "reference/cli.md").read_text(encoding="utf-8")
+            guide = (ROOT / prefix / "reference/operator-signatures.md").read_text(encoding="utf-8")
+            self.assertIn("operator-signatures.md", index)
+            self.assertIn("operator-signatures.md", cli)
+            self.assertTrue((ROOT / prefix / "architecture/threat-model.md").is_file())
+            for term in (
+                "required",
+                "advisory",
+                "off",
+                "agent-workflow-state.v7",
+                "operatorSignatureAuthority",
+                "nativePermissionGranted",
+                "keyCustodyVerified",
+                "Declared",
+                "Externally attested",
+            ):
+                self.assertIn(term, guide)
+
     def test_plugin_update_advice_is_reachable_and_does_not_claim_installation(self):
         for prefix in ("docs", "docs/ru"):
             for page in ("README.md", "guides/install-and-first-run.md", "reference/cli.md"):

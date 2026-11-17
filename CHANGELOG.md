@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.50.0
+
+- Add paired threat models that name assets, adversaries, trust boundaries, existing controls and explicit limits.
+- Add optional detached operator signatures for canonical freeze, initial or renewed authorization, and final run acceptance. Reuse existing strict Ed25519 verification; accept public evidence only, with no signer or private-key input.
+- Keep the profile off by default. Required mode uses a bound policy marker and native state v7; older readers refuse it. Preserve old/off formats and existing independent lifecycle gates. Local verification does not prove human identity, key custody, host isolation, filesystem-wide ACID, or global replay protection.
+- Add public request and verify commands, scoped verification receipts and paired references. Refresh base-relative update advice and complete Russian evidence-import resource/proposal guidance. Preserve the historical macOS CI cause as UNKNOWN rather than changing production deadlines without evidence.
+
 ## 2.49.0
 
 - Keep imported reviewer independence conservative unless the existing evidence-bundle reconstruction proves it. Reject unsupported qualification extensions and mismatched source/manifest remedy policies with typed errors.

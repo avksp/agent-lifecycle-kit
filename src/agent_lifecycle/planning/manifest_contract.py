@@ -7,6 +7,7 @@ from typing import Any
 from agent_lifecycle.contracts import LifecycleError, canonical_digest
 from agent_lifecycle.contracts.authority_text import require_manifest_text
 from agent_lifecycle.contracts.immutable_input_schemas import validate_a5_plan_policy, validate_a5_policy
+from agent_lifecycle.contracts.operator_signature_schemas import require_operator_authority
 from agent_lifecycle.contracts.ownership_paths import (
     authority_paths_overlap,
     normalize_authority_path,
@@ -23,6 +24,8 @@ from agent_lifecycle.planning.prerequisites import prerequisite_dependencies
 from agent_lifecycle.research.preflight import decision_research_blockers
 
 _TOP_LEVEL = {
+    "operatorSignaturePolicy",
+    "operatorSignatureAuthority",
     "schemaVersion",
     "status",
     "planRevision",
@@ -304,16 +307,29 @@ def _artifact_path_blockers(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     return blockers
 
 
+def _operator_policy_blockers(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    try:
+        require_operator_authority(manifest)
+    except LifecycleError as exc:
+        blockers.append(_blocker(exc.code, exc.message))
+
+
+def _specification_requirement_shapes(specification: Any, blockers: list[dict[str, Any]]) -> None:
+    if not isinstance(specification, dict):
+        return
+    requirements = specification.get("requirements")
+    if not isinstance(requirements, list):
+        return
+    for index, requirement in enumerate(requirements):
+        _object_keys(requirement, _REQUIREMENT, f"specification.requirements[{index}]", blockers)
+
+
 def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    _operator_policy_blockers(manifest, blockers)
     _object_keys(manifest.get("author"), _AUTHOR, "author", blockers)
     _object_keys(manifest.get("baseRevision"), _BASE_REVISION, "baseRevision", blockers)
     _object_keys(manifest.get("specification"), _SPECIFICATION, "specification", blockers)
-    specification = manifest.get("specification")
-    if isinstance(specification, dict):
-        requirements = specification.get("requirements")
-        if isinstance(requirements, list):
-            for index, requirement in enumerate(requirements):
-                _object_keys(requirement, _REQUIREMENT, f"specification.requirements[{index}]", blockers)
+    _specification_requirement_shapes(manifest.get("specification"), blockers)
     _object_keys(manifest.get("acceptance"), _ACCEPTANCE, "acceptance", blockers)
     acceptance = manifest.get("acceptance")
     if isinstance(acceptance, dict):

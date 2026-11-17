@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.49.0
+python -m pip install agent-lifecycle-kit==2.50.0
 ```
 
 ## Task evidence identity
@@ -1094,3 +1094,15 @@ agent-lifecycle plugin-update reconcile --request update-request.json --out iden
 `offer` only shows an inert operator recipe after rechecking assessed files. `install` returns UNSUPPORTED, with zero native dispatch. Automatic updates and notification triggers are unqualified. `reconcile` reports UNKNOWN or DRIFT; matching caller labels do not attest loaded instructions. Advisory/refusal statuses are JSON reports with exit 0; malformed inputs and unsafe output paths return exit 2. No model call or native installer is started. Keep existing native authorization and separate host permission.
 
 An incomplete `assess` with `--out` returns exit 2 before writing any output, including a missing declared plan input. Omit `--out` to read its UNKNOWN diagnostic on stdout. A shipped descriptor with `sourceCommit: null` remains unresolved; use the separately observed commit and create-only derived descriptor recipe in [the update contract](plugin-updates.md), keeping the canonical descriptor unchanged and its trust DECLARED.
+
+
+## Operator signatures
+
+`operator-signature request` prepares public signing bytes; `operator-signature verify` checks a detached envelope against the actual manifest or state and subject. Neither command grants native permission. Required invalid verification exits with an error before output creation; advisory returns its diagnostic result. See [the operator-signature reference](operator-signatures.md) for modes, exact flags, file names, expiry, compatibility and trust limits.
+
+```bash
+agent-lifecycle operator-signature request --kind freeze --manifest plans/example/plan.manifest.json --signer-fingerprint ed25519:PUBLIC_KEY_SHA256 --valid-from 2026-11-17T00:00:00.000000Z --expires-at 2026-11-18T00:00:00.000000Z
+agent-lifecycle operator-signature verify --kind freeze --manifest plans/example/plan.manifest.json --signature plans/example/operator-freeze-signature.json
+```
+
+The fingerprint above is a placeholder, not a valid key. Signing runs outside ALK.

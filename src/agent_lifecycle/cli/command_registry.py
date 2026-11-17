@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 COMMAND_DISPATCH = {
+    "operator-signature": ("agent_lifecycle.cli.operator_signature_commands", "dispatch_operator_signatures", False),
     "plugin-update": ("agent_lifecycle.cli.plugin_updates", "dispatch_plugin_updates", False),
     "start": ("agent_lifecycle.cli.start", "dispatch_start", True),
     "host-launch": ("agent_lifecycle.cli.host_launch", "dispatch_host_launch", False),

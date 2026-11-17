@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
+from agent_lifecycle.contracts.operator_signature import operator_observed_at, verify_operator_freeze
 from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
 from agent_lifecycle.freeze import verify_plan_lock, verify_plan_package_integrity
 from agent_lifecycle.planning.acceptance_markdown import validate_acceptance_checklist
@@ -37,6 +38,17 @@ def build_plan_verification(
     manifest_check = _check("manifest", lambda: validate_plan_manifest(manifest))
     checks["manifest"] = manifest_check
     _extend_blockers(blockers, manifest_check)
+
+    operator_policy = manifest.get("operatorSignaturePolicy")
+    if (
+        operator_policy is not None and (not isinstance(operator_policy, dict) or operator_policy.get("mode") != "off")
+    ) or "operatorSignatureAuthority" in manifest:
+        operator_check = _check(
+            "operatorSignature",
+            lambda: verify_operator_freeze(manifest, root=root, observed_at=operator_observed_at()),
+        )
+        checks["operatorSignature"] = operator_check
+        _extend_blockers(blockers, operator_check)
 
     output_check = _check("outputFootprint", lambda: require_declared_output_footprint(manifest, repository_root=root))
     checks["outputFootprint"] = output_check

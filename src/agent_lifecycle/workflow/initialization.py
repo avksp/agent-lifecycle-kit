@@ -113,6 +113,8 @@ def migrate_workflow_state(
     )
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    if state.get("schemaVersion") == "agent-workflow-state.v7":
+        raise LifecycleError("operator-signature-downgrade-unsupported", "Required v7 authority cannot be downgraded")
     if state.get("schemaVersion") == "agent-workflow-state.v6":
         raise LifecycleError("review-remedy-downgrade-unsupported", "Required v6 authority cannot be downgraded")
     if target_schema == WORKFLOW_STATE_V5:

@@ -50,6 +50,15 @@ from agent_lifecycle.contracts.lifecycle_control_definitions import (
 )
 from agent_lifecycle.contracts.metric_schemas import METRIC_SCHEMAS
 from agent_lifecycle.contracts.multi_run_view_schemas import MULTI_RUN_VIEW_SCHEMAS
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    OPERATOR_SIGNATURE_SCHEMAS,
+)
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    PAYLOAD as OPERATOR_PAYLOAD,
+)
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    VALIDATION as OPERATOR_VALIDATION,
+)
 from agent_lifecycle.contracts.phase_packet_schemas import PHASE_PACKET_SCHEMAS
 from agent_lifecycle.contracts.plan_contract_schemas import PLAN_CONTRACT_SCHEMAS
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_DELTA_SCHEMAS
@@ -873,6 +882,33 @@ for _group in _SCHEMA_GROUPS:
 if set(_SCHEMAS).intersection(_AUTHORING_CORE_SCHEMAS):
     raise RuntimeError("authoring schema ids conflict")
 _SCHEMAS.update(_AUTHORING_CORE_SCHEMAS)
+_SCHEMAS.update(OPERATOR_SIGNATURE_SCHEMAS)
+_SCHEMAS["agent-operator-signature-request.v1"] = {
+    **open_object_schema(
+        "agent-operator-signature-request.v1",
+        required=["schemaVersion", "payload", "signingMessageHex", "nativePermissionGranted", "authorityClaimed"],
+        properties={
+            "payload": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_PAYLOAD],
+            "signingMessageHex": {"type": "string", "pattern": "^[0-9a-f]+$"},
+            "nativePermissionGranted": {"const": False},
+            "authorityClaimed": {"const": False},
+        },
+    ),
+    "additionalProperties": False,
+}
+_SCHEMAS[OPERATOR_VALIDATION] = open_object_schema(
+    OPERATOR_VALIDATION,
+    required=["schemaVersion", "status", "mode", "signatureVerified", "nativePermissionGranted"],
+    properties={
+        "status": {"enum": ["VALID", "INVALID", "OFF"]},
+        "mode": {"enum": ["off", "advisory", "required"]},
+        "signatureVerified": {"type": "boolean"},
+        "nativePermissionGranted": {"const": False},
+        "keyCustodyVerified": {"const": False},
+        "rootSelectionStrength": {"const": "Declared"},
+        "claimStrength": {"enum": ["Declared", "Externally attested"]},
+    },
+)
 
 
 def list_schemas(*, scope: str = "all") -> dict[str, Any]:

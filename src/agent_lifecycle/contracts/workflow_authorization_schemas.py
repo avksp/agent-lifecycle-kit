@@ -173,8 +173,9 @@ def _require_renewable_phase(state: dict[str, Any]) -> None:
         "agent-workflow-state.v4",
         "agent-workflow-state.v5",
         "agent-workflow-state.v6",
+        "agent-workflow-state.v7",
     }:
-        raise _renewal_error("Renewal requires supported v4/v5/v6 state")
+        raise _renewal_error("Renewal requires supported v4/v5/v6/v7 state")
     if state.get("startMode") == "plan-only":
         raise LifecycleError("plan-only-not-executable", "Plan-only workflows cannot renew execution authority")
     if state.get("closingWindow") is not None:

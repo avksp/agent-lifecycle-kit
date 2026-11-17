@@ -23,6 +23,16 @@ TARGET_REF = f"v{TARGET_VERSION}"
 
 
 class PublicationVersionTests(unittest.TestCase):
+    def test_operator_signature_release_exports_optional_contracts_with_default_off(self):
+        from agent_lifecycle.contracts.schemas import get_schema
+
+        self.assertEqual(get_schema("agent-workflow-state.v7")["$id"], "agent-workflow-state.v7")
+        self.assertIn("operatorSignatureAuthority", get_schema("agent-workflow-state.v7")["required"])
+        policy = get_schema("agent-operator-signature-policy.v1")
+        self.assertEqual(policy["anyOf"][0]["properties"]["mode"], {"const": "off"})
+        request = get_schema("agent-operator-signature-request.v1")
+        self.assertEqual(request["properties"]["nativePermissionGranted"], {"const": False})
+
     def test_plugin_update_descriptor_matches_release_and_is_packaged(self) -> None:
         from agent_lifecycle.contracts.plugin_update_validation import validate_release_impact
 

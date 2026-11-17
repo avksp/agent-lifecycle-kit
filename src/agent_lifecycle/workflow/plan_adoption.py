@@ -13,6 +13,8 @@ from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_jso
 from agent_lifecycle.contracts.authority_io import read_authority_bytes
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES, load_json_object
 from agent_lifecycle.contracts.immutable_input_schemas import validate_a5_plan_policy, validate_a5_policy
+from agent_lifecycle.contracts.operator_signature import require_operator_adoption
+from agent_lifecycle.contracts.operator_signature_schemas import require_operator_authority
 from agent_lifecycle.contracts.ownership_paths import require_manifest_authority_paths
 from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
 from agent_lifecycle.freeze import verify_plan_lock_envelope, verify_plan_package_integrity
@@ -68,6 +70,7 @@ def adopt_plan(
     _require_adoptable(state, reset_tasks=reset_tasks)
     root = package_root(state_path, state)
     manifest = read_json_object(manifest_path, label="frozen plan manifest")
+    require_operator_adoption(state, manifest, start_mode=start_mode)
     _require_remedy_adoption(state, manifest, preserve_accepted_compatible)
     digest = _verify_frozen_manifest(root, manifest)
     validate_prerequisite_acceptance(manifest, repository_root=root)
@@ -610,6 +613,10 @@ def _archive_prior_snapshot(state: dict[str, Any]) -> None:
 
     if marker is not None:
         state["priorSnapshots"][-1].update(reviewRemedyAuthority=marker, reviewMesh=prior_policy)
+    if "operatorSignaturePolicy" in state:
+        for key in ("operatorSignaturePolicy", "operatorSignatureAuthority"):
+            if key in state:
+                state["priorSnapshots"][-1][key] = copy.deepcopy(state[key])
 
 
 def _replace_plan_state(
@@ -640,6 +647,19 @@ def _replace_plan_state(
         state.setdefault(
             "storage", {"schemaVersion": "agent-workflow-storage.v1", "root": storage_root_for_state(state_path, state)}
         )
+    operator_policy = require_operator_authority(manifest)
+    if operator_policy is not None:
+        state["operatorSignaturePolicy"] = copy.deepcopy(operator_policy)
+        if operator_policy["mode"] == "required":
+            state["schemaVersion"] = "agent-workflow-state.v7"
+            state["operatorSignatureAuthority"] = copy.deepcopy(manifest["operatorSignatureAuthority"])
+            state.setdefault(
+                "storage",
+                {"schemaVersion": "agent-workflow-storage.v1", "root": storage_root_for_state(state_path, state)},
+            )
+    else:
+        state.pop("operatorSignaturePolicy", None)
+        state.pop("operatorSignatureAuthority", None)
     state["planRevision"] = revision
     state["planDigest"] = digest
     state["sourceRevision"] = source_revision

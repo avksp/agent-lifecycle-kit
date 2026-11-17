@@ -14,6 +14,7 @@ from agent_lifecycle.contracts import (
     load_json_object,
     sha256_hex,
 )
+from agent_lifecycle.contracts.operator_signature import operator_observed_at, verify_operator_freeze
 from agent_lifecycle.contracts.paths import normalize_repo_path, read_stable_repository_file
 from agent_lifecycle.contracts.plan_delta_schemas import PLAN_LOCK_SCOPE_SCHEMA
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
@@ -108,6 +109,7 @@ def build_plan_lock_v2(manifest: dict[str, Any], *, repository_root: Path) -> di
 
 
 def _inventory_lock(manifest: dict[str, Any], repository_root: Path) -> dict[str, Any]:
+    operator_signature = verify_operator_freeze(manifest, root=repository_root, observed_at=operator_observed_at())
     entries = _inventory_entries(manifest, repository_root)
     package = _object(manifest.get("package"))
     body = {
@@ -118,6 +120,8 @@ def _inventory_lock(manifest: dict[str, Any], repository_root: Path) -> dict[str
         "planFilesHash": canonical_digest({"schemaVersion": PLAN_FILE_INVENTORY_SCHEMA, "entries": entries}),
         "entries": entries,
     }
+    if operator_signature is not None:
+        body["operatorSignature"] = operator_signature
     return body
 
 
@@ -196,6 +200,13 @@ def verify_plan_package_integrity(
     """Verify a lock and, when required, every declared package file."""
 
     envelope = verify_plan_lock_envelope(manifest, lock)
+    operator_signature = verify_operator_freeze(manifest, root=repository_root, observed_at=operator_observed_at())
+    if operator_signature is not None:
+        operator_bound = lock.get("operatorSignature") == operator_signature
+        if operator_signature["mode"] == "required" and not operator_bound:
+            raise LifecycleError(
+                "operator-signature-lock-mismatch", "Lock does not bind the required operator signature"
+            )
     if envelope["lockSchemaVersion"] == PLAN_LOCK_V1_SCHEMA:
         body = {
             "schemaVersion": PACKAGE_INTEGRITY_VERIFICATION_SCHEMA,
@@ -208,6 +219,8 @@ def verify_plan_package_integrity(
             "entries": [],
             "blockers": [],
         }
+        if operator_signature is not None:
+            body["operatorSignature"] = operator_signature
         return {**body, "verificationDigest": canonical_digest(body)}
 
     expected_entries = _inventory_entries(manifest, repository_root)
@@ -249,6 +262,8 @@ def verify_plan_package_integrity(
         "entries": expected_entries,
         "blockers": [],
     }
+    if operator_signature is not None:
+        body["operatorSignature"] = operator_signature
     return {**body, "verificationDigest": canonical_digest(body)}
 
 

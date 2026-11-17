@@ -15,6 +15,7 @@ from agent_lifecycle.contracts.implementation_audit_validation import (
     validate_final_audit_outcome_report,
     validate_final_implementation_audit,
 )
+from agent_lifecycle.contracts.operator_signature import operator_observed_at, verify_operator_subject
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import persist_json_artifact, prepared_artifact_identity
 from agent_lifecycle.contracts.review_remedy_schemas import remedy_policy
@@ -449,6 +450,15 @@ def finalize_run(
     final_audit = read_json_object(root / final_audit_rel, label="final audit")
     raw_final_audit = deepcopy(final_audit)
     final_audit_identity = artifact_identity(root, final_audit_rel, final_audit)
+    operator_signature = verify_operator_subject(
+        state,
+        "accept",
+        root=root,
+        signature_path=final_audit_rel + ".operator-signature.json",
+        observed_at=operator_observed_at(),
+        operation_id=operation_id,
+        subject=raw_final_audit,
+    )
     _validate_final_audit(state, final_audit)
     completion_check_receipt = _validate_completion_check(state, root)
     goal_record = _validate_goal_record(state, root, goal_record_path)
@@ -498,6 +508,10 @@ def finalize_run(
         "reason": reason,
     }
     proof, source_writers, lifecycle_control_stop = _prepare_final_proof(root, state, final_audit, proof_inputs)
+    if operator_signature is not None:
+        signed_body = {key: value for key, value in proof.items() if key != "bodyDigest"}
+        signed_body["operatorSignature"] = operator_signature
+        proof = {**signed_body, "bodyDigest": canonical_digest(signed_body)}
     identity = prepared_artifact_identity(proof_rel, dict(proof))
     state["finalProof"] = {**identity, "semanticStatus": proof["semanticStatus"]}
     state["finalAudit"] = final_audit_identity

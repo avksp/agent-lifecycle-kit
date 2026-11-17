@@ -154,7 +154,11 @@ def prepare_freeze_candidate(
         repository_root=root,
         package_root=root / target,
     )
-    blockers = [item for item in verification["blockers"] if item["code"] != "plan-lock-required"]
+    blockers = [
+        item
+        for item in verification["blockers"]
+        if item["code"] not in {"plan-lock-required", "operator-signature-missing"}
+    ]
     if blockers:
         raise LifecycleError("freeze-prepare-preflight-failed", "Candidate preflight failed", {"blockers": blockers})
     for name, data in inputs.items():
