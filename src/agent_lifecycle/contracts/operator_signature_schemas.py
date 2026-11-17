@@ -228,6 +228,7 @@ _ROOT_SCHEMA = _schema(
 OPERATOR_SIGNATURE_SCHEMAS = {
     ROOT: _ROOT_SCHEMA,
     POLICY: {
+        "$schema": _ROOT_SCHEMA["$schema"],
         "$id": POLICY,
         "anyOf": [
             _schema(POLICY, {"mode": {"const": "off"}}),

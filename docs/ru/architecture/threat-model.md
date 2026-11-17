@@ -1,6 +1,6 @@
 # Модель угроз
 
-[English version](../../architecture/threat-model.md)
+Английский справочник: `docs/architecture/threat-model.md`.
 
 ALK проверяет объявленный план и его доказательства через поддерживаемые API
 и CLI. Хост выполняет работу агента, инструменты и вызовы моделей. ALK не
@@ -62,14 +62,14 @@ ALK проверяет объявленный план и его доказат�
 
 | Защита | Уровень и граница | Ссылка на код |
 | --- | --- | --- |
-| Целостность проверенного пакета | Enforced locally для manifest, привязки независимого обзора и объявленного состава файлов. | [package_integrity.py](../../../src/agent_lifecycle/freeze/package_integrity.py) |
-| Допуск состояния и операции | Enforced locally для ожидаемой ревизии, неиспользованного идентификатора операции и покрытых native commits. | [operation_kernel.py](../../../src/agent_lifecycle/workflow/operation_kernel.py) |
-| Конкурирующие native-изменения | Enforced locally для сотрудничающих операций ALK под выбранной блокировкой процесса. | [transactions.py](../../../src/agent_lifecycle/workflow/transactions.py) |
-| Чтение и запись authority-файлов | Enforced locally для правил путей, стабильного входа и ограниченного вывода. | [authority_io.py](../../../src/agent_lifecycle/contracts/authority_io.py) |
-| Подписанные утверждения и публичные pins | Enforced locally для строгой проверки подписи и привязки; хранение ключа и исходное происхождение корня рассматриваются отдельно. | [workflow_authority.py](../../../src/agent_lifecycle/contracts/workflow_authority.py) |
-| Provenance обзора | Declared, пока выбранный маршрут не предоставит квалифицированное внешнее основание для Externally attested. | [provenance.py](../../../src/agent_lifecycle/review/provenance.py) |
-| Квитанции ресурсов | Declared либо ограничены квалифицированными наблюдаемыми источниками; недоступный полный расход хоста остаётся неизвестным. | [declared_ledger.py](../../../src/agent_lifecycle/accounting/declared_ledger.py); [граница учёта](../reference/source-native-workflow-accounting.md) |
-| Контроль действий хоста | Designed, Declared либо внешне подтверждённый уровень в пределах фактического маршрута; локальная проверка пакета не предотвращает действия хоста. | [lifecycle_control.py](../../../src/agent_lifecycle/adapter_sessions/lifecycle_control.py); [возможности хостов](../reference/host-capabilities.md) |
+| Целостность проверенного пакета | Enforced locally для manifest, привязки независимого обзора и объявленного состава файлов. | package_integrity.py (`src/agent_lifecycle/freeze/package_integrity.py`) |
+| Допуск состояния и операции | Enforced locally для ожидаемой ревизии, неиспользованного идентификатора операции и покрытых native commits. | operation_kernel.py (`src/agent_lifecycle/workflow/operation_kernel.py`) |
+| Конкурирующие native-изменения | Enforced locally для сотрудничающих операций ALK под выбранной блокировкой процесса. | transactions.py (`src/agent_lifecycle/workflow/transactions.py`) |
+| Чтение и запись authority-файлов | Enforced locally для правил путей, стабильного входа и ограниченного вывода. | authority_io.py (`src/agent_lifecycle/contracts/authority_io.py`) |
+| Подписанные утверждения и публичные pins | Enforced locally для строгой проверки подписи и привязки; хранение ключа и исходное происхождение корня рассматриваются отдельно. | workflow_authority.py (`src/agent_lifecycle/contracts/workflow_authority.py`) |
+| Provenance обзора | Declared, пока выбранный маршрут не предоставит квалифицированное внешнее основание для Externally attested. | provenance.py (`src/agent_lifecycle/review/provenance.py`) |
+| Квитанции ресурсов | Declared либо ограничены квалифицированными наблюдаемыми источниками; недоступный полный расход хоста остаётся неизвестным. | declared_ledger.py (`src/agent_lifecycle/accounting/declared_ledger.py`); [граница учёта](../reference/source-native-workflow-accounting.md) |
+| Контроль действий хоста | Designed, Declared либо внешне подтверждённый уровень в пределах фактического маршрута; локальная проверка пакета не предотвращает действия хоста. | lifecycle_control.py (`src/agent_lifecycle/adapter_sessions/lifecycle_control.py`); [возможности хостов](../reference/host-capabilities.md) |
 
 Функции signed authority явно отделяют криптографическую проверку данных от
 native-разрешения. Непустая строка подписи, корректный JSON и метка `PASS` не

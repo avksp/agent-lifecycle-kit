@@ -137,6 +137,11 @@ class OperatorSignatureNativeTests(unittest.TestCase):
                 if kind == "accept":
                     proof = json.loads((root / "proof.json").read_bytes())
                     self.assertTrue(proof["operatorSignature"]["signatureVerified"])
+                    event = json.loads((root / "events.jsonl").read_text().splitlines()[-1])
+                    bound_proof = event["payload"]["proof"]
+                    self.assertEqual(bound_proof["path"], "proof.json")
+                    self.assertEqual(bound_proof["sha256"], canonical_digest(proof))
+                    self.assertEqual(bound_proof["bytes"], len(canonical_bytes(proof)) + 1)
                     self.assertEqual(
                         proof["bodyDigest"], canonical_digest({k: v for k, v in proof.items() if k != "bodyDigest"})
                     )

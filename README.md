@@ -1,8 +1,4 @@
 <p align="center">
-
-## Optional operator signatures
-
-Use [operator signatures](docs/reference/operator-signatures.md) for public detached decisions at freeze, authorization and final acceptance. The default is off; required mode retains separate native gates and uses state v7. See the [threat model](docs/architecture/threat-model.md) for the limits of local verification.
   <img src="docs/assets/agent-lifecycle-kit-banner.svg?v=2026-08-02-1" alt="Agent Lifecycle Kit - plan, execute, prove, finish agent work" width="100%">
 </p>
 
@@ -12,7 +8,7 @@ Use [operator signatures](docs/reference/operator-signatures.md) for public deta
 [![Release](https://img.shields.io/github/v/release/avksp/agent-lifecycle-kit?label=release)](https://github.com/avksp/agent-lifecycle-kit/releases)
 ![Python](https://img.shields.io/badge/python-3.11--3.15-blue.svg)
 
-**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and acceptance decisions connected while the external agent changes the project.
+**Agent Lifecycle Kit (ALK)** coordinates coding-agent work through a verifiable finish. It keeps the requested outcome, reviewed plan, execution boundaries, evidence and acceptance decisions connected while the external agent changes the project. Use [operator signatures](docs/reference/operator-signatures.md) for public detached decisions at freeze, authorization and final acceptance. The default is off; required mode retains separate native gates and uses state v7. See the [threat model](docs/architecture/threat-model.md) for the limits of local verification.
 
 ALK secures imports and documents the [external AI SDLC CLI contract](docs/guides/ai-sdlc-integration.md) and eight bounded consumer cases. Wheel/sdist include both guides and case JSON; the plugin ships the paired CLI contract. Native authority and release gates remain required.
 

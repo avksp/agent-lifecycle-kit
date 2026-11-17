@@ -12,6 +12,10 @@ from unittest.mock import patch
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.operator_signature_schemas import operator_authority_marker
 from agent_lifecycle.contracts.workflow_state_schemas import validate_workflow_state
+from agent_lifecycle.contracts.workflow_storage import persist_storage, prepare_storage
+from agent_lifecycle.contracts.workflow_state_authority import read_workflow_authority
+from tests.contracts.test_review_remedy_authority import authority
+from tests.review_mesh.test_remediation import config
 from agent_lifecycle.freeze.package_integrity import build_plan_lock_v2
 from agent_lifecycle.workflow import adopt_plan, authorize_execution
 from agent_lifecycle.workflow.initialization import migrate_workflow_state
@@ -23,14 +27,27 @@ from tests.workflow.test_plan_adoption import _write_authority_bundle
 
 class OperatorSignatureCompatibilityTests(unittest.TestCase):
     def test_actual_adoption_uses_v7_and_refuses_automatic_authorization(self):
-        for case in ("approval-required", "auto-after-freeze", "missing-freeze-signature"):
-            start_mode = "approval-required" if case == "missing-freeze-signature" else case
+        for case in ("approval-required", "auto-after-freeze", "missing-freeze-signature", "composed-v6"):
+            start_mode = "approval-required" if case in {"missing-freeze-signature", "composed-v6"} else case
             with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 path = _write_state(root, phase="READY")
                 manifest_path = _write_authority_bundle(root, kind="integrity")
                 m = json.loads(manifest_path.read_bytes())
                 m["baseRevision"] = {"sha": "source-2", "ref": "synthetic"}
+                if case == "composed-v6":
+                    current = json.loads(path.read_bytes())
+                    current["operationLedger"] = {}
+                    current.update(
+                        schemaVersion="agent-workflow-state.v6", reviewMesh=config(), reviewRemedyAuthority=authority()
+                    )
+                    for task in current["tasks"]:
+                        task["reviewMesh"] = config()
+                    prepared = prepare_storage(current, storage_root="run.state.json.storage")
+                    persist_storage(root, prepared)
+                    path.write_bytes(canonical_bytes(prepared.state) + b"\n")
+                    m.update(reviewMesh=config(), reviewRemedyAuthority=authority())
+
                 m["operatorSignaturePolicy"] = policy()
                 m["operatorSignatureAuthority"] = operator_authority_marker(m["operatorSignaturePolicy"])
                 m["packageIntegrity"]["allowedUnlistedFiles"].append("operator-freeze-signature.json")
@@ -56,7 +73,7 @@ class OperatorSignatureCompatibilityTests(unittest.TestCase):
                     "reset_tasks": True,
                     "start_mode": start_mode,
                 }
-                if case != "approval-required":
+                if case not in {"approval-required", "composed-v6"}:
                     with self.assertRaises(LifecycleError) as caught:
                         adopt_plan(path, **args)
                     self.assertEqual(
@@ -68,9 +85,12 @@ class OperatorSignatureCompatibilityTests(unittest.TestCase):
                     self.assertEqual(before, inventory(root))
                 else:
                     adopt_plan(path, **args)
-                    actual = json.loads(path.read_bytes())
+                    actual = read_workflow_authority(path)
                     self.assertEqual(actual["schemaVersion"], "agent-workflow-state.v7")
                     self.assertEqual(actual["operatorSignaturePolicy"], m["operatorSignaturePolicy"])
+                    if case == "composed-v6":
+                        self.assertEqual(actual["reviewRemedyAuthority"], authority())
+                        self.assertEqual(actual["operatorSignatureAuthority"], m["operatorSignatureAuthority"])
                     self.assertEqual(actual["phase"], "AWAITING_AUTHORIZATION")
                     self.assertFalse(actual["authorization"]["granted"])
 

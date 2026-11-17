@@ -273,13 +273,31 @@ class OperatorSignatureContractsTests(unittest.TestCase):
             )["signatureVerified"]
         )
 
+    def test_key_and_decision_expiry_have_distinct_safe_diagnostics(self):
+        value = manifest()
+        signed = envelope(value)
+        results = [
+            verify_operator_envelope(
+                value["operatorSignaturePolicy"],
+                signed,
+                expected_operator_decision(value, "freeze"),
+                observed_at=stamp,
+            )
+            for stamp in ("2095-01-01T00:00:00.000000Z", "2101-01-01T00:00:00.000000Z")
+        ]
+        self.assertEqual({r["reason"] for r in results}, {"operator-signature-invalid"})
+        self.assertIn("decision", results[0]["reasonDetail"])
+        self.assertIn("key", results[1]["reasonDetail"])
+        self.assertNotEqual(results[0]["reasonDetail"], results[1]["reasonDetail"])
+        self.assertTrue(all(not r["nativePermissionGranted"] for r in results))
+
     def test_strict_shapes_reject_ambiguous_secret_and_malformed_fields(self):
         for mode in ([], {}, True, 1, "unknown"):
             invalid = policy()
             invalid["mode"] = mode
             with self.subTest(mode=mode), self.assertRaises(LifecycleError):
                 validate_operator_policy(invalid)
-        for update in ({"privateKey": "not-a-real-secret"}, {"unexpected": 1}):
+        for update in ({"privateKey": None}, {"unexpected": 1}):
             invalid = {**envelope(manifest()), **update}
             with self.assertRaises(LifecycleError):
                 validate_operator_envelope(invalid)

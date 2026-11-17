@@ -39,6 +39,15 @@ Required mode also needs whole-package integrity and an exact
 of the selected policy, and `stateSchemaVersion` is
 `agent-workflow-state.v7`. The marker records a requirement; it is not approval.
 Required adoption uses `approval-required`, never automatic authorization.
+Set `packageIntegrity.required` to `true` and
+`packageIntegrity.lockSchemaVersion` to `agent-plan-lock.v2`. The declaration
+stays v2; composite reviewed evidence can produce a derived v3 lock. A v3 lock
+is not a supported v3 declaration.
+
+Published JSON schemas describe necessary structural checks. They do not prove
+fingerprint derivation, key order, validity at admission, decision-kind field
+relationships or cryptographic verification. ALK semantic validators and native
+gates remain required; a JSON-schema PASS grants no authority.
 
 ## Prepare and sign a decision
 
@@ -48,6 +57,10 @@ actions. Select `--kind freeze`, `authorize`, or `accept`.
 For freeze, supply `--manifest`. For authorize or accept, supply `--state`,
 `--subject`, and the exact future `--operation-id`. The subject is the actual
 authorization or renewal receipt, or the complete independent final audit.
+For freeze, paths resolve from the working directory. For state decisions,
+`--state` resolves from the working directory; `--subject`, `--signature` and
+`--out` resolve from the state's declared package root.
+
 For `request`, also supply `--signer-fingerprint`, `--valid-from`, and
 `--expires-at`. The response contains the public payload and
 `signingMessageHex`. It does not sign the request or grant permission.

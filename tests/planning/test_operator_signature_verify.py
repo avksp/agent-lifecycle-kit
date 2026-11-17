@@ -134,6 +134,20 @@ class OperatorSignaturePlanTests(unittest.TestCase):
                     self.assertEqual(result["status"], "PASS")
                     self.assertTrue(result["operatorSignature"]["signatureVerified"])
 
+    def test_advisory_missing_and_invalid_freeze_diagnose_without_blocking(self):
+        for case in ("missing", "flipped"):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                m, name, review = prepare_package(root, "advisory", case=case)
+                created = create_reviewed_plan_lock(manifest_path=name, review_path=review, repository_root=root)
+                lock = json.loads((root / created["lockPath"]).read_bytes())
+                self.assertEqual(lock["operatorSignature"]["status"], "INVALID")
+                result = build_plan_verification(m, manifest_path=root / name, lock=lock, repository_root=root)
+                self.assertEqual(result["status"], "PASS", result)
+                diagnostic = result["checks"]["operatorSignature"]["result"]
+                self.assertEqual(diagnostic["status"], "INVALID")
+                self.assertFalse(diagnostic["nativePermissionGranted"])
+
     def test_expired_frozen_signature_requires_revision_instead_of_in_place_replacement(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -168,14 +168,22 @@ def verify_operator_envelope(
             claimStrength="Externally attested",
             verificationStrength="Enforced locally",
         )
-    except (LifecycleError, ValueError, TypeError, KeyError, RecursionError):
+    except (LifecycleError, ValueError, TypeError, KeyError, RecursionError) as exc:
         receipt["reason"] = "operator-signature-invalid"
+        receipt["reasonDetail"] = (
+            exc.message if isinstance(exc, LifecycleError) else "Malformed operator signature data"
+        )
     return receipt
 
 
 def _invalid_public_artifact(policy: dict[str, Any], expected: dict[str, Any], code: str) -> dict[str, Any]:
     receipt = verify_operator_envelope(policy, {}, expected, observed_at="1970-01-01T00:00:00.000000Z")
     receipt["reason"] = code
+    receipt["reasonDetail"] = (
+        "Public signature artifact is missing"
+        if code == "operator-signature-missing"
+        else "Public signature artifact is invalid"
+    )
     return receipt
 
 
