@@ -720,6 +720,10 @@ agent-lifecycle project preset render \
 - `agent-lifecycle audit final-implementation`: итоговый отчёт
   `agent-final-implementation-audit.v1` перед финальным подтверждением
   рабочего цикла.
+- `agent-lifecycle audit verify-chain --repository-root <путь> --bundle <относительный-путь>
+  --trust-config <путь> --anchor <путь>`: автономная проверка одного строгого запуска.
+  Код 0 означает успех, 1 — несоответствие или неполную проверку,
+  2 — неверный вход. См. [проверку цепочки в CI](../guides/verify-chain-in-ci.md).
 - `agent-lifecycle audit package --plan-dir <папка>`: проверка папки плана и,
   при указании `--state <путь>`, объединение аудитов реализации. Для строгой
   проверки готовой передачи используйте `--require-frozen

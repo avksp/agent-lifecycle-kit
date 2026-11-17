@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.51.0
+
+- Add opt-in reviewer attestations for a strict full-plan review, task
+  decisions and final acceptance. Bind the decision and its author and
+  reviewer assignment to the selected public policy. Required mode uses
+  lock v4 and native state v8. Existing off and legacy routes retain
+  their formats, and operator-only required runs continue to use v7.
+- Add the read-only `audit verify-chain` command for a completed strict run.
+  Verify the frozen inventory, state and journal, receipt chain and exact
+  signatures against an independently selected terminal anchor. Report
+  incomplete or unsupported checks with a nonzero exit.
+- Add paired CI instructions and update advisory plan-impact metadata.
+  Synthetic signature proofs qualify the implemented checks under the
+  selected public roots. Deployment identity, key custody and account
+  isolation need independent evidence.
+
 ## 2.50.0
 
 - Add paired threat models that name assets, adversaries, trust boundaries, existing controls and explicit limits.

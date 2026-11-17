@@ -24,6 +24,13 @@ from agent_lifecycle.contracts import LifecycleError, read_json_object, write_js
 def dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
     """Dispatch one audit command without owning workflow transitions."""
 
+    if args.audit_command == "verify-chain":
+        from agent_lifecycle.audit.chain_verification import verify_chain
+
+        return verify_chain(
+            Path(args.repository_root), args.bundle,
+            trust_config_path=Path(args.trust_config), anchor_path=Path(args.anchor),
+        )
     if args.audit_command == "review-check":
         review = read_json_object(Path(args.review), label="task review")
         verdict = review.get("reviewVerdict", review)

@@ -20,7 +20,7 @@ from tests.diagnostics.test_plugin_update_network import fixture_client, publica
 
 
 class PluginUpdatesTests(unittest.TestCase):
-    def test_shipped_advice_is_base249_relative_without_compatibility_promotion(self):
+    def test_shipped_advice_covers_selected_bases_without_compatibility_promotion(self):
         import importlib.resources
 
         descriptor = json.loads(
@@ -28,12 +28,22 @@ class PluginUpdatesTests(unittest.TestCase):
             .joinpath("data/plugin-updates/release-impact.v1.json")
             .read_bytes()
         )
-        self.assertEqual(descriptor["baseVersions"], ["2.49.0"])
+        self.assertEqual(descriptor["baseVersions"], ["2.49.0", "2.50.0"])
         self.assertEqual(descriptor["version"], agent_lifecycle.__version__)
         self.assertIsNone(descriptor["sourceCommit"])
         changes = {(r["domain"], r["identifier"]) for r in descriptor["changes"]}
         self.assertIn(("schema", "agent-workflow-state.v7"), changes)
         self.assertIn(("cli", "operator-signature verify"), changes)
+        for expected in (
+            ("schema", "agent-workflow-state.v8"),
+            ("schema", "agent-plan-lock.v4"),
+            ("authority", "reviewerAttestationPolicy"),
+            ("evidence", "plan.lock.operatorSignature"),
+            ("cli", "workflow authorization-renew"),
+            ("cli", "review-mesh synthesize --remedy-decisions"),
+            ("cli", "audit verify-chain"),
+        ):
+            self.assertIn(expected, changes)
         self.assertNotIn(("cli", "plugin-update check"), changes)
         self.assertTrue(all(r["impact"] == "UNKNOWN" for r in descriptor["changes"]))
         for domain in descriptor["domains"].values():
