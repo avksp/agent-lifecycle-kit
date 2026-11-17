@@ -28,8 +28,10 @@ def dispatch_audit(args: argparse.Namespace) -> dict[str, Any]:
         from agent_lifecycle.audit.chain_verification import verify_chain
 
         return verify_chain(
-            Path(args.repository_root), args.bundle,
-            trust_config_path=Path(args.trust_config), anchor_path=Path(args.anchor),
+            Path(args.repository_root),
+            args.bundle,
+            trust_config_path=Path(args.trust_config),
+            anchor_path=Path(args.anchor),
         )
     if args.audit_command == "review-check":
         review = read_json_object(Path(args.review), label="task review")

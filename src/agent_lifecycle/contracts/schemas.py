@@ -438,9 +438,14 @@ PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
             "schemaVersion": {"const": "agent-plan-package-integrity-verification.v1"},
             "status": {"enum": ["PASS", "FAIL"]},
             "required": {"type": "boolean"},
-            "lockSchemaVersion": {"enum": [
-                "agent-plan-lock.v1", "agent-plan-lock.v2", "agent-plan-lock.v3", REVIEWER_REQUIRED_LOCK,
-            ]},
+            "lockSchemaVersion": {
+                "enum": [
+                    "agent-plan-lock.v1",
+                    "agent-plan-lock.v2",
+                    "agent-plan-lock.v3",
+                    REVIEWER_REQUIRED_LOCK,
+                ]
+            },
             "filesystemVerified": {"type": "boolean"},
             "manifestHash": {"type": "string", "minLength": 64, "maxLength": 64},
             "planFilesHash": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
