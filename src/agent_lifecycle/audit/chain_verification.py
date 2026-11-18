@@ -5,7 +5,7 @@ from __future__ import annotations
 import errno
 import hashlib
 import os
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from itertools import islice
 from pathlib import Path
@@ -823,7 +823,10 @@ def _verify_authorization_receipts(evidence: _Snapshot, state: dict[str, Any], e
     _, receipt = evidence.identity(payload.get("authorizationReceipt"))
     before = {**state, "stateRevision": row["stateRevision"] - 1}
     now = parse_reviewer_utc(row["recordedAt"])
+    _ensure(parse_reviewer_utc(events[0]["recordedAt"]) <= now, "chain-execution-time-order")
     validation = validate_workflow_authorization_receipt(receipt, state=before, now=now)
+    issued = datetime.fromisoformat(receipt["issuedAt"].replace("Z", "+00:00")).astimezone(UTC)
+    _ensure(issued.replace(microsecond=0) <= now, "chain-authorization-issued-after-grant")
     _verify_execution_window(events[2:], authorized_at=now, expires_at=validation["expiresAt"])
     terminal = state["authorization"]
     _ensure(

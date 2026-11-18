@@ -404,6 +404,53 @@ class ChainVerificationTests(TestCase):
             chain_verification._verify_checkpoint_scope({"payload": None})
         self.assertEqual(caught.exception.code, "chain-journal-payload-invalid")
 
+    def test_archived_authorization_accepts_issuance_at_journal_second_precision(self):
+        instant = "2026-01-01T12:00:00Z"
+        identity = {"path": "grant.json"}
+        state = {
+            "runId": "run",
+            "packageId": "package",
+            "planRevision": 1,
+            "planDigest": "plan",
+            "sourceRevision": "source",
+        }
+        events = [
+            {"recordedAt": instant},
+            {"recordedAt": instant, "stateRevision": 3, "payload": {"authorizationReceipt": identity}},
+            {"recordedAt": instant, "payload": {"previousPhase": "READY", "phase": "RUNNING"}},
+        ]
+        receipt = {
+            **state,
+            "stateRevision": 2,
+            "schemaVersion": "agent-workflow-authorization-receipt.v1",
+            "status": "PASS",
+            "decision": "ALLOW",
+            "authorizationId": "local-grant",
+            "authorizedBy": "test",
+            "expiresAt": "2026-01-01T12:00:03Z",
+        }
+        state["authorization"] = {
+            "authorizationReceipt": identity,
+            "granted": True,
+            "grantedBy": "test",
+            "expiresAt": receipt["expiresAt"],
+        }
+        check = chain_verification._verify_authorization_receipts
+        with TemporaryDirectory() as temp:
+            snapshot = chain_verification._Snapshot(Path(temp))
+            for issued in ("2026-01-01T11:59:59Z", instant, "2026-01-01T13:00:00.900000+01:00"):
+                body = {**receipt, "issuedAt": issued}
+                body["receiptDigest"] = canonical_digest(body)
+                with self.subTest(issued=issued), patch.object(snapshot, "identity", return_value=("grant.json", body)):
+                    check(snapshot, state, events)
+            body = {**receipt, "issuedAt": "2026-01-01T12:00:01Z"}
+            body["receiptDigest"] = canonical_digest(body)
+            with patch.object(snapshot, "identity", return_value=("grant.json", body)):
+                with self.assertRaises(LifecycleError) as caught:
+                    check(snapshot, state, events)
+            self.assertEqual(caught.exception.code, "chain-authorization-issued-after-grant")
+            self.assertEqual(list(Path(temp).iterdir()), [])
+
     def test_execution_window_requires_live_grant(self):
         start = datetime(2026, 1, 1, 12, tzinfo=UTC)
         event = {"recordedAt": "2026-01-01T12:00:00Z", "payload": {"previousPhase": "READY", "phase": "RUNNING"}}

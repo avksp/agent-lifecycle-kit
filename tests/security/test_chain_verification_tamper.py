@@ -181,6 +181,40 @@ class ChainTamperTests(TestCase):
         self.assertFalse(report["authorityGranted"])
         self.assertEqual(inventory(self.root), before)
 
+    def test_adoption_and_grant_use_the_same_ordered_journal_clock(self):
+        verify_events = chain_verification._events
+        for offset in (-1, 0, 1):
+            with self.subTest(adoptionSecondsFromGrant=offset):
+
+                def with_observed_adoption(raw, state):
+                    events = verify_events(raw, state)
+                    grant = datetime.fromisoformat(events[1]["recordedAt"].replace("Z", "+00:00"))
+                    observed = (grant + timedelta(seconds=offset)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    events[0] = {**events[0], "recordedAt": observed}
+                    return events
+
+                check_window = chain_verification._verify_admission_window
+
+                def with_prior_freeze(receipt, *, latest, earliest=None):
+                    if earliest is None and offset == -1:
+                        receipt = {"reviewerAdmission": {"observedAt": latest}}
+                    return check_window(receipt, latest=latest, earliest=earliest)
+
+                with (
+                    patch.object(chain_verification, "_events", side_effect=with_observed_adoption),
+                    patch.object(
+                        chain_verification, "_verify_admission_window", side_effect=with_prior_freeze
+                    ) as admission,
+                ):
+                    if offset == 1:
+                        self.refusal("state-journal", "chain-execution-time-order")
+                        self.assertEqual(admission.call_count, 1)
+                    else:
+                        before = inventory(self.root)
+                        result = self.fixture.verify()
+                        self.assertEqual(result["status"], "VERIFIED")
+                        self.assertEqual(inventory(self.root), before)
+
     def test_final_event_at_grant_expiry_is_a_named_mismatch(self):
         events = self._events()
         grant = self.fixture.read("receipts/authorization.json")
