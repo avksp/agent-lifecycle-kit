@@ -64,10 +64,23 @@ def resolve_authority_anchor(base_file: Path, reference: str, *, root: Path | No
     return root.joinpath(*resolved_parts)
 
 
-def authority_location(path: Path, *, root: Path | None = None) -> tuple[Path, str]:
-    """Bind a caller path; an explicit root is authority, never inferred from a document."""
-
+def authority_location(path: Path, *, root: Path | None = None, runtime_aliases: bool = True) -> tuple[Path, str]:
+    """Bind a portable path. Read-only callers can supply a canonical explicit root."""
     candidate = path.absolute()
+    if runtime_aliases:
+        root, candidate = _runtime_authority_location(candidate, root)
+    elif root is None:
+        raise LifecycleError("authority-root-required", "Canonical authority reads require an explicit root")
+    root = root.absolute()
+    try:
+        relative_name = candidate.relative_to(root).as_posix()
+    except ValueError:
+        raise LifecycleError("authority-path-outside-root", "authority path escapes the authorized root") from None
+    _relative_parts(relative_name)
+    return root, relative_name
+
+
+def _runtime_authority_location(candidate: Path, root: Path | None) -> tuple[Path, Path]:
     if root is None:
         # Only runtime-owned anchors may resolve platform aliases such as macOS /var.
         anchors = (Path.cwd(), Path(tempfile.gettempdir()))
@@ -91,12 +104,7 @@ def authority_location(path: Path, *, root: Path | None = None) -> tuple[Path, s
     else:
         root = runtime_temp.resolve(strict=True) / root_tail
         candidate = runtime_temp.resolve(strict=True) / candidate_tail
-    try:
-        relative_name = candidate.relative_to(root).as_posix()
-    except ValueError:
-        raise LifecycleError("authority-path-outside-root", "authority path escapes the authorized root") from None
-    _relative_parts(relative_name)
-    return root, relative_name
+    return root, candidate
 
 
 def _relative_parts(name: str) -> tuple[str, ...]:
@@ -333,10 +341,15 @@ def _check_bindings(root: Path, info: os.stat_result, bindings: list[tuple[_Dire
 
 @contextmanager
 def hold_authority_directory(
-    path: Path, *, writable: bool = False, held_directories: dict[Path, _Directory] | None = None
+    path: Path,
+    *,
+    root: Path | None = None,
+    runtime_aliases: bool = True,
+    writable: bool = False,
+    held_directories: dict[Path, _Directory] | None = None,
 ) -> Iterator[_Directory]:
     """Pin a directory and all ancestors, without inventing a leaf artifact."""
-    root, name = authority_location(path / ".directory-check")
+    root, name = authority_location(path / ".directory-check", root=root, runtime_aliases=runtime_aliases)
     with _parent(root, name, writable=writable, held_directories=held_directories) as (directory, _):
         yield directory
 
@@ -348,10 +361,10 @@ def sync_authority_directory(path: Path) -> None:
 
 
 @contextmanager
-def open_authority_read(path: Path, *, root: Path | None = None) -> Iterator[BinaryIO]:
+def open_authority_read(path: Path, *, root: Path | None = None, runtime_aliases: bool = True) -> Iterator[BinaryIO]:
     """Hold a guarded stream; trust results only after successful context exit."""
 
-    root, name = authority_location(path, root=root)
+    root, name = authority_location(path, root=root, runtime_aliases=runtime_aliases)
     found = False
     try:
         with _parent(root, name) as (parent, leaf):

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -20,7 +20,11 @@ from agent_lifecycle.contracts.workflow_state_schemas import (
     has_current_workflow_semantics,
     validate_workflow_state,
 )
-from agent_lifecycle.contracts.workflow_storage import iter_historical_snapshots, validate_storage
+from agent_lifecycle.contracts.workflow_storage import (
+    iter_historical_snapshots,
+    validate_archived_storage,
+    validate_storage,
+)
 from agent_lifecycle.contracts.workflow_storage_context import StorageOperation, choose_operation
 from agent_lifecycle.contracts.workflow_storage_io import check_deadline
 from agent_lifecycle.contracts.workflow_storage_schemas import IO_DEADLINE_SECONDS, uses_reference_storage
@@ -57,6 +61,7 @@ def validate_workflow_authority(
     root: Path | None = None,
     state_path: Path | None = None,
     operation: StorageOperation | None = None,
+    archive_reader: Callable[[str], bytes] | None = None,
 ) -> dict[str, Any]:
     """Validate the actual compact object, never a relabelled/hydrated projection."""
     validate_workflow_state(state)
@@ -72,11 +77,18 @@ def validate_workflow_authority(
     operation.bind_path(state_path)
     operation.bind(root, state)
     anchor = resolve_authority_anchor(state_path, state.get("packageRoot", "."), root=root)
-    if authority_location(anchor / ".storage-anchor", root=anchor)[0] != operation.root:
+    runtime_aliases = archive_reader is None
+    if (
+        authority_location(anchor / ".storage-anchor", root=anchor, runtime_aliases=runtime_aliases)[0]
+        != operation.root
+    ):
         raise LifecycleError("workflow-storage-invalid", "Package root differs from selected authority root")
-    authority_location(anchor / normalize_repo_path(state["eventLog"]), root=root)
+    authority_location(anchor / normalize_repo_path(state["eventLog"]), root=root, runtime_aliases=runtime_aliases)
     require_storage_root(state_path, state)
-    validate_storage(root, state, operation=operation)
+    if archive_reader is None:
+        validate_storage(root, state, operation=operation)
+    else:
+        validate_archived_storage(root, state, read=archive_reader, operation=operation)
     operation.check()
     return state
 
@@ -87,6 +99,7 @@ def decode_workflow_authority(
     root: Path | None = None,
     state_path: Path | None = None,
     operation: StorageOperation | None = None,
+    archive_reader: Callable[[str], bytes] | None = None,
 ) -> dict[str, Any]:
     """Compose exact already authority-read bytes without changing their identity."""
     if operation is not None:
@@ -94,7 +107,9 @@ def decode_workflow_authority(
     state = load_json_object(raw, label="workflow state")
     if uses_reference_storage(state) and canonical_bytes(state) + b"\n" != raw:
         raise LifecycleError("workflow-storage-invalid", "Reference-storage state must be exact canonical JSON plus LF")
-    return validate_workflow_authority(state, root=root, state_path=state_path, operation=operation)
+    return validate_workflow_authority(
+        state, root=root, state_path=state_path, operation=operation, archive_reader=archive_reader
+    )
 
 
 @contextmanager

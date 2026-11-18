@@ -110,6 +110,18 @@ def final_reviewer_decision(
     if not isinstance(manifest_path, str):
         raise LifecycleError("reviewer-authority-changed", "Strict review requires the adopted manifest")
     manifest = read_json_object(root / normalize_repo_path(manifest_path), label="reviewed manifest")
+    return final_reviewer_decision_from_manifest(state, manifest, report, phase=phase, archived=archived)
+
+
+def final_reviewer_decision_from_manifest(
+    state: dict[str, Any],
+    manifest: dict[str, Any],
+    report: dict[str, Any],
+    *,
+    phase: str,
+    archived: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Bind the final decision to an already acquired manifest."""
     if canonical_digest(manifest) != state.get("planDigest") or manifest.get(
         "reviewerAttestationAuthority"
     ) != state.get("reviewerAttestationAuthority"):

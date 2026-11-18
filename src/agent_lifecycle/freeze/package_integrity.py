@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -249,14 +250,19 @@ def _verify_frozen_reviewer_decision(
 
 
 def _verify_locked_reviewer_admission(
-    manifest: dict[str, Any], lock: dict[str, Any], repository_root: Path, *, require_current: bool
+    manifest: dict[str, Any],
+    lock: dict[str, Any],
+    repository_root: Path,
+    *,
+    require_current: bool,
+    archive_reader: Callable[[str], bytes] | None = None,
 ) -> None:
     policy = require_reviewer_attestation_authority(manifest)
     admission = lock.get("reviewerAdmission")
     path = _object(manifest.get("planReview")).get("report")
     if policy is None or not isinstance(path, str) or not isinstance(admission, dict):
         raise LifecycleError("reviewer-lock-admission-missing", "Strict reviewer lock needs exact admission evidence")
-    review_data = _read_review_artifact(repository_root, path)
+    review_data = _read_review_artifact(repository_root, path) if archive_reader is None else archive_reader(path)
     if _byte_entry(path, review_data) not in lock["entries"]:
         raise LifecycleError("reviewer-lock-admission-mismatch", "Signed review bytes differ from the lock inventory")
     review = load_json_object(review_data, label="locked attested plan review")
@@ -272,11 +278,17 @@ def _verify_locked_reviewer_admission(
 
 
 def verify_archived_reviewer_package(
-    manifest: dict[str, Any], lock: dict[str, Any], package_root: Path, *, repository_root: Path
+    manifest: dict[str, Any],
+    lock: dict[str, Any],
+    package_relative: str,
+    *,
+    repository_root: Path,
+    read: Callable[[str], bytes],
+    members: Iterable[tuple[str, bool, bool]],
 ) -> None:
-    """Verify archived package closure after checking the anchored lock and declared file bytes."""
-    _reject_undeclared_top_level_files(manifest, package_root, lock["entries"], repository_root=repository_root)
-    _verify_locked_reviewer_admission(manifest, lock, repository_root, require_current=False)
+    """Check the archived review and package from the selected bounded view."""
+    _reject_top_level_members(manifest, package_relative, lock["entries"], members)
+    _verify_locked_reviewer_admission(manifest, lock, repository_root, require_current=False, archive_reader=read)
 
 
 def verify_plan_package_integrity(
@@ -700,11 +712,26 @@ def _reject_undeclared_top_level_files(
     *,
     repository_root: Path,
 ) -> None:
+    package_relative = package_root.relative_to(repository_root.resolve()).as_posix()
+    _reject_top_level_members(manifest, package_relative, entries, _top_level_members(package_root))
+
+
+def _top_level_members(directory: Path) -> Iterator[tuple[str, bool, bool]]:
+    for child in sorted(directory.iterdir(), key=lambda item: item.name):
+        linked = child.is_symlink()
+        yield child.name, linked, not linked and child.is_dir()
+
+
+def _reject_top_level_members(
+    manifest: dict[str, Any],
+    package_relative: str,
+    entries: list[dict[str, Any]],
+    members: Iterable[tuple[str, bool, bool]],
+) -> None:
     integrity = _object(manifest.get("packageIntegrity"))
     allowed = integrity.get("allowedUnlistedFiles", ["plan.lock.json"])
     if not isinstance(allowed, list) or not all(isinstance(item, str) and item for item in allowed):
         raise LifecycleError("plan-integrity-policy-invalid", "allowedUnlistedFiles must be a list of names")
-    package_relative = package_root.relative_to(repository_root.resolve()).as_posix()
     declared_top_level: set[str] = set()
     declared_directories: set[str] = set()
     for entry in entries:
@@ -717,26 +744,26 @@ def _reject_undeclared_top_level_files(
             declared_top_level.add(relative.as_posix())
         elif relative.parts:
             declared_directories.add(relative.parts[0])
-    for child in sorted(package_root.iterdir(), key=lambda item: item.name):
-        if child.is_symlink():
+    for name, linked, directory in members:
+        if linked:
             raise LifecycleError(
                 "plan-file-symlink",
                 "package top-level entries must not be symlinks",
-                {"path": child.name},
+                {"path": name},
             )
-        if child.is_dir():
-            if child.name not in declared_directories:
+        if directory:
+            if name not in declared_directories:
                 raise LifecycleError(
                     "plan-directory-undeclared",
                     "package contains an undeclared top-level directory",
-                    {"path": child.name},
+                    {"path": name},
                 )
             continue
-        if child.name in allowed:
+        if name in allowed:
             continue
-        if child.name not in declared_top_level:
+        if name not in declared_top_level:
             raise LifecycleError(
                 "plan-file-undeclared",
                 "package contains an undeclared top-level file",
-                {"path": child.name},
+                {"path": name},
             )
