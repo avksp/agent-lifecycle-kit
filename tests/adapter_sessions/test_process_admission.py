@@ -206,13 +206,16 @@ class ProcessAdmissionTests(unittest.TestCase):
                         return original_slot(observation, timeout=10.0)
 
                     # Give both real writers time to reach the revision check.
-                    with patch.object(journal._queue, "slot", side_effect=fixture_slot):
+                    with patch.object(journal._queue, "slot", side_effect=fixture_slot) as slot:
                         try:
                             admission.invoke(lambda: effects.append(name),
                                              input_digest="b" * 64)
-                            outcomes.append("DISPATCHED")
                         except RevisionConflict:
-                            outcomes.append("REVISION_CONFLICT")
+                            outcome = "REVISION_CONFLICT"
+                        else:
+                            outcome = "DISPATCHED"
+                        slot.assert_called()
+                        outcomes.append(outcome)
             threads = [threading.Thread(target=worker, args=(str(i),)) for i in range(2)]
             for thread in threads:
                 thread.start()
