@@ -29,11 +29,20 @@ class VerifyChainCommandTests(TestCase):
         before = inventory(self.root)
         target = io.StringIO()
         with redirect_stdout(target):
-            actual = main([
-                "audit", "verify-chain", "--repository-root", str(fixture.repo),
-                "--bundle", fixture.bundle_name, "--trust-config", str(fixture.trust),
-                "--anchor", str(fixture.anchor),
-            ])
+            actual = main(
+                [
+                    "audit",
+                    "verify-chain",
+                    "--repository-root",
+                    str(fixture.repo),
+                    "--bundle",
+                    fixture.bundle_name,
+                    "--trust-config",
+                    str(fixture.trust),
+                    "--anchor",
+                    str(fixture.anchor),
+                ]
+            )
         self.assertEqual(actual, exit_code)
         report = json.loads(target.getvalue())
         self.assertEqual(report["schemaVersion"], REPORT)
@@ -52,7 +61,7 @@ class VerifyChainCommandTests(TestCase):
     def test_tampered_receipt_returns_structured_mismatch_and_exit_one(self) -> None:
         (self.fixture.repo / "receipts/proof.json").unlink()
         report = self.call("MISMATCH", 1)
-        self.assertEqual(report["firstFailure"], {"check": "receipt-chain", "code": "chain-input-missing"})
+        self.assertEqual(report["firstFailure"], {"check": "reviewer-signatures", "code": "chain-input-missing"})
 
     def test_missing_anchor_returns_structured_input_error_and_exit_two(self) -> None:
         self.fixture.anchor.unlink()
@@ -61,12 +70,12 @@ class VerifyChainCommandTests(TestCase):
 
     def test_incomplete_history_returns_nonzero_not_checked(self) -> None:
         state = self.fixture.read(self.fixture.bundle["state"])
-        state["tasks"][0]["attempt"] = 2
+        state["schemaVersion"] = "agent-workflow-state.v7"
         write(self.fixture.state_path, state)
         self.fixture.rebuild_chain()
         self.fixture.refresh_anchor()
         report = self.call("NOT_CHECKED", 1)
-        self.assertEqual(report["firstFailure"]["code"], "chain-task-history-unsupported")
+        self.assertEqual(report["firstFailure"]["code"], "chain-state-profile-unsupported")
 
     def test_ordinary_version_command_retains_exit_zero_and_existing_schema(self) -> None:
         output = io.StringIO()
