@@ -271,6 +271,40 @@ class ChainTamperTests(TestCase):
             self.skipTest(f"Symbolic links unavailable on test volume: {type(exc).__name__}")
         self.refusal("lock", "authority-input-not-regular")
 
+    def test_every_admission_window_has_a_named_read_only_refusal(self):
+        before = inventory(self.root)
+        check = chain_verification._verify_admission_window
+        with patch.object(chain_verification, "_verify_admission_window", wraps=check) as probe:
+            self.assertEqual(self.fixture.verify()["status"], "VERIFIED")
+        events = {event["eventType"]: event["recordedAt"] for event in self._events()}
+        task = self.fixture.value["tasks"][0]
+        result_time, accept_time = events["task-result-committed"], events["task-accepted"]
+        outcome_time, final_time = events["final-audit-outcome-applied"], events["run-finalized"]
+        admission_windows = [
+            (self.fixture.read("plan/plan.lock.json"), {"latest": events["plan-adopted"]}),
+            (task["review"], {"earliest": result_time, "latest": accept_time}),
+            (task["implementationAuditReport"], {"earliest": result_time, "latest": accept_time}),
+            (self.fixture.value["finalAudit"], {"earliest": accept_time, "latest": outcome_time}),
+            (self.fixture.value["finalImplementationAudit"], {"earliest": outcome_time, "latest": final_time}),
+        ]
+        self.assertEqual([(call.args[0], call.kwargs) for call in probe.call_args_list], admission_windows)
+
+        for selected, phase in enumerate(("state-journal",) + ("reviewer-signatures",) * 4):
+            with self.subTest(admission_index=selected):
+                index = 0
+
+                def with_invalid_time(receipt, *, earliest=None, latest):
+                    nonlocal index
+                    if index == selected:
+                        later = datetime.fromisoformat(latest.replace("Z", "+00:00")) + timedelta(seconds=1)
+                        receipt = {"reviewerAdmission": {"observedAt": later.strftime("%Y-%m-%dT%H:%M:%SZ")}}
+                    index += 1
+                    return check(receipt, earliest=earliest, latest=latest)
+
+                with patch.object(chain_verification, "_verify_admission_window", side_effect=with_invalid_time):
+                    self.refusal(phase, "chain-reviewer-admission-outside-journal-window")
+        self.assertEqual(inventory(self.root), before)
+
     def test_cyclic_explicit_selectors_return_named_cli_input_errors(self):
         cycle = self.root / "cycle"
         try:

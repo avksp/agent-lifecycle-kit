@@ -351,6 +351,7 @@ def _verify_native_state(
     events = _events(journal, state)
     adopted = _object(events[0]["payload"].get("frozenPlanAuthority"), "chain-plan-authority-missing")
     _ensure(adopted.get("manifest") == manifest and adopted.get("lock") == lock, "chain-plan-authority-mismatch")
+    _verify_admission_window(lock, latest=events[0]["recordedAt"])
     _verify_authorization_receipts(evidence, state, events)
     return state, events
 
@@ -544,9 +545,23 @@ def _verify_reviewer_receipts(
     _ensure(final.get("proof") == state["finalProof"], "chain-final-proof-mismatch")
     _verify_terminal_proof(proof, state, events[-1])
     _final_attestation(
-        manifest, state, report, state["finalAudit"], "final-audit", recorded_at=events[-2]["recordedAt"]
+        manifest,
+        state,
+        report,
+        state["finalAudit"],
+        "final-audit",
+        earliest=events[-3]["recordedAt"],
+        latest=events[-2]["recordedAt"],
     )
-    _verify_final_implementation_receipt(evidence, manifest, state, final, proof, recorded_at=events[-1]["recordedAt"])
+    _verify_final_implementation_receipt(
+        evidence,
+        manifest,
+        state,
+        final,
+        proof,
+        earliest=events[-2]["recordedAt"],
+        latest=events[-1]["recordedAt"],
+    )
     integrity = proof.get("proofIntegrity")
     receipt = evidence.identity(integrity["receipt"])[1] if isinstance(integrity, dict) else None
     validate_final_proof_integrity(state=state, final_audit=report, receipt=receipt, final_proof=proof)
@@ -559,7 +574,8 @@ def _verify_final_implementation_receipt(
     final: dict[str, Any],
     proof: dict[str, Any],
     *,
-    recorded_at: str,
+    earliest: str,
+    latest: str,
 ) -> None:
     typed = state.get("finalImplementationAudit")
     final_typed_required = any(
@@ -585,7 +601,15 @@ def _verify_final_implementation_receipt(
     )
     _, typed_report = evidence.identity(identity)
     _verify_final_implementation(typed_report, state)
-    _final_attestation(manifest, state, typed_report, identity, "final-implementation-audit", recorded_at=recorded_at)
+    _final_attestation(
+        manifest,
+        state,
+        typed_report,
+        identity,
+        "final-implementation-audit",
+        earliest=earliest,
+        latest=latest,
+    )
 
 
 def _verify_terminal_proof(proof: dict[str, Any], state: dict[str, Any], event: dict[str, Any]) -> None:
@@ -672,6 +696,16 @@ def _verify_outcome_event(
     )
 
 
+def _verify_admission_window(receipt: dict[str, Any], *, latest: str, earliest: str | None = None) -> dict[str, Any]:
+    admission = _object(receipt.get("reviewerAdmission"), "chain-reviewer-admission-missing")
+    observed = parse_reviewer_utc(admission.get("observedAt"))
+    _ensure(
+        observed <= parse_reviewer_utc(latest) and (earliest is None or parse_reviewer_utc(earliest) <= observed),
+        "chain-reviewer-admission-outside-journal-window",
+    )
+    return admission
+
+
 def _final_attestation(
     manifest: dict[str, Any],
     state: dict[str, Any],
@@ -679,13 +713,10 @@ def _final_attestation(
     identity: dict[str, Any],
     phase: str,
     *,
-    recorded_at: str,
+    earliest: str,
+    latest: str,
 ) -> None:
-    archived = _object(identity.get("reviewerAdmission"), "chain-reviewer-admission-missing")
-    _ensure(
-        parse_reviewer_utc(archived.get("observedAt")) <= parse_reviewer_utc(recorded_at),
-        "chain-final-admission-after-transition",
-    )
+    archived = _verify_admission_window(identity, earliest=earliest, latest=latest)
     _ensure(
         final_reviewer_decision_from_manifest(state, manifest, report, phase=phase, archived=archived) == archived,
         "chain-final-attestation-mismatch",
@@ -708,6 +739,7 @@ def _verify_task_reviews(
 
 def _task_events(tasks: dict[str, dict[str, Any]], state: dict[str, Any], events: list[dict[str, Any]]) -> None:
     indices: dict[str, int] = {}
+    committed_at: dict[str, str] = {}
     accepted: set[str] = set()
     for event in events[3:-2]:
         payload = _object(event.get("payload"), "chain-task-event-missing")
@@ -728,8 +760,14 @@ def _task_events(tasks: dict[str, dict[str, Any]], state: dict[str, Any], events
         elif index == 1:
             _ensure(payload.get("result") == task["result"], "chain-task-result-mismatch")
             _require_absent_profile_data(payload, ("modelUsageReceipt",))
+            committed_at[task_id] = event["recordedAt"]
         else:
             _ensure(payload.get("review") == task["review"], "chain-task-acceptance-mismatch")
+            earliest, latest = committed_at[task_id], event["recordedAt"]
+            _verify_admission_window(task["review"], earliest=earliest, latest=latest)
+            typed = task.get("implementationAuditReport")
+            if typed is not None:
+                _verify_admission_window(typed, earliest=earliest, latest=latest)
             accepted.add(task_id)
         indices[task_id] = index + 1
     _ensure(accepted == tasks.keys(), "chain-task-acceptance-incomplete")

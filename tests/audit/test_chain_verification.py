@@ -378,29 +378,26 @@ class ChainVerificationTests(TestCase):
             snapshot = chain_verification._Snapshot(Path(temp))
             check = chain_verification._verify_final_implementation_receipt
             timestamp = "2026-01-01T12:00:00Z"
-            check(snapshot, {}, {}, {}, {}, recorded_at=timestamp)
+            check(snapshot, {}, {}, {}, {}, earliest=timestamp, latest=timestamp)
             with self.assertRaises(LifecycleError) as caught:
-                check(snapshot, {}, {}, {"finalImplementationAudit": {}}, {}, recorded_at=timestamp)
+                check(snapshot, {}, {}, {"finalImplementationAudit": {}}, {}, earliest=timestamp, latest=timestamp)
             self.assertEqual(caught.exception.code, "chain-final-implementation-mismatch")
 
-    def test_final_admission_respects_journal_second_for_both_phases(self):
-        check = chain_verification._final_attestation
-        transition = "2026-01-01T12:00:00Z"
-        archive = {"observedAt": transition}
-        identity = {"reviewerAdmission": archive}
-        for phase in ("final-audit", "final-implementation-audit"):
-            with (
-                self.subTest(phase=phase),
-                patch.object(
-                    chain_verification, "final_reviewer_decision_from_manifest", return_value=archive
-                ) as decision,
-            ):
-                check({}, {}, {}, identity, phase, recorded_at=transition)
-                check({}, {}, {}, identity, phase, recorded_at="2026-01-01T12:00:01Z")
-                with self.assertRaises(LifecycleError) as caught:
-                    check({}, {}, {}, identity, phase, recorded_at="2026-01-01T11:59:59Z")
-                self.assertEqual(caught.exception.code, "chain-final-admission-after-transition")
-                self.assertEqual(decision.call_count, 2)
+    def test_admission_time_includes_the_valid_window_endpoints(self):
+        check = chain_verification._verify_admission_window
+        first = "2026-01-01T12:00:00Z"
+        last = "2026-01-01T12:00:02Z"
+        for observed in (first, "2026-01-01T12:00:01Z", last):
+            admission = {"observedAt": observed}
+            receipt = {"reviewerAdmission": admission}
+            with self.subTest(observed=observed):
+                self.assertEqual(check(receipt, earliest=first, latest=last), admission)
+                self.assertEqual(check(receipt, latest=last), admission)
+        for observed in ("2026-01-01T11:59:59Z", "2026-01-01T12:00:03Z"):
+            receipt = {"reviewerAdmission": {"observedAt": observed}}
+            with self.subTest(observed=observed), self.assertRaises(LifecycleError) as caught:
+                check(receipt, earliest=first, latest=last)
+            self.assertEqual(caught.exception.code, "chain-reviewer-admission-outside-journal-window")
 
     def test_journal_payload_must_be_an_object(self):
         with self.assertRaises(LifecycleError) as caught:
@@ -447,8 +444,11 @@ class ChainVerificationTests(TestCase):
     def test_disabled_operator_profile_is_explicitly_not_applicable(self):
         with TemporaryDirectory() as temp:
             fixture = AnchoredRunFixture(Path(temp).resolve(strict=True), operator_required=False)
-            result = fixture.verify()
+            check = chain_verification._verify_admission_window
+            with patch.object(chain_verification, "_verify_admission_window", wraps=check) as probe:
+                result = fixture.verify()
             self.assertEqual(result["exitCode"], 0, result)
+            self.assertEqual(probe.call_count, 3)
             self.assertIn(
                 {
                     "check": "operator-signatures",
