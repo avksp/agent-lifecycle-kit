@@ -271,6 +271,40 @@ class ChainTamperTests(TestCase):
             self.skipTest(f"Symbolic links unavailable on test volume: {type(exc).__name__}")
         self.refusal("lock", "authority-input-not-regular")
 
+    def test_cyclic_explicit_selectors_return_named_cli_input_errors(self):
+        cycle = self.root / "cycle"
+        try:
+            cycle.symlink_to(cycle.name)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"Symbolic links unavailable on test volume: {type(exc).__name__}")
+        before = inventory(self.fixture.repo)
+        cases = (
+            (cycle, self.fixture.trust, "chain-evidence-root-not-canonical"),
+            (self.fixture.repo, cycle, "chain-trust-path-not-canonical"),
+        )
+        for root, trust, code in cases:
+            with self.subTest(code=code), redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(
+                    [
+                        "audit",
+                        "verify-chain",
+                        "--repository-root",
+                        str(root),
+                        "--bundle",
+                        self.fixture.bundle_name,
+                        "--trust-config",
+                        str(trust),
+                        "--anchor",
+                        str(self.fixture.anchor),
+                    ]
+                )
+                report = json.loads(stdout.getvalue())
+                self.assertEqual((exit_code, report["exitCode"], report["status"]), (2, 2, "INVALID_INPUT"))
+                self.assertEqual(report["firstFailure"], {"check": "input", "code": code})
+                self.assertFalse(report["authorityGranted"])
+                self.assertEqual(inventory(self.fixture.repo), before)
+                self.assertEqual(os.readlink(cycle), cycle.name)
+
     def test_nonregular_review_is_refused(self):
         name = self.fixture.repo / "plan/plan-review.json"
         name.unlink()

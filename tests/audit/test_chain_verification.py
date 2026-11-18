@@ -377,10 +377,30 @@ class ChainVerificationTests(TestCase):
         with TemporaryDirectory() as temp:
             snapshot = chain_verification._Snapshot(Path(temp))
             check = chain_verification._verify_final_implementation_receipt
-            check(snapshot, {}, {}, {}, {})
+            timestamp = "2026-01-01T12:00:00Z"
+            check(snapshot, {}, {}, {}, {}, recorded_at=timestamp)
             with self.assertRaises(LifecycleError) as caught:
-                check(snapshot, {}, {}, {"finalImplementationAudit": {}}, {})
+                check(snapshot, {}, {}, {"finalImplementationAudit": {}}, {}, recorded_at=timestamp)
             self.assertEqual(caught.exception.code, "chain-final-implementation-mismatch")
+
+    def test_final_admission_respects_journal_second_for_both_phases(self):
+        check = chain_verification._final_attestation
+        transition = "2026-01-01T12:00:00Z"
+        archive = {"observedAt": transition}
+        identity = {"reviewerAdmission": archive}
+        for phase in ("final-audit", "final-implementation-audit"):
+            with (
+                self.subTest(phase=phase),
+                patch.object(
+                    chain_verification, "final_reviewer_decision_from_manifest", return_value=archive
+                ) as decision,
+            ):
+                check({}, {}, {}, identity, phase, recorded_at=transition)
+                check({}, {}, {}, identity, phase, recorded_at="2026-01-01T12:00:01Z")
+                with self.assertRaises(LifecycleError) as caught:
+                    check({}, {}, {}, identity, phase, recorded_at="2026-01-01T11:59:59Z")
+                self.assertEqual(caught.exception.code, "chain-final-admission-after-transition")
+                self.assertEqual(decision.call_count, 2)
 
     def test_journal_payload_must_be_an_object(self):
         with self.assertRaises(LifecycleError) as caught:

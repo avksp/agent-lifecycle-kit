@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import os
 from datetime import datetime, timedelta
@@ -157,7 +158,7 @@ def verify_chain(
     phase = "input"
     try:
         root = repository_root.absolute()
-        _ensure(root.resolve(strict=True) == root, "chain-evidence-root-not-canonical")
+        _require_canonical_selector(root, "chain-evidence-root-not-canonical")
         snapshot = _Snapshot(root)
         bundle = validate_chain_input(snapshot.object(bundle_path), BUNDLE)
         trust_raw = _trusted_input(root, trust_config_path)
@@ -233,9 +234,22 @@ def verify_chain(
     return _report("VERIFIED", 0, checks)
 
 
+def _require_canonical_selector(path: Path, code: str) -> None:
+    try:
+        resolved = path.resolve(strict=True)
+    except RuntimeError as exc:
+        # Path.resolve uses RuntimeError for a symlink loop on Python 3.11 and 3.12.
+        raise LifecycleError(code, "Unable to resolve an explicit verification input") from exc
+    except OSError as exc:
+        if exc.errno != errno.ELOOP:
+            raise
+        raise LifecycleError(code, "Unable to resolve an explicit verification input") from exc
+    _ensure(resolved == path, code)
+
+
 def _trusted_input(root: Path, path: Path) -> bytes:
     selected = path.absolute()
-    _ensure(selected.resolve(strict=True) == selected, "chain-trust-path-not-canonical")
+    _require_canonical_selector(selected, "chain-trust-path-not-canonical")
     _ensure(not selected.is_relative_to(root), "chain-trust-inside-evidence-root")
     return _bounded_file(selected.parent, selected, _MAX_FILE_BYTES)
 
@@ -529,8 +543,10 @@ def _verify_reviewer_receipts(
     _ensure(final.get("finalAudit") == state["finalAudit"] == proof.get("finalAudit"), "chain-final-review-mismatch")
     _ensure(final.get("proof") == state["finalProof"], "chain-final-proof-mismatch")
     _verify_terminal_proof(proof, state, events[-1])
-    _final_attestation(manifest, state, report, state["finalAudit"], "final-audit")
-    _verify_final_implementation_receipt(evidence, manifest, state, final, proof)
+    _final_attestation(
+        manifest, state, report, state["finalAudit"], "final-audit", recorded_at=events[-2]["recordedAt"]
+    )
+    _verify_final_implementation_receipt(evidence, manifest, state, final, proof, recorded_at=events[-1]["recordedAt"])
     integrity = proof.get("proofIntegrity")
     receipt = evidence.identity(integrity["receipt"])[1] if isinstance(integrity, dict) else None
     validate_final_proof_integrity(state=state, final_audit=report, receipt=receipt, final_proof=proof)
@@ -542,6 +558,8 @@ def _verify_final_implementation_receipt(
     state: dict[str, Any],
     final: dict[str, Any],
     proof: dict[str, Any],
+    *,
+    recorded_at: str,
 ) -> None:
     typed = state.get("finalImplementationAudit")
     final_typed_required = any(
@@ -567,7 +585,7 @@ def _verify_final_implementation_receipt(
     )
     _, typed_report = evidence.identity(identity)
     _verify_final_implementation(typed_report, state)
-    _final_attestation(manifest, state, typed_report, identity, "final-implementation-audit")
+    _final_attestation(manifest, state, typed_report, identity, "final-implementation-audit", recorded_at=recorded_at)
 
 
 def _verify_terminal_proof(proof: dict[str, Any], state: dict[str, Any], event: dict[str, Any]) -> None:
@@ -655,9 +673,19 @@ def _verify_outcome_event(
 
 
 def _final_attestation(
-    manifest: dict[str, Any], state: dict[str, Any], report: dict[str, Any], identity: dict[str, Any], phase: str
+    manifest: dict[str, Any],
+    state: dict[str, Any],
+    report: dict[str, Any],
+    identity: dict[str, Any],
+    phase: str,
+    *,
+    recorded_at: str,
 ) -> None:
     archived = _object(identity.get("reviewerAdmission"), "chain-reviewer-admission-missing")
+    _ensure(
+        parse_reviewer_utc(archived.get("observedAt")) <= parse_reviewer_utc(recorded_at),
+        "chain-final-admission-after-transition",
+    )
     _ensure(
         final_reviewer_decision_from_manifest(state, manifest, report, phase=phase, archived=archived) == archived,
         "chain-final-attestation-mismatch",
