@@ -36,13 +36,21 @@ SHA-256 сырых байтов всех использованных доказ
 
 ## Настройте проверку
 
-Запускайте этот workflow из защищённого источника. Назначьте репозиторий
-владельца проверки и полный SHA его ревизии. В защищённом источнике находятся
-trust.json и anchor.json. Владелец готовит образ с установленным CLI 2.51.0,
-доступным по /usr/local/bin/agent-lifecycle, и закрепляет digest образа.
-Образ и подключаемые каталоги содержат только необходимые для проверки
-данные. Используйте checkout PR только как данные.
+Храните workflow в защищённом источнике владельца проверки. Если организация
+или предприятие GitHub поддерживает workflow из ruleset, укажите этот
+источник и workflow в правиле обязательной проверки перед слиянием.
+Привяжите проверку к выбранному коммиту PR. Проверьте правило на тестовом PR.
+
+В этом примере владелец проверки размещает trust.json и anchor.json в
+проверенном публичном репозитории с закреплённым полным SHA. Закрытые
+входные данные загружайте доверенным шагом с правом чтения только этого
+репозитория. Учётные данные оставляйте за пределами контейнера.
+
+Подготовьте образ с установленным CLI 2.51.0 по пути
+/usr/local/bin/agent-lifecycle и закрепите digest образа. Используйте
+checkout PR как данные.
 [GitHub Secure use](https://docs.github.com/en/actions/reference/security/secure-use)
+[Workflow из GitHub ruleset](https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-workflows-to-pass-before-merging)
 
 ```yaml
 name: Verify selected run

@@ -13,9 +13,9 @@ grant, one attempt per task and one final outcome. A retry, renewal or
 additional unsupported admission yields NOT_CHECKED.
 
 The bundle selects repository-relative paths to the manifest, lock, state,
-journal and receipt chain. Use agent-chain-verification-bundle.v1. Include
-raw SHA-256 digests for the files used by the selected proof. Exclude the bundle
-and chain files. The verifier derives the required closure from the native
+journal and receipt chain. Use agent-chain-verification-bundle.v1. In the
+receipt chain, include raw SHA-256 digests of the files used by the proof.
+Exclude the bundle and chain files. The verifier derives the required closure from the native
 evidence before it compares the chain inventory.
 
 The trust configuration pins the canonical reviewer policy digest and the
@@ -33,12 +33,20 @@ Disabled operator signatures are explicitly NOT_APPLICABLE.
 
 ## Configure the job
 
-Use a workflow and required check protected from changes by the PR. Replace
-the verifier repository and reviewed commit placeholders. The verifier owner
-provides trust.json and anchor.json there. Prepare a credential-free image
-with the reviewed 2.51.0 CLI installed at /usr/local/bin/agent-lifecycle and
-pin its image digest. Use the PR checkout as evidence.
+Store the workflow in a protected verifier-owned source. Where your GitHub
+organization or enterprise supports ruleset workflows, select that source
+and workflow in the rule that requires workflows to pass before merge.
+Bind the expected check to the selected PR commit. Verify the rule on a
+test PR before relying on it. In this example the verifier provides
+trust.json and anchor.json in a reviewed public repository at a full SHA.
+Fetch private verifier inputs in a trusted checkout step with a read-only
+credential scoped to that repository. Keep the credential outside the
+verification container.
+
+Prepare a credential-free image with the reviewed 2.51.0 CLI installed at
+/usr/local/bin/agent-lifecycle and pin its image digest. Use the PR checkout as evidence.
 [GitHub secure use reference](https://docs.github.com/en/actions/reference/security/secure-use)
+[GitHub ruleset workflows](https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-workflows-to-pass-before-merging)
 
 ```yaml
 name: Verify selected run
