@@ -47,7 +47,7 @@ class ChainTamperTests(TestCase):
 
     def test_missing_terminal_proof_is_named_a_required_receipt_mismatch(self):
         (self.fixture.repo / "receipts/proof.json").unlink()
-        self.refusal("receipt-chain", "chain-input-missing")
+        self.refusal("reviewer-signatures", "chain-input-missing")
 
     def test_unpinned_signer_refuses_even_when_the_selection_digests_match(self):
         name = "receipts/final-review.json.operator-signature.json"
@@ -91,7 +91,7 @@ class ChainTamperTests(TestCase):
         changed = self.fixture.read(name)
         changed["verdict"] = "BLOCKED"
         write(self.fixture.repo / name, changed)
-        self.refusal("receipt-chain", "chain-receipt-artifact-mismatch")
+        self.refusal("reviewer-signatures", "chain-artifact-bytes-mismatch")
 
     def test_task_retry_without_archived_admission_cannot_pass(self):
         changed = self.fixture.read(self.fixture.bundle["state"])
@@ -99,7 +99,7 @@ class ChainTamperTests(TestCase):
         write(self.fixture.state_path, changed)
         self.fixture.rebuild_chain()
         self.fixture.refresh_anchor()
-        self.refusal("reviewer-signatures", "chain-task-history-unsupported", status="NOT_CHECKED")
+        self.refusal("state-journal", "workflow-storage-invalid")
 
     def _reanchor_history(self, events: list[dict]) -> None:
         changed = self.fixture.read(self.fixture.bundle["state"])
@@ -107,9 +107,8 @@ class ChainTamperTests(TestCase):
             entry["stateRevision"] = revision
         changed["stateRevision"] = events[-1]["stateRevision"]
         changed["operationLedger"] = {
-            entry["operationId"]: {
-                key: entry[key] for key in ("stateRevision", "eventType", "recordedAt")
-            } for entry in events
+            entry["operationId"]: {key: entry[key] for key in ("stateRevision", "eventType", "recordedAt")}
+            for entry in events
         }
         self.fixture.value = changed
         write(self.fixture.state_path, changed)
@@ -120,8 +119,9 @@ class ChainTamperTests(TestCase):
         self.fixture.refresh_anchor()
 
     def _events(self) -> list[dict]:
-        return [json.loads(row) for row in
-                (self.fixture.repo / self.fixture.bundle["journal"]).read_bytes().splitlines()]
+        return [
+            json.loads(row) for row in (self.fixture.repo / self.fixture.bundle["journal"]).read_bytes().splitlines()
+        ]
 
     def test_multi_plan_history_has_no_successful_projection(self):
         events = self._events()
@@ -133,14 +133,17 @@ class ChainTamperTests(TestCase):
         events = self._events()
         events.insert(-1, {**events[-2], "operationId": "second-outcome"})
         self._reanchor_history(events)
-        self.refusal("reviewer-signatures", "chain-outcome-history-unsupported", status="NOT_CHECKED")
+        self.refusal("state-journal", "chain-outcome-history-unsupported", status="NOT_CHECKED")
 
     def test_one_second_observation_that_straddles_key_window_is_not_checked(self):
         terminal = self._events()[-1]
         before = {**self.fixture.value, "stateRevision": terminal["stateRevision"] - 1}
         audit = self.fixture.read("receipts/final-review.json")
         detached = envelope(
-            before, "accept", operation_id=terminal["operationId"], subject=audit,
+            before,
+            "accept",
+            operation_id=terminal["operationId"],
+            subject=audit,
             validFrom=terminal["recordedAt"][:-1] + ".500000Z",
         )
         write(self.fixture.repo / "receipts/final-review.json.operator-signature.json", detached)
@@ -150,7 +153,9 @@ class ChainTamperTests(TestCase):
 
     def test_advisory_diagnostic_does_not_prove_native_operator_admission(self):
         self.fixture = AnchoredRunFixture(
-            self.root / "advisory", operator_required=False, operator_advisory=True,
+            self.root / "advisory",
+            operator_required=False,
+            operator_advisory=True,
         )
         self.refusal("operator-signatures", "chain-advisory-operator-not-checked", status="NOT_CHECKED")
 
@@ -199,7 +204,7 @@ class ChainTamperTests(TestCase):
             f.truncate(8 * 1024 * 1024 + 1)
         self.refusal("lock", "chain-input-byte-limit")
 
-    def test_selected_unreadable_receipt_is_mismatch(self):
+    def test_selected_unreadable_receipt_is_invalid_input(self):
         original = chain_verification._bounded_file
 
         def failed(root, path, cap):
@@ -208,7 +213,7 @@ class ChainTamperTests(TestCase):
             return original(root, path, cap)
 
         with patch.object(chain_verification, "_bounded_file", side_effect=failed):
-            self.refusal("receipt-chain", "chain-input-unreadable")
+            self.refusal("reviewer-signatures", "chain-input-unreadable", status="INVALID_INPUT", exit_code=2)
 
     def test_selected_bytes_observed_to_drift_cannot_pass(self):
         original = chain_verification._bounded_file
