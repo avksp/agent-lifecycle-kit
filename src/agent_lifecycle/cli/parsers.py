@@ -307,6 +307,11 @@ def _add_review_mesh_parser(subparsers: argparse._SubParsersAction[argparse.Argu
 def _add_audit_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     audit = subparsers.add_parser("audit", help="audit commands")
     audit_sub = audit.add_subparsers(dest="audit_command", required=True)
+    chain = audit_sub.add_parser("verify-chain", help="verify an independently anchored run offline")
+    chain.add_argument("--repository-root", required=True)
+    chain.add_argument("--bundle", required=True)
+    chain.add_argument("--trust-config", required=True)
+    chain.add_argument("--anchor", required=True)
     ownership = audit_sub.add_parser("ownership")
     ownership.add_argument("--manifest", required=True)
     ownership.add_argument("--base", required=False)

@@ -6,13 +6,17 @@ import re
 from datetime import datetime
 from typing import Any, NoReturn
 
-from agent_lifecycle.contracts.canonical import canonical_bytes
+from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
 from agent_lifecycle.contracts.errors import LifecycleError
 
 TRUST_ROOT_V1 = "agent-reviewer-trust-root.v1"
 ATTESTATION_V1 = "agent-reviewer-attestation.v1"
 CLAIMS_V1 = "agent-reviewer-identity-claims.v1"
 PROVENANCE_VALIDATION_V1 = "agent-reviewer-provenance-validation.v1"
+REVIEWER_ATTESTATION_POLICY_V1 = "agent-reviewer-attestation-policy.v1"
+REVIEWER_ATTESTATION_AUTHORITY_V1 = "agent-reviewer-attestation-authority.v1"
+REVIEWER_REQUIRED_LOCK = "agent-plan-lock.v4"
+REVIEWER_REQUIRED_STATE = "agent-workflow-state.v8"
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 _SIGNATURE = re.compile(r"[0-9a-f]{128}\Z")
 _TIME = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z\Z")
@@ -32,6 +36,16 @@ _CLAIM_FIELDS = {
     "expiresAt",
 }
 _ISSUER_FIELDS = {"issuerId", "fingerprint", "publicKeyHex", "actorIds", "phases"}
+_ASSIGNMENT_FIELDS = {
+    "issuerId",
+    "reviewerActorId",
+    "reviewerSessionId",
+    "authorActorId",
+    "authorSessionId",
+    "authorFingerprint",
+    "validFrom",
+    "expiresAt",
+}
 
 
 def _schema(schema_id: str, fields: dict[str, Any]) -> dict[str, Any]:
@@ -140,6 +154,44 @@ REVIEWER_IDENTITY_SCHEMAS = {
     ),
 }
 
+REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_POLICY_V1] = {
+    **_schema(
+        REVIEWER_ATTESTATION_POLICY_V1,
+        {
+            "schemaVersion": {"const": REVIEWER_ATTESTATION_POLICY_V1},
+            "mode": {"enum": ["off", "advisory", "required"]},
+            "trustRoot": {"$ref": TRUST_ROOT_V1},
+            "trustRootDigest": _HEX,
+            "assignments": {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 512,
+                "additionalProperties": _schema(
+                    "agent-reviewer-decision-assignment.v1",
+                    {
+                        **{name: _TEXT for name in sorted(_ASSIGNMENT_FIELDS - {"validFrom", "expiresAt"})},
+                        "validFrom": _UTC,
+                        "expiresAt": _UTC,
+                    },
+                ),
+            },
+        },
+    ),
+    "required": ["schemaVersion", "mode"],
+    "if": {"properties": {"mode": {"const": "off"}}},
+    "then": {"maxProperties": 2},
+    "else": {"required": ["trustRoot", "trustRootDigest", "assignments"]},
+}
+REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_AUTHORITY_V1] = _schema(
+    REVIEWER_ATTESTATION_AUTHORITY_V1,
+    {
+        "schemaVersion": {"const": REVIEWER_ATTESTATION_AUTHORITY_V1},
+        "policyDigest": _HEX,
+        "lockSchemaVersion": {"const": REVIEWER_REQUIRED_LOCK},
+        "stateSchemaVersion": {"const": REVIEWER_REQUIRED_STATE},
+    },
+)
+
 
 def _invalid(field: str) -> NoReturn:
     raise LifecycleError("reviewer-provenance-shape-invalid", f"Invalid {field}")
@@ -205,6 +257,74 @@ def validate_reviewer_trust_root(value: Any) -> dict[str, Any]:
     return root
 
 
+def validate_reviewer_attestation_policy(value: Any) -> dict[str, Any]:
+    """Validate the frozen, operator-selected public policy."""
+    fields = {"schemaVersion", "mode"}
+    if not isinstance(value, dict) or value.get("mode") != "off":
+        fields.update({"trustRoot", "trustRootDigest", "assignments"})
+    policy = _closed(value, fields, "reviewer attestation policy")
+    mode = policy["mode"]
+    if policy["schemaVersion"] != REVIEWER_ATTESTATION_POLICY_V1 or mode not in ("off", "advisory", "required"):
+        _invalid("reviewer attestation mode")
+    if mode == "off":
+        return policy
+    root = validate_reviewer_trust_root(policy["trustRoot"])
+    if policy["trustRootDigest"] != canonical_digest(root):
+        _invalid("reviewer trust root pin")
+    assignments = policy["assignments"]
+    if type(assignments) is not dict or not 1 <= len(assignments) <= 512:
+        _invalid("reviewer assignments")
+    for key, assignment in assignments.items():
+        _text(key, "assignment")
+        entry = _closed(assignment, _ASSIGNMENT_FIELDS, "reviewer assignment")
+        for field in sorted(_ASSIGNMENT_FIELDS - {"validFrom", "expiresAt", "authorFingerprint"}):
+            _text(entry[field], field)
+        author = entry["authorFingerprint"]
+        if not isinstance(author, str) or not author.startswith("ed25519:"):
+            _invalid("author fingerprint")
+        _digest(author[8:], "author fingerprint")
+        if parse_reviewer_utc(entry["validFrom"]) >= parse_reviewer_utc(entry["expiresAt"]):
+            _invalid("reviewer key validity")
+    if len(canonical_bytes(policy)) > 262_144:
+        _invalid("reviewer policy byte limit")
+    return policy
+
+
+def reviewer_attestation_authority(policy: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schemaVersion": REVIEWER_ATTESTATION_AUTHORITY_V1,
+        "policyDigest": canonical_digest(policy),
+        "lockSchemaVersion": REVIEWER_REQUIRED_LOCK,
+        "stateSchemaVersion": REVIEWER_REQUIRED_STATE,
+    }
+
+
+def require_reviewer_attestation_authority(container: dict[str, Any], *, state: bool = False) -> dict[str, Any] | None:
+    policy = (
+        validate_reviewer_attestation_policy(container["reviewerAttestationPolicy"])
+        if "reviewerAttestationPolicy" in container
+        else None
+    )
+    required = policy is not None and policy["mode"] == "required"
+    if required and policy is not None:
+        if container.get("reviewerAttestationAuthority") != reviewer_attestation_authority(policy):
+            _invalid("required reviewer authority marker")
+        if not state:
+            integrity = container.get("packageIntegrity")
+            extensions = container.get("extensions")
+            if not isinstance(integrity, dict) or integrity.get("required") is not True:
+                _invalid("reviewer authority requires whole-package integrity")
+            if integrity.get("lockSchemaVersion") != "agent-plan-lock.v2":
+                _invalid("reviewer authority requires the full-package lock inventory")
+            if container.get("reviewMesh") or (isinstance(extensions, dict) and extensions.get("reviewPolicy")):
+                _invalid("unsupported strict reviewer and composite review combination")
+    elif "reviewerAttestationAuthority" in container:
+        _invalid("reviewer authority marker without required policy")
+    if state and (container.get("schemaVersion") == REVIEWER_REQUIRED_STATE) != required:
+        _invalid("required reviewer policy and native v8 must occur together")
+    return policy if policy is not None and policy["mode"] != "off" else None
+
+
 def validate_reviewer_attestation_shape(value: Any) -> dict[str, Any]:
     attestation = _closed(value, {"schemaVersion", "claims", "signer", "signature"}, "attestation")
     if attestation["schemaVersion"] != ATTESTATION_V1:
@@ -237,9 +357,16 @@ __all__ = [
     "ATTESTATION_V1",
     "CLAIMS_V1",
     "PROVENANCE_VALIDATION_V1",
+    "REVIEWER_ATTESTATION_AUTHORITY_V1",
+    "REVIEWER_ATTESTATION_POLICY_V1",
     "REVIEWER_IDENTITY_SCHEMAS",
+    "REVIEWER_REQUIRED_LOCK",
+    "REVIEWER_REQUIRED_STATE",
     "TRUST_ROOT_V1",
     "parse_reviewer_utc",
+    "require_reviewer_attestation_authority",
+    "reviewer_attestation_authority",
+    "validate_reviewer_attestation_policy",
     "validate_reviewer_attestation_shape",
     "validate_reviewer_trust_root",
 ]

@@ -49,6 +49,7 @@ from agent_lifecycle.workflow.audit_evidence import (
 from agent_lifecycle.workflow.audit_evidence import (
     validate_task_evidence_paths,
 )
+from agent_lifecycle.workflow.reviewer_gate import implementation_reviewer_decision
 
 
 def task_implementation_audit_required(
@@ -101,6 +102,10 @@ def validate_task_implementation_audit_artifact(
     root = package_root(state_path, state)
     rel = normalize_repo_path(report_path, label="implementation audit report")
     report = read_json_object(root / rel, label="implementation audit report")
+    identity = artifact_identity(root, rel, report)
+    admission = implementation_audit_reviewer_admission(state_path, state, task, report)
+    if admission is not None:
+        identity["reviewerAdmission"] = admission
     if report.get("schemaVersion") == SECURITY_ANALYSIS_AUDIT_SCHEMA:
         security_validation = validate_security_analysis_audit(report, state=state, task=task)
         if (
@@ -114,7 +119,6 @@ def validate_task_implementation_audit_artifact(
                 {"taskId": task.get("id"), "validation": security_validation},
             )
         _validate_security_verification_artifact(state_path, state, task, report)
-        identity = artifact_identity(root, rel, report)
         return {
             **identity,
             "taskId": report.get("taskId"),
@@ -133,7 +137,6 @@ def validate_task_implementation_audit_artifact(
         validate_implementation_audit_report,
     )
 
-    identity = artifact_identity(root, rel, report)
     validation = validate_implementation_audit_report(
         report,
         state=state,
@@ -160,6 +163,20 @@ def validate_task_implementation_audit_artifact(
     }
 
 
+def implementation_audit_reviewer_admission(
+    state_path: Path, state: dict[str, Any], task: dict[str, Any], report: dict[str, Any]
+) -> dict[str, Any] | None:
+    if "reviewerAttestationAuthority" not in state:
+        return None
+    archived = None
+    if task.get("status") == "ACCEPTED":
+        accepted = task.get("implementationAuditReport")
+        archived = accepted.get("reviewerAdmission") if isinstance(accepted, dict) else None
+        if not isinstance(archived, dict):
+            raise LifecycleError("reviewer-admission-required", "Accepted audit lacks its reviewer admission")
+    return implementation_reviewer_decision(state_path, state, task, report, archived=archived)
+
+
 def validate_task_implementation_audit_for_rework(
     state_path: Path,
     state: dict[str, Any],
@@ -171,6 +188,10 @@ def validate_task_implementation_audit_for_rework(
     root = package_root(state_path, state)
     rel = normalize_repo_path(report_path, label="implementation audit report")
     report = read_json_object(root / rel, label="implementation audit report")
+    identity = artifact_identity(root, rel, report)
+    admission = implementation_audit_reviewer_admission(state_path, state, task, report)
+    if admission is not None:
+        identity["reviewerAdmission"] = admission
     if report.get("schemaVersion") == SECURITY_ANALYSIS_AUDIT_SCHEMA:
         security_validation = validate_security_analysis_audit(report, state=state, task=task)
         if security_validation.get("status") != "PASS":
@@ -179,7 +200,6 @@ def validate_task_implementation_audit_for_rework(
                 "security analysis audit report failed contract validation",
                 {"validation": security_validation},
             )
-        identity = artifact_identity(root, rel, report)
         summary = {
             **identity,
             "taskId": report.get("taskId"),
@@ -199,7 +219,6 @@ def validate_task_implementation_audit_for_rework(
         validate_implementation_audit_report,
     )
 
-    identity = artifact_identity(root, rel, report)
     validation = validate_implementation_audit_report(
         report,
         state=state,

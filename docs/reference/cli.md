@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.50.0
+python -m pip install agent-lifecycle-kit==2.51.0
 ```
 
 ## Task evidence identity
@@ -693,6 +693,10 @@ cannot accept a workflow task or promote an adapter.
   receipt never accepts a task.
 - `agent-lifecycle audit final-implementation`: aggregate accepted
   implementation audit reports before final workflow proof.
+- `agent-lifecycle audit verify-chain --repository-root <path> --bundle <relative-path>
+  --trust-config <path> --anchor <path>`: check one anchored strict run offline.
+  Exit 0 for verified evidence, 1 for mismatch or incomplete coverage, and 2
+  for invalid input. See [Verify an anchored run in CI](../guides/verify-chain-in-ci.md).
 - `agent-lifecycle audit package --plan-dir <dir>`: audit a plan directory and,
   when `--state <path>` is supplied, aggregate its implementation audit. Add
   `--require-frozen --require-implementation --strict` for a completed handoff

@@ -10,6 +10,7 @@ from agent_lifecycle.contracts.canonical import canonical_digest
 from agent_lifecycle.contracts.deadline_schemas import utc_microseconds
 from agent_lifecycle.contracts.ed25519 import fingerprint
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE
 
 POLICY = "agent-operator-signature-policy.v1"
 AUTHORITY = "agent-operator-signature-authority.v1"
@@ -135,8 +136,12 @@ def require_operator_authority(container: dict[str, Any], *, state: bool = False
                 raise operator_error("Required operator policy needs whole-package integrity")
     elif "operatorSignatureAuthority" in container:
         raise operator_error("Off or advisory operator policy must omit its authority marker")
-    if state and (container.get("schemaVersion") == WORKFLOW_STATE_V7) != required:
-        raise operator_error("Required operator policy and native v7 must occur together")
+    if state:
+        schema = container.get("schemaVersion")
+        if (schema == WORKFLOW_STATE_V7 and not required) or (
+            required and schema not in {WORKFLOW_STATE_V7, REVIEWER_REQUIRED_STATE}
+        ):
+            raise operator_error("Required operator policy needs an operator-capable native state")
     return policy
 
 

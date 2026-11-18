@@ -20,12 +20,15 @@ from agent_lifecycle.contracts.plan_manifest_schemas import (
     MANIFEST_VALIDATION_SCHEMA,
 )
 from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
+from agent_lifecycle.contracts.reviewer_identity_schemas import require_reviewer_attestation_authority
 from agent_lifecycle.planning.prerequisites import prerequisite_dependencies
 from agent_lifecycle.research.preflight import decision_research_blockers
 
 _TOP_LEVEL = {
     "operatorSignaturePolicy",
     "operatorSignatureAuthority",
+    "reviewerAttestationPolicy",
+    "reviewerAttestationAuthority",
     "schemaVersion",
     "status",
     "planRevision",
@@ -307,11 +310,37 @@ def _artifact_path_blockers(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     return blockers
 
 
-def _operator_policy_blockers(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+def _signature_policy_blockers(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
     try:
         require_operator_authority(manifest)
+        reviewer = require_reviewer_attestation_authority(manifest)
+        if reviewer is not None and reviewer["mode"] == "required":
+            _require_reviewer_assignments(manifest, reviewer)
     except LifecycleError as exc:
         blockers.append(_blocker(exc.code, exc.message))
+
+
+def _require_reviewer_assignments(manifest: dict[str, Any], policy: dict[str, Any]) -> None:
+    assignments = {"freeze", "final-audit"}
+    implementation = manifest.get("implementationAudit")
+    task_audits = isinstance(implementation, dict) and implementation.get("required") is True
+    if isinstance(implementation, dict) and implementation.get("finalRequired") is True:
+        assignments.add("final-implementation-audit")
+    streams = manifest.get("workstreams")
+    for workstream in streams if isinstance(streams, list) else []:
+        if not isinstance(workstream, dict) or not isinstance(workstream.get("id"), str):
+            continue
+        task_id = workstream["id"]
+        assignments.add(f"task-review:{task_id}")
+        if task_audits:
+            assignments.add(f"implementation-audit:{task_id}")
+    missing = sorted(assignments - policy["assignments"].keys())
+    if missing:
+        raise LifecycleError(
+            "reviewer-assignment-required",
+            "Required reviewer policy has missing phase or task assignments",
+            {"assignments": missing},
+        )
 
 
 def _specification_requirement_shapes(specification: Any, blockers: list[dict[str, Any]]) -> None:
@@ -325,7 +354,7 @@ def _specification_requirement_shapes(specification: Any, blockers: list[dict[st
 
 
 def _validate_nested(manifest: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
-    _operator_policy_blockers(manifest, blockers)
+    _signature_policy_blockers(manifest, blockers)
     _object_keys(manifest.get("author"), _AUTHOR, "author", blockers)
     _object_keys(manifest.get("baseRevision"), _BASE_REVISION, "baseRevision", blockers)
     _object_keys(manifest.get("specification"), _SPECIFICATION, "specification", blockers)

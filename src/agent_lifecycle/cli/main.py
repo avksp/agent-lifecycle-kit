@@ -69,6 +69,8 @@ def _main(raw_argv: list[str]) -> int:
         _write_text(payload)
         return 0
     _write(payload)
+    if args.command == "audit" and args.audit_command == "verify-chain":
+        return int(payload["exitCode"])
     return 0
 
 

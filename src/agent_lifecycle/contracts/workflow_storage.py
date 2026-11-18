@@ -8,9 +8,10 @@ only after the prospective state/event/checkpoint have all passed preflight.
 from __future__ import annotations
 
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from agent_lifecycle.contracts.canonical import (
     sha256_hex,
 )
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE
 from agent_lifecycle.contracts.workflow_storage_context import (
     CheckedStorageWrites,
     StorageOperation,
@@ -286,8 +288,9 @@ def prepare_storage(
         WORKFLOW_STATE_V5,
         WORKFLOW_STATE_V6,
         WORKFLOW_STATE_V7,
+        REVIEWER_REQUIRED_STATE,
     }:
-        raise storage_error("Storage preparation requires v4, v5, v6 or v7 input")
+        raise storage_error("Storage preparation requires a supported native state")
     operation = operation or StorageOperation.current()
     if operation is not None:
         operation, _ = choose_operation(operation.root, operation)
@@ -304,7 +307,7 @@ def prepare_storage(
         raise storage_error("Existing immutable storage root cannot change")
     compact["schemaVersion"] = (
         state["schemaVersion"]
-        if state.get("schemaVersion") in {WORKFLOW_STATE_V6, WORKFLOW_STATE_V7}
+        if state.get("schemaVersion") in {WORKFLOW_STATE_V6, WORKFLOW_STATE_V7, REVIEWER_REQUIRED_STATE}
         else WORKFLOW_STATE_V5
     )
     compact["storage"] = metadata
@@ -464,6 +467,7 @@ class _Graph:
         objects: dict[str, bytes],
         operation: StorageOperation,
         selection: _TaskSelection | None = None,
+        archive_reader: Callable[[str], bytes] | None = None,
     ) -> None:
         self.root, self.state, self.objects = root, state, objects
         self.operation = operation
@@ -475,6 +479,13 @@ class _Graph:
         self.reads = 0
         self.revisions = _plan_revisions(state)
         self.selection = selection
+        metadata = state["storage"]
+        self.read_body: Callable[[str], bytes] = partial(
+            read_object, root, metadata, deadline=self.deadline, operation=operation
+        )
+        if archive_reader is not None:
+            # Archived validation sees only referenced objects through one selected read view.
+            self.read_body = lambda name: archive_reader(f"{metadata['root']}/{name}")
 
     def visit(
         self,
@@ -515,13 +526,7 @@ class _Graph:
             )
         data = self.objects.get(name)
         if data is None:
-            data = read_object(
-                self.root,
-                self.state["storage"],
-                name,
-                self.deadline,
-                operation=self.operation,
-            )
+            data = self.read_body(name)
             self.reads += 1
         cached = self.operation._admit(
             self.state["storage"],
@@ -577,6 +582,7 @@ def _inspect_storage(
     prepared: PreparedStorage | None = None,
     operation: StorageOperation,
     selection: _TaskSelection | None = None,
+    archive_reader: Callable[[str], bytes] | None = None,
 ) -> tuple[StorageValidation, _Graph]:
     """Validate all contextual slots, reusing only operation-checked bytes."""
     started = time.monotonic()
@@ -588,7 +594,7 @@ def _inspect_storage(
     validate_storage_counts(state)
     _bounded_bytes(state, "rootBytes")
     objects = prepared.objects if prepared is not None else {}
-    graph = _Graph(root, state, objects, operation, selection)
+    graph = _Graph(root, state, objects, operation, selection, archive_reader)
     allowed = graph.task_leaves(state)
     identities: set[str] = set()
     for reference in state.get("priorSnapshots", []):
@@ -607,7 +613,7 @@ def _inspect_storage(
             snapshot_allowed = graph.task_leaves(snapshot)
             _forbid_nested_references(snapshot, snapshot_allowed)
     _forbid_nested_references(state, allowed)
-    retained = retained_bytes(root, state["storage"], deadline)
+    retained = retained_bytes(root, state["storage"], deadline) if archive_reader is None else graph.total_bytes
     warnings = tuple(
         category
         for category, actual, limit in (
@@ -665,6 +671,21 @@ def validate_storage(
             prepared=prepared,
             operation=current,
         )[0]
+
+
+def validate_archived_storage(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    read: Callable[[str], bytes],
+    operation: StorageOperation,
+) -> None:
+    """Validate the reachable graph from bounded caller-selected bytes.
+
+    The archive does not assert retained inventory, so native orphan scanning
+    and storage publication are outside this read-only contract.
+    """
+    _inspect_storage(root, state, operation=operation, archive_reader=read)
 
 
 def _require_cached_header(

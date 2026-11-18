@@ -22,6 +22,13 @@ from agent_lifecycle.contracts.operator_signature_schemas import (
 )
 from agent_lifecycle.contracts.paths import MAX_REPO_PATH_BYTES, normalize_repo_path
 from agent_lifecycle.contracts.review_remedy_schemas import AUTHORITY_VERSION, REMEDY_SCHEMAS, require_remedy_authority
+from agent_lifecycle.contracts.reviewer_identity_schemas import (
+    REVIEWER_ATTESTATION_AUTHORITY_V1,
+    REVIEWER_ATTESTATION_POLICY_V1,
+    REVIEWER_IDENTITY_SCHEMAS,
+    REVIEWER_REQUIRED_STATE,
+    require_reviewer_attestation_authority,
+)
 from agent_lifecycle.contracts.schema_builders import open_object_schema
 from agent_lifecycle.contracts.workflow_storage_schemas import (
     WORKFLOW_STATE_V5,
@@ -837,7 +844,7 @@ WORKFLOW_STATE_SCHEMAS: dict[str, dict[str, Any]] = {
 
 def has_current_workflow_semantics(state: dict[str, Any]) -> bool:
     """v5 changes storage representation and retains all v4 authority rules."""
-    return state.get("schemaVersion") in {WORKFLOW_STATE_V4, WORKFLOW_STATE_V5, WORKFLOW_STATE_V6, WORKFLOW_STATE_V7}
+    return state.get("schemaVersion") == WORKFLOW_STATE_V4 or uses_reference_storage(state)
 
 
 WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5] = deepcopy(WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V4])
@@ -885,6 +892,21 @@ WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V7]["properties"].update(
     }
 )
 
+WORKFLOW_STATE_SCHEMAS[REVIEWER_REQUIRED_STATE] = deepcopy(WORKFLOW_STATE_SCHEMAS[WORKFLOW_STATE_V5])
+WORKFLOW_STATE_SCHEMAS[REVIEWER_REQUIRED_STATE]["$id"] = REVIEWER_REQUIRED_STATE
+WORKFLOW_STATE_SCHEMAS[REVIEWER_REQUIRED_STATE]["required"].extend(
+    ["reviewerAttestationPolicy", "reviewerAttestationAuthority"]
+)
+WORKFLOW_STATE_SCHEMAS[REVIEWER_REQUIRED_STATE]["properties"].update(
+    {
+        "schemaVersion": {"const": REVIEWER_REQUIRED_STATE},
+        "reviewerAttestationPolicy": REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_POLICY_V1],
+        "reviewerAttestationAuthority": REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_AUTHORITY_V1],
+        "operatorSignaturePolicy": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_POLICY],
+        "operatorSignatureAuthority": OPERATOR_SIGNATURE_SCHEMAS[OPERATOR_AUTHORITY],
+    }
+)
+
 
 def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True) -> dict[str, Any]:
     """Validate state shape and cross-field invariants before it is trusted."""
@@ -893,6 +915,7 @@ def validate_workflow_state(state: dict[str, Any], *, allow_legacy: bool = True)
         raise LifecycleError("invalid-workflow-state", "workflow state must be an object")
     schema_version = state.get("schemaVersion")
     require_operator_authority(state, state=True)
+    require_reviewer_attestation_authority(state, state=True)
     require_remedy_authority(state, state=True)
     if schema_version == WORKFLOW_STATE_V3 and allow_legacy:
         _validate_legacy_state(state)

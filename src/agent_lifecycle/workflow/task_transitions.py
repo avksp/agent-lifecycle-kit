@@ -234,7 +234,9 @@ def accept_task(
     review = read_json_object(root / expected_path, label="task review")
     identity = artifact_identity(root, expected_path, review)
     result = _read_committed_result(root, task)
-    validate_task_review(state, task, review, result=result)
+    admission = validate_task_review(state, task, review, result=result)
+    if admission is not None:
+        identity["reviewerAdmission"] = admission
     freshness = validate_task_result(
         state,
         task,

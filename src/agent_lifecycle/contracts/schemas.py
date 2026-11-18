@@ -14,6 +14,7 @@ from agent_lifecycle.contracts.audit_optimization_schemas import AUDIT_OPTIMIZAT
 from agent_lifecycle.contracts.audit_schemas import AUDIT_SCHEMAS
 from agent_lifecycle.contracts.benchmark_schemas import BENCHMARK_SCHEMAS
 from agent_lifecycle.contracts.bug_forensics_schemas import BUG_FORENSICS_SCHEMAS
+from agent_lifecycle.contracts.chain_verification_schemas import CHAIN_VERIFICATION_SCHEMAS
 from agent_lifecycle.contracts.closing_resource_schemas import CLOSING_RESOURCE_SCHEMAS
 from agent_lifecycle.contracts.closing_window_schemas import CLOSING_WINDOW_SCHEMAS
 from agent_lifecycle.contracts.context_checkpoint_schemas import CONTEXT_CHECKPOINT_SCHEMAS
@@ -82,7 +83,11 @@ from agent_lifecycle.contracts.review_mesh_recommendation_schemas import (
 )
 from agent_lifecycle.contracts.review_mesh_schemas import REVIEW_MESH_SCHEMAS, raw_reviewer_schema
 from agent_lifecycle.contracts.review_quality_schemas import REVIEW_QUALITY_SCHEMAS
-from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_IDENTITY_SCHEMAS
+from agent_lifecycle.contracts.reviewer_identity_schemas import (
+    REVIEWER_ATTESTATION_AUTHORITY_V1,
+    REVIEWER_IDENTITY_SCHEMAS,
+    REVIEWER_REQUIRED_LOCK,
+)
 from agent_lifecycle.contracts.runner_worktree_schemas import WORKTREE_SUPPORT_SCHEMAS
 from agent_lifecycle.contracts.sandbox_schemas import SANDBOX_SCHEMAS
 from agent_lifecycle.contracts.schema_builders import open_object_schema
@@ -433,7 +438,14 @@ PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
             "schemaVersion": {"const": "agent-plan-package-integrity-verification.v1"},
             "status": {"enum": ["PASS", "FAIL"]},
             "required": {"type": "boolean"},
-            "lockSchemaVersion": {"enum": ["agent-plan-lock.v1", "agent-plan-lock.v2", "agent-plan-lock.v3"]},
+            "lockSchemaVersion": {
+                "enum": [
+                    "agent-plan-lock.v1",
+                    "agent-plan-lock.v2",
+                    "agent-plan-lock.v3",
+                    REVIEWER_REQUIRED_LOCK,
+                ]
+            },
             "filesystemVerified": {"type": "boolean"},
             "manifestHash": {"type": "string", "minLength": 64, "maxLength": 64},
             "planFilesHash": {"type": ["string", "null"], "minLength": 0, "maxLength": 64},
@@ -443,6 +455,17 @@ PLAN_INTEGRITY_SCHEMAS: dict[str, dict[str, Any]] = {
         },
     ),
 }
+_V2_LOCK_SCHEMA = PLAN_INTEGRITY_SCHEMAS["agent-plan-lock.v2"]
+PLAN_INTEGRITY_SCHEMAS[REVIEWER_REQUIRED_LOCK] = open_object_schema(
+    REVIEWER_REQUIRED_LOCK,
+    required=[*_V2_LOCK_SCHEMA["required"], "reviewerAttestationAuthority", "reviewerAdmission"],
+    properties={
+        **_V2_LOCK_SCHEMA["properties"],
+        "schemaVersion": {"const": REVIEWER_REQUIRED_LOCK},
+        "reviewerAttestationAuthority": REVIEWER_IDENTITY_SCHEMAS[REVIEWER_ATTESTATION_AUTHORITY_V1],
+        "reviewerAdmission": {"type": "object"},
+    },
+)
 RISK_EXECUTION_SCHEMAS: dict[str, dict[str, Any]] = {
     "agent-risk-execution-policy.v1": open_object_schema(
         "agent-risk-execution-policy.v1",
@@ -779,6 +802,7 @@ _SCHEMA_GROUPS: tuple[dict[str, dict[str, Any]], ...] = (
     DEADLINE_SCHEMAS,
     WORKFLOW_AUTHORITY_SCHEMAS,
     REVIEWER_IDENTITY_SCHEMAS,
+    CHAIN_VERIFICATION_SCHEMAS,
     EVIDENCE_RECEIPT_SCHEMAS,
     CLOSING_RESOURCE_SCHEMAS,
     CLOSING_WINDOW_SCHEMAS,

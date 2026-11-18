@@ -13,6 +13,7 @@ from agent_lifecycle.contracts.workflow_state_authority import historical_snapsh
 from agent_lifecycle.contracts.workflow_state_schemas import has_current_workflow_semantics
 from agent_lifecycle.review.validation import require_supported_review_provenance
 from agent_lifecycle.workflow.artifacts import require_artifact_identity
+from agent_lifecycle.workflow.reviewer_gate import task_reviewer_decision
 from agent_lifecycle.workflow.state import validate_typed_blocker
 
 
@@ -43,6 +44,33 @@ def validate_task_result(
     require_freshness: bool = False,
     allow_non_accepting_outcome: bool = False,
 ) -> dict[str, Any] | None:
+    _validate_task_result_body(state, task, result, allow_non_accepting_outcome=allow_non_accepting_outcome)
+    _validate_item_dispositions(state, task, result, repository_root)
+    if not identity["sha256"]:
+        raise LifecycleError("task-result-invalid", "task result identity missing")
+    if repository_root is None:
+        if require_freshness:
+            raise LifecycleError("task-result-freshness-context-missing", "repository root is required")
+        return None
+    change_set = result.get("changeSet")
+    if not require_freshness and (not isinstance(change_set, dict) or change_set.get("provider") != "git-worktree-v2"):
+        return None
+    evidence = capture_task_change_set(
+        repository_root,
+        baseline=str(state.get("sourceRevision") or ""),
+        write_paths=[path for path in task.get("writes", []) if isinstance(path, str)],
+    )
+    require_current_task_change_set(result, evidence)
+    return evidence
+
+
+def _validate_task_result_body(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    allow_non_accepting_outcome: bool,
+) -> None:
     expected = {
         "schemaVersion": "agent-task-result.v2",
         "runId": state.get("runId"),
@@ -82,23 +110,16 @@ def validate_task_result(
     if any(not isinstance(item.get("status"), str) or item["status"] not in allowed_statuses for item in item_outcomes):
         raise LifecycleError("task-result-not-complete", "task result has incomplete items")
     _validate_commands(result, allow_failed=non_accepting)
-    _validate_item_dispositions(state, task, result, repository_root)
-    if not identity["sha256"]:
-        raise LifecycleError("task-result-invalid", "task result identity missing")
-    if repository_root is None:
-        if require_freshness:
-            raise LifecycleError("task-result-freshness-context-missing", "repository root is required")
-        return None
-    change_set = result.get("changeSet")
-    if not require_freshness and (not isinstance(change_set, dict) or change_set.get("provider") != "git-worktree-v2"):
-        return None
-    evidence = capture_task_change_set(
-        repository_root,
-        baseline=str(state.get("sourceRevision") or ""),
-        write_paths=[path for path in task.get("writes", []) if isinstance(path, str)],
-    )
-    require_current_task_change_set(result, evidence)
-    return evidence
+
+
+def validate_archived_task_result(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    result: dict[str, Any],
+) -> None:
+    """Validate the result of an initial attempt whose archive has no prior task evidence."""
+    _validate_task_result_body(state, task, result, allow_non_accepting_outcome=False)
+    _task_item_identities(result["itemOutcomes"])
 
 
 def _validate_item_dispositions(
@@ -108,13 +129,7 @@ def _validate_item_dispositions(
     root: Path | None,
 ) -> None:
     items = result["itemOutcomes"]
-    identifiers = [item.get("plannedItemId") for item in items]
-    if any(not isinstance(value, str) or not value.strip() for value in identifiers) or len(set(identifiers)) != len(
-        items
-    ):
-        raise LifecycleError(
-            "task-result-item-identity-invalid", "item outcomes require unique stable plannedItemId values"
-        )
+    identifiers = _task_item_identities(items)
     unfinished = _unfinished_item_ids(state, task, root)
     omitted = sorted(unfinished.difference(identifiers))
     if omitted:
@@ -145,6 +160,18 @@ def _validate_item_dispositions(
                 "resolving an unfinished item requires passing evidence selected in the current source-bound result",
                 {"plannedItemId": item["plannedItemId"]},
             )
+
+
+def _task_item_identities(items: list[dict[str, Any]]) -> set[str]:
+    identifiers: set[str] = set()
+    for item in items:
+        value = item.get("plannedItemId")
+        if not isinstance(value, str) or not value.strip() or value in identifiers:
+            raise LifecycleError(
+                "task-result-item-identity-invalid", "item outcomes require unique stable plannedItemId values"
+            )
+        identifiers.add(value)
+    return identifiers
 
 
 def _unfinished_item_ids(state: dict[str, Any], task: dict[str, Any], root: Path | None) -> set[str]:
@@ -353,10 +380,29 @@ def validate_task_review(
     review: dict[str, Any],
     *,
     result: dict[str, Any] | None = None,
-) -> None:
+) -> dict[str, Any] | None:
     if result is not None:
         _require_review_id(review)
-    _validate_review_lineage(state, task, review)
+    admission = _validate_review_lineage(state, task, review, result)
+    _require_task_acceptance(review, result)
+    return admission
+
+
+def validate_archived_task_review(
+    state: dict[str, Any],
+    task: dict[str, Any],
+    review: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    archived: dict[str, Any],
+) -> None:
+    """Recompute previously admitted task review semantics in a read-only audit."""
+    _require_review_id(review)
+    _validate_review_lineage(state, task, review, result, archived=archived)
+    _require_task_acceptance(review, result)
+
+
+def _require_task_acceptance(review: dict[str, Any], result: dict[str, Any] | None) -> None:
     if result is not None:
         _require_reviewer_separate_from_worker(review, result)
     if review.get("verdict") != "ACCEPTED":
@@ -390,8 +436,10 @@ def validate_task_rework_review(
     """Validate review lineage and independence for a remediation decision."""
 
     _require_review_id(review)
-    _validate_review_lineage(state, task, review)
+    admission = _validate_review_lineage(state, task, review, result)
     _require_reviewer_separate_from_worker(review, result)
+    if admission is not None and review.get("verdict") != "REWORK":
+        raise LifecycleError("reviewer-outcome-scope-mismatch", "Signed review does not authorize rework")
     if review.get("verdict") not in {"ACCEPTED", "REWORK"}:
         raise LifecycleError("task-review-not-rework-compatible", "task rework review must be ACCEPTED or REWORK")
     findings = review.get("findings")
@@ -409,7 +457,7 @@ def validate_task_outcome_review(
     """Validate the common lineage boundary for every task review outcome."""
 
     _require_review_id(review)
-    _validate_review_lineage(state, task, review)
+    _validate_review_lineage(state, task, review, result)
     _require_reviewer_separate_from_worker(review, result)
     verdict = review.get("verdict")
     if verdict not in {"ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"}:
@@ -446,9 +494,14 @@ def _validate_review_lineage(
     state: dict[str, Any],
     task: dict[str, Any],
     review: dict[str, Any],
-) -> None:
+    artifact: dict[str, Any] | None,
+    *,
+    archived: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     require_review_text(review)
-    require_supported_review_provenance(review, native_phase="task-review")
+    admission = task_reviewer_decision(state, task, review, artifact, phase="task-review", archived=archived)
+    if admission is None:
+        require_supported_review_provenance(review, native_phase="task-review")
     result = task.get("result")
     if not isinstance(result, dict):
         raise LifecycleError("missing-task-result", "task review requires committed result")
@@ -469,6 +522,7 @@ def _validate_review_lineage(
     reviewer = review.get("reviewer")
     if not isinstance(reviewer, dict) or reviewer.get("independent") is not True:
         raise LifecycleError("task-review-not-independent", "task review must be independent")
+    return admission
 
 
 def _require_review_id(review: dict[str, Any]) -> None:

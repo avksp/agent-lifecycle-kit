@@ -8,6 +8,7 @@ from typing import Any
 from agent_lifecycle.contracts.authority_io import normalize_authority_path
 from agent_lifecycle.contracts.canonical import MAX_JSON_INPUT_BYTES
 from agent_lifecycle.contracts.errors import LifecycleError
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE
 
 STORAGE_VERSION = "agent-workflow-storage.v1"
 REFERENCE_VERSION = "agent-workflow-storage-reference.v1"
@@ -18,7 +19,12 @@ WORKFLOW_STATE_V7 = "agent-workflow-state.v7"
 
 def uses_reference_storage(state: dict[str, Any]) -> bool:
     """Native v5 and required-remedy v6 share the same immutable storage."""
-    return state.get("schemaVersion") in {WORKFLOW_STATE_V5, WORKFLOW_STATE_V6, WORKFLOW_STATE_V7}
+    return state.get("schemaVersion") in {
+        WORKFLOW_STATE_V5,
+        WORKFLOW_STATE_V6,
+        WORKFLOW_STATE_V7,
+        REVIEWER_REQUIRED_STATE,
+    }
 
 
 LEAF_KINDS = {

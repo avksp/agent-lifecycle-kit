@@ -82,11 +82,13 @@ class StorageOperation:
         state_path: Path | None = None,
         run_id: str | None = None,
         deadline: float | None = None,
+        runtime_aliases: bool = True,
     ) -> None:
         if deadline is not None:
             require_finite_deadline(deadline)
         self._input_root = root.absolute()
-        self._root = authority_location(root / ".storage-anchor", root=root)[0]
+        self._runtime_aliases = runtime_aliases
+        self._root = authority_location(root / ".storage-anchor", root=root, runtime_aliases=self._runtime_aliases)[0]
         self._started = time.monotonic()
         maximum = self._started + IO_DEADLINE_SECONDS
         self._deadline = maximum if deadline is None else min(maximum, deadline)
@@ -202,7 +204,7 @@ class StorageOperation:
         root = self._root
         if path.absolute().is_relative_to(self._input_root):
             root = self._input_root
-        anchor, name = authority_location(path, root=root)
+        anchor, name = authority_location(path, root=root, runtime_aliases=self._runtime_aliases)
         selected = anchor / name
         if self._state_path is not None and self._state_path != selected:
             raise storage_error("Storage operation state path cannot change")
@@ -210,7 +212,7 @@ class StorageOperation:
 
     def bind(self, root: Path, state: dict[str, Any]) -> None:
         self.check()
-        selected = authority_location(root / ".storage-anchor", root=root)[0]
+        selected = authority_location(root / ".storage-anchor", root=root, runtime_aliases=self._runtime_aliases)[0]
         if selected != self._root:
             raise storage_error("Storage operation authority root mismatch")
         for name, field in (("_run_id", "runId"), ("_package_id", "packageId")):

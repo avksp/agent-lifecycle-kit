@@ -33,6 +33,7 @@ from agent_lifecycle.contracts.ownership_paths import (
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.persistence import create_private_json
 from agent_lifecycle.contracts.review_remedy_schemas import require_remedy_authority
+from agent_lifecycle.contracts.reviewer_identity_schemas import REVIEWER_REQUIRED_STATE
 from agent_lifecycle.contracts.workflow_state_authority import workflow_package_root
 from agent_lifecycle.contracts.workflow_state_schemas import (
     WORKFLOW_STATE_MIGRATION_RECEIPT,
@@ -113,6 +114,8 @@ def migrate_workflow_state(
     )
     if state.get("sourceRevision") != source_revision:
         raise LifecycleError("source-revision-mismatch", "source revision mismatch")
+    if state.get("schemaVersion") == REVIEWER_REQUIRED_STATE:
+        raise LifecycleError("reviewer-attestation-downgrade-unsupported", "Required v8 cannot be downgraded")
     if state.get("schemaVersion") == "agent-workflow-state.v7":
         raise LifecycleError("operator-signature-downgrade-unsupported", "Required v7 authority cannot be downgraded")
     if state.get("schemaVersion") == "agent-workflow-state.v6":
@@ -441,10 +444,7 @@ def _prepare_initialization_inputs(
     selected_output = repository_authority_name(root / (output_dir or default_output), root)
     if selected_output != default_output.as_posix():
         raise LifecycleError("execution-target-selector-mismatch", "Packet output disagrees with adoption's selector")
-    if normalize_context_checkpoint_policy(manifest.get("contextCheckpointPolicy"))["enabled"]:
-        raise LifecycleError(
-            "composition-policy-unsupported", "Use explicit operations for checkpoint-enabled adoption"
-        )
+    _require_supported_composition_policy(manifest)
     source = source_revision or manifest.get("baseRevision", {}).get("sha")
     if not isinstance(source, str) or not source or source != manifest.get("baseRevision", {}).get("sha"):
         raise LifecycleError("execution-target-selector-mismatch", "Source selector disagrees with the frozen base")
@@ -474,6 +474,17 @@ def _prepare_initialization_inputs(
         inputs,
         outputs,
     )
+
+
+def _require_supported_composition_policy(manifest: dict[str, Any]) -> None:
+    if normalize_context_checkpoint_policy(manifest.get("contextCheckpointPolicy"))["enabled"]:
+        raise LifecycleError(
+            "composition-policy-unsupported", "Use explicit operations for checkpoint-enabled adoption"
+        )
+    if "reviewerAttestationAuthority" in manifest:
+        raise LifecycleError(
+            "composition-policy-unsupported", "Use explicit compile, init and adopt for strict reviewer storage"
+        )
 
 
 def _project_packet_outputs(

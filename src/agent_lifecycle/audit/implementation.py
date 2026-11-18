@@ -24,6 +24,7 @@ from agent_lifecycle.review.validation import require_supported_review_provenanc
 from agent_lifecycle.review_mesh.remediation import evidence_values, load_remedy_evidence, native_remedy_context
 from agent_lifecycle.workflow.artifacts import artifact_identity, package_root, require_artifact_identity
 from agent_lifecycle.workflow.implementation_audit_gate import (
+    implementation_audit_reviewer_admission,
     validate_final_task_evidence_reports,
     validate_task_evidence_paths,
 )
@@ -264,49 +265,15 @@ def validate_implementation_audit_report(
     state: dict[str, Any] | None = None,
     task: dict[str, Any] | None = None,
     report_identity: dict[str, Any] | None = None,
+    reviewer_admission: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     blockers: list[dict[str, Any]] = []
     compatibility_validation: dict[str, Any] | None = None
     require_review_text(report)
-    require_supported_review_provenance(report, native_phase="implementation-audit")
-    if report.get("schemaVersion") != IMPLEMENTATION_AUDIT_SCHEMA:
-        blockers.append(
-            {"code": "implementation-audit-schema", "message": "unsupported implementation audit schemaVersion"}
-        )
-    body = {key: value for key, value in report.items() if key != "reportDigest"}
-    if report.get("reportDigest") != canonical_digest(body):
-        blockers.append({"code": "implementation-audit-digest", "message": "reportDigest does not match report body"})
-    if report.get("productionPromotionClaimed") is not False:
-        blockers.append(
-            {
-                "code": "implementation-audit-production-claim",
-                "message": "implementation audit must not claim production promotion",
-            }
-        )
-    if report.get("status") not in {"PASS", "FAIL"}:
-        blockers.append({"code": "implementation-audit-status", "message": "status must be PASS or FAIL"})
+    if reviewer_admission is None or reviewer_admission.get("reportDigest") != canonical_digest(report):
+        require_supported_review_provenance(report, native_phase="implementation-audit")
+    _collect_implementation_audit_envelope_blockers(report, blockers)
     verdict = report.get("verdict")
-    if verdict not in {"ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"}:
-        blockers.append({"code": "implementation-audit-verdict", "message": "verdict is unsupported"})
-    if report.get("status") == "PASS" and verdict != "ACCEPTED":
-        blockers.append(
-            {"code": "implementation-audit-status-verdict", "message": "PASS status requires ACCEPTED verdict"}
-        )
-    if report.get("status") == "FAIL" and verdict == "ACCEPTED":
-        blockers.append(
-            {"code": "implementation-audit-status-verdict", "message": "ACCEPTED verdict requires PASS status"}
-        )
-    if report.get("status") == "PASS" and _has_blockers(report):
-        blockers.append(
-            {"code": "implementation-audit-open-blockers", "message": "PASS report must not contain blockers"}
-        )
-    if report.get("status") == "PASS" and _has_open_blocking_findings(report):
-        blockers.append(
-            {
-                "code": "implementation-audit-open-findings",
-                "message": "PASS report must not contain open Medium or higher findings",
-            }
-        )
     auditor = report.get("auditor")
     if not isinstance(auditor, dict) or auditor.get("independent") is not True:
         blockers.append({"code": "implementation-audit-auditor", "message": "auditor must be independent"})
@@ -352,6 +319,47 @@ def validate_implementation_audit_report(
     return {**body, "validationDigest": canonical_digest(body)}
 
 
+def _collect_implementation_audit_envelope_blockers(report: dict[str, Any], blockers: list[dict[str, Any]]) -> None:
+    if report.get("schemaVersion") != IMPLEMENTATION_AUDIT_SCHEMA:
+        blockers.append(
+            {"code": "implementation-audit-schema", "message": "unsupported implementation audit schemaVersion"}
+        )
+    body = {key: value for key, value in report.items() if key != "reportDigest"}
+    if report.get("reportDigest") != canonical_digest(body):
+        blockers.append({"code": "implementation-audit-digest", "message": "reportDigest does not match report body"})
+    if report.get("productionPromotionClaimed") is not False:
+        blockers.append(
+            {
+                "code": "implementation-audit-production-claim",
+                "message": "implementation audit must not claim production promotion",
+            }
+        )
+    if report.get("status") not in {"PASS", "FAIL"}:
+        blockers.append({"code": "implementation-audit-status", "message": "status must be PASS or FAIL"})
+    verdict = report.get("verdict")
+    if verdict not in {"ACCEPTED", "REWORK", "CONTRACT_CHANGE", "BLOCKED"}:
+        blockers.append({"code": "implementation-audit-verdict", "message": "verdict is unsupported"})
+    if report.get("status") == "PASS" and verdict != "ACCEPTED":
+        blockers.append(
+            {"code": "implementation-audit-status-verdict", "message": "PASS status requires ACCEPTED verdict"}
+        )
+    if report.get("status") == "FAIL" and verdict == "ACCEPTED":
+        blockers.append(
+            {"code": "implementation-audit-status-verdict", "message": "ACCEPTED verdict requires PASS status"}
+        )
+    if report.get("status") == "PASS" and _has_blockers(report):
+        blockers.append(
+            {"code": "implementation-audit-open-blockers", "message": "PASS report must not contain blockers"}
+        )
+    if report.get("status") == "PASS" and _has_open_blocking_findings(report):
+        blockers.append(
+            {
+                "code": "implementation-audit-open-findings",
+                "message": "PASS report must not contain open Medium or higher findings",
+            }
+        )
+
+
 def require_implementation_audit_accepted(validation: dict[str, Any], report: dict[str, Any]) -> dict[str, Any]:
     if validation.get("status") != "PASS" or report.get("verdict") != "ACCEPTED" or report.get("status") != "PASS":
         raise LifecycleError(
@@ -378,30 +386,13 @@ def build_final_implementation_audit(
     blockers: list[dict[str, Any]] = []
     for raw_path in report_paths:
         rel = normalize_repo_path(raw_path, label="implementation audit report")
-        report = read_json_object(root / rel, label="implementation audit report")
-        task = find_task(state, str(report.get("taskId"))) if isinstance(report.get("taskId"), str) else None
-        identity = artifact_identity(root, rel, report)
-        validation = validate_implementation_audit_report(
-            report,
-            state=state,
-            task=task,
-            report_identity=identity,
-        )
-        accepted = (
-            validation["status"] == "PASS" and report.get("status") == "PASS" and report.get("verdict") == "ACCEPTED"
-        )
+        entry, accepted, report_findings = _final_task_audit_entry(root, state_path, state, rel)
         if not accepted:
-            blockers.append({"code": "implementation-audit-report-not-accepted", "path": rel, "validation": validation})
-        reports.append(
-            {
-                **identity,
-                "taskId": report.get("taskId"),
-                "attempt": report.get("attempt"),
-                "verdict": report.get("verdict"),
-                "validation": validation,
-            }
-        )
-        findings.extend(report.get("findings", []) if isinstance(report.get("findings"), list) else [])
+            blockers.append(
+                {"code": "implementation-audit-report-not-accepted", "path": rel, "validation": entry["validation"]}
+            )
+        reports.append(entry)
+        findings.extend(report_findings)
     accepted_report_task_ids = {item.get("taskId") for item in reports if item.get("verdict") == "ACCEPTED"}
     missing_task_ids = [
         str(task.get("id"))
@@ -463,6 +454,32 @@ def build_final_implementation_audit(
         "productionPromotionClaimed": False,
     }
     return {**body, "auditDigest": canonical_digest(body)}
+
+
+def _final_task_audit_entry(
+    root: Path, state_path: Path, state: dict[str, Any], rel: str
+) -> tuple[dict[str, Any], bool, list[dict[str, Any]]]:
+    report = read_json_object(root / rel, label="implementation audit report")
+    task = find_task(state, str(report.get("taskId"))) if isinstance(report.get("taskId"), str) else None
+    identity = artifact_identity(root, rel, report)
+    admission = implementation_audit_reviewer_admission(state_path, state, task, report) if task else None
+    validation = validate_implementation_audit_report(
+        report,
+        state=state,
+        task=task,
+        report_identity=identity,
+        reviewer_admission=admission,
+    )
+    accepted = validation["status"] == "PASS" and report.get("status") == "PASS" and report.get("verdict") == "ACCEPTED"
+    entry = {
+        **identity,
+        "taskId": report.get("taskId"),
+        "attempt": report.get("attempt"),
+        "verdict": report.get("verdict"),
+        "validation": validation,
+    }
+    findings = report.get("findings")
+    return entry, accepted, findings if isinstance(findings, list) else []
 
 
 def validate_final_implementation_audit(
