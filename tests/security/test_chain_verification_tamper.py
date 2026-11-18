@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
+from contextlib import redirect_stdout
+from datetime import datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -11,7 +14,8 @@ from unittest.mock import patch
 
 from agent_lifecycle.audit import chain_verification
 from agent_lifecycle.audit.chain_verification import verify_chain
-from agent_lifecycle.contracts.canonical import canonical_bytes
+from agent_lifecycle.cli.main import main
+from agent_lifecycle.contracts.canonical import canonical_bytes, canonical_digest
 from tests.audit.test_chain_verification import AnchoredRunFixture
 from tests.contracts.test_operator_signature import envelope, inventory
 from tests.workflow.test_operator_signature_gates import write
@@ -135,7 +139,7 @@ class ChainTamperTests(TestCase):
         self._reanchor_history(events)
         self.refusal("state-journal", "chain-outcome-history-unsupported", status="NOT_CHECKED")
 
-    def test_one_second_observation_that_straddles_key_window_is_not_checked(self):
+    def test_replaced_signature_receipt_is_mismatch_even_for_partial_window(self):
         terminal = self._events()[-1]
         before = {**self.fixture.value, "stateRevision": terminal["stateRevision"] - 1}
         audit = self.fixture.read("receipts/final-review.json")
@@ -149,7 +153,82 @@ class ChainTamperTests(TestCase):
         write(self.fixture.repo / "receipts/final-review.json.operator-signature.json", detached)
         self.fixture.rebuild_chain()
         self.fixture.refresh_anchor()
-        self.refusal("operator-signatures", "chain-operator-time-precision", status="NOT_CHECKED")
+        self.refusal("operator-signatures", "chain-operator-signature-mismatch")
+
+    def test_non_object_journal_payload_has_a_named_refusal(self):
+        events = self._events()
+        events[2]["payload"] = None
+        self._reanchor_history(events)
+        before = inventory(self.root)
+        with redirect_stdout(io.StringIO()) as stdout:
+            exit_code = main(
+                [
+                    "audit",
+                    "verify-chain",
+                    "--repository-root",
+                    str(self.fixture.repo),
+                    "--bundle",
+                    self.fixture.bundle_name,
+                    "--trust-config",
+                    str(self.fixture.trust),
+                    "--anchor",
+                    str(self.fixture.anchor),
+                ]
+            )
+        report = json.loads(stdout.getvalue())
+        self.assertEqual((exit_code, report["status"]), (1, "MISMATCH"))
+        self.assertEqual(report["firstFailure"], {"check": "state-journal", "code": "chain-journal-payload-invalid"})
+        self.assertFalse(report["authorityGranted"])
+        self.assertEqual(inventory(self.root), before)
+
+    def test_final_event_at_grant_expiry_is_a_named_mismatch(self):
+        events = self._events()
+        grant = self.fixture.read("receipts/authorization.json")
+        expiry = datetime.fromisoformat(grant["expiresAt"])
+        events[-1]["recordedAt"] = expiry.strftime("%Y-%m-%dT%H:%M:%SZ")
+        self._reanchor_history(events)
+        self.refusal("state-journal", "authorization-expired")
+
+    def test_operator_interval_after_observed_second_is_a_mismatch(self):
+        terminal = self._events()[-1]
+        second = datetime.fromisoformat(terminal["recordedAt"].replace("Z", "+00:00"))
+        before = {**self.fixture.value, "stateRevision": terminal["stateRevision"] - 1}
+        signature = envelope(
+            before,
+            "accept",
+            operation_id=terminal["operationId"],
+            subject=self.fixture.read("receipts/final-review.json"),
+            validFrom=(second + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+        )
+        write(self.fixture.repo / "receipts/final-review.json.operator-signature.json", signature)
+        self.fixture.rebuild_chain()
+        self.fixture.refresh_anchor()
+        self.refusal("operator-signatures", "chain-operator-signature-mismatch")
+
+    def test_optional_audit_claim_in_terminal_proof_only_is_refused(self):
+        self.fixture = AnchoredRunFixture(self.root / "untyped", operator_required=False)
+        events = self._events()
+        proof_path = "receipts/proof.json"
+        proof = self.fixture.read(proof_path)
+        proof.pop("bodyDigest")
+        proof["finalImplementationAudit"] = {}
+        proof["bodyDigest"] = canonical_digest(proof)
+        write(self.fixture.repo / proof_path, proof)
+        proof_identity = dict(self.fixture.value["finalProof"])
+        proof_identity.update(bytes=(self.fixture.repo / proof_path).stat().st_size, sha256=canonical_digest(proof))
+        self.fixture.value["finalProof"] = proof_identity
+        write(self.fixture.state_path, self.fixture.value)
+        events[-1]["payload"]["proof"] = proof_identity
+        self._reanchor_history(events)
+        self.refusal("reviewer-signatures", "chain-final-implementation-mismatch")
+
+    def test_required_typed_final_receipt_missing_is_an_error(self):
+        changed = self.fixture.read(self.fixture.bundle["state"])
+        changed.pop("finalImplementationAudit")
+        write(self.fixture.state_path, changed)
+        self.fixture.rebuild_chain()
+        self.fixture.refresh_anchor()
+        self.refusal("reviewer-signatures", "chain-final-implementation-missing")
 
     def test_advisory_diagnostic_does_not_prove_native_operator_admission(self):
         self.fixture = AnchoredRunFixture(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
-from datetime import timedelta
+from datetime import datetime, timedelta
 from io import BytesIO
 from itertools import islice
 from pathlib import Path
@@ -26,7 +26,11 @@ from agent_lifecycle.contracts.operator_signature import (
     expected_operator_decision,
     verify_operator_envelope,
 )
-from agent_lifecycle.contracts.operator_signature_schemas import require_operator_authority
+from agent_lifecycle.contracts.operator_signature_schemas import (
+    operator_interval,
+    require_operator_authority,
+    validate_operator_envelope,
+)
 from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.contracts.review_verdict import open_blocking_finding_ids
 from agent_lifecycle.contracts.reviewer_identity_schemas import (
@@ -284,8 +288,11 @@ def _verify_lock(
         manifest, lock, root, repository_root=evidence.root, read=evidence.read, members=evidence.members(root)
     )
     acceptance = _object(manifest.get("acceptance"), "chain-plan-acceptance-missing")
-    if any(item.get("validation") for item in acceptance.get("evidence", [])):
-        raise _Incomplete("chain-structured-evidence-unsupported", "Selected plan requires extra evidence checks")
+    evidence_entries = acceptance.get("evidence", [])
+    _ensure(isinstance(evidence_entries, list), "chain-plan-evidence-invalid")
+    for item in evidence_entries:
+        if _object(item, "chain-plan-evidence-invalid").get("validation"):
+            raise _Incomplete("chain-structured-evidence-unsupported", "Selected plan requires extra evidence checks")
     return manifest, lock
 
 
@@ -395,7 +402,8 @@ def _require_supported_history(state: dict[str, Any], events: list[dict[str, Any
 
 
 def _verify_checkpoint_scope(event: dict[str, Any]) -> None:
-    checkpoint = event["payload"].get("contextCheckpoint")
+    payload = _object(event.get("payload"), "chain-journal-payload-invalid")
+    checkpoint = payload.get("contextCheckpoint")
     if checkpoint is None:
         return
     if not isinstance(checkpoint, dict) or checkpoint.get("status") != "SKIPPED" or checkpoint.get("required"):
@@ -522,6 +530,19 @@ def _verify_reviewer_receipts(
     _ensure(final.get("proof") == state["finalProof"], "chain-final-proof-mismatch")
     _verify_terminal_proof(proof, state, events[-1])
     _final_attestation(manifest, state, report, state["finalAudit"], "final-audit")
+    _verify_final_implementation_receipt(evidence, manifest, state, final, proof)
+    integrity = proof.get("proofIntegrity")
+    receipt = evidence.identity(integrity["receipt"])[1] if isinstance(integrity, dict) else None
+    validate_final_proof_integrity(state=state, final_audit=report, receipt=receipt, final_proof=proof)
+
+
+def _verify_final_implementation_receipt(
+    evidence: _Snapshot,
+    manifest: dict[str, Any],
+    state: dict[str, Any],
+    final: dict[str, Any],
+    proof: dict[str, Any],
+) -> None:
     typed = state.get("finalImplementationAudit")
     final_typed_required = any(
         item.get("finalImplementationAuditRequired") is True
@@ -532,19 +553,21 @@ def _verify_reviewer_receipts(
         for item in (manifest, state)
     )
     _ensure(typed is not None or not final_typed_required, "chain-final-implementation-missing")
-    if typed is not None:
-        typed_proof = _object(proof.get("finalImplementationAudit"), "chain-final-implementation-missing")
-        identity = _object(typed, "chain-final-implementation-missing")
+    if typed is None:
         _ensure(
-            typed_proof == final.get("finalImplementationAudit") and typed_proof.get("audit") == identity,
+            proof.get("finalImplementationAudit") is None and final.get("finalImplementationAudit") is None,
             "chain-final-implementation-mismatch",
         )
-        _, typed_report = evidence.identity(identity)
-        _verify_final_implementation(typed_report, state)
-        _final_attestation(manifest, state, typed_report, identity, "final-implementation-audit")
-    integrity = proof.get("proofIntegrity")
-    receipt = evidence.identity(integrity["receipt"])[1] if isinstance(integrity, dict) else None
-    validate_final_proof_integrity(state=state, final_audit=report, receipt=receipt, final_proof=proof)
+        return
+    typed_proof = _object(proof.get("finalImplementationAudit"), "chain-final-implementation-missing")
+    identity = _object(typed, "chain-final-implementation-missing")
+    _ensure(
+        typed_proof == final.get("finalImplementationAudit") and typed_proof.get("audit") == identity,
+        "chain-final-implementation-mismatch",
+    )
+    _, typed_report = evidence.identity(identity)
+    _verify_final_implementation(typed_report, state)
+    _final_attestation(manifest, state, typed_report, identity, "final-implementation-audit")
 
 
 def _verify_terminal_proof(proof: dict[str, Any], state: dict[str, Any], event: dict[str, Any]) -> None:
@@ -735,6 +758,7 @@ def _verify_authorization_receipts(evidence: _Snapshot, state: dict[str, Any], e
     before = {**state, "stateRevision": row["stateRevision"] - 1}
     now = parse_reviewer_utc(row["recordedAt"])
     validation = validate_workflow_authorization_receipt(receipt, state=before, now=now)
+    _verify_execution_window(events[2:], authorized_at=now, expires_at=validation["expiresAt"])
     terminal = state["authorization"]
     _ensure(
         terminal.get("authorizationReceipt") == payload.get("authorizationReceipt")
@@ -743,6 +767,23 @@ def _verify_authorization_receipts(evidence: _Snapshot, state: dict[str, Any], e
         and terminal.get("expiresAt") == validation["expiresAt"],
         "chain-authorization-terminal-mismatch",
     )
+
+
+def _verify_execution_window(events: list[dict[str, Any]], *, authorized_at: datetime, expires_at: str) -> None:
+    payload = _object(events[0].get("payload"), "chain-journal-payload-invalid")
+    _ensure(
+        payload.get("previousPhase") == "READY" and payload.get("phase") == "RUNNING",
+        "chain-execution-start-transition",
+    )
+    deadline = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+    previous = authorized_at
+    for event in events:
+        current = parse_reviewer_utc(event["recordedAt"])
+        _ensure(previous <= current, "chain-execution-time-order")
+        _ensure(current < deadline, "authorization-expired")
+        if current + timedelta(microseconds=999_999) >= deadline:
+            raise _Incomplete("chain-authorization-time-precision", "Archived event time straddles the grant expiry")
+        previous = current
 
 
 def _verify_operator_receipts(
@@ -810,13 +851,20 @@ def _signature(
 ) -> None:
     raw = evidence.read(path)
     envelope = load_json_object(raw, label="operator signature")
-    # Native journal and reviewer lock observations have second precision.
-    # Require validity across the complete observed second.
-    start = parse_reviewer_utc(observed_at)
-    end = start + timedelta(microseconds=999_999)
-    result = verify_operator_envelope(policy, envelope, expected, observed_at=start.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
-    end_result = verify_operator_envelope(policy, envelope, expected, observed_at=end.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
-    if result["signatureVerified"] != end_result["signatureVerified"]:
-        raise _Incomplete("chain-operator-time-precision", "Archived time does not establish exact key validity")
+    try:
+        valid_from, expires = operator_interval(validate_operator_envelope(envelope)["payload"])
+    except LifecycleError as exc:
+        raise LifecycleError("chain-operator-signature-mismatch", "Operator envelope is invalid") from exc
+    probe, whole_second = _operator_observation_sample(parse_reviewer_utc(observed_at), valid_from, expires)
+    result = verify_operator_envelope(policy, envelope, expected, observed_at=probe.strftime("%Y-%m-%dT%H:%M:%S.%fZ"))
     result["artifact"] = {"path": path, "bytes": len(raw), "sha256": _digest(raw)}
     _ensure(result["signatureVerified"] is True and result == admitted, "chain-operator-signature-mismatch")
+    if not whole_second:
+        raise _Incomplete("chain-operator-time-precision", "Archived time does not establish exact key validity")
+
+
+def _operator_observation_sample(start: datetime, valid_from: datetime, expires: datetime) -> tuple[datetime, bool]:
+    end = start + timedelta(microseconds=999_999)
+    sample = max(start, valid_from)
+    _ensure(sample <= end and sample < expires, "chain-operator-signature-mismatch")
+    return sample, valid_from <= start and end < expires

@@ -11,11 +11,13 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
 
+from agent_lifecycle.audit import chain_verification
 from agent_lifecycle.audit.chain_verification import verify_chain
 from agent_lifecycle.audit.implementation import build_final_implementation_audit
 from agent_lifecycle.compiler.task_packets import compile_task_packets
 from agent_lifecycle.contracts.canonical import canonical_digest
 from agent_lifecycle.contracts.chain_verification_schemas import ANCHOR, BUNDLE, TRUST
+from agent_lifecycle.contracts.errors import LifecycleError
 from agent_lifecycle.contracts.operator_signature_schemas import operator_authority_marker
 from agent_lifecycle.contracts.proof_validation import build_receipt_hash_chain
 from agent_lifecycle.contracts.reviewer_identity_schemas import reviewer_attestation_authority
@@ -371,6 +373,42 @@ class AnchoredRunFixture:
 
 
 class ChainVerificationTests(TestCase):
+    def test_optional_final_implementation_audit_requires_consistent_absence(self):
+        with TemporaryDirectory() as temp:
+            snapshot = chain_verification._Snapshot(Path(temp))
+            check = chain_verification._verify_final_implementation_receipt
+            check(snapshot, {}, {}, {}, {})
+            with self.assertRaises(LifecycleError) as caught:
+                check(snapshot, {}, {}, {"finalImplementationAudit": {}}, {})
+            self.assertEqual(caught.exception.code, "chain-final-implementation-mismatch")
+
+    def test_journal_payload_must_be_an_object(self):
+        with self.assertRaises(LifecycleError) as caught:
+            chain_verification._verify_checkpoint_scope({"payload": None})
+        self.assertEqual(caught.exception.code, "chain-journal-payload-invalid")
+
+    def test_execution_window_requires_live_grant(self):
+        start = datetime(2026, 1, 1, 12, tzinfo=UTC)
+        event = {"recordedAt": "2026-01-01T12:00:00Z", "payload": {"previousPhase": "READY", "phase": "RUNNING"}}
+        check = chain_verification._verify_execution_window
+        check([event], authorized_at=start, expires_at="2026-01-01T12:00:01Z")
+        with self.assertRaises(LifecycleError) as caught:
+            check([event], authorized_at=start, expires_at="2026-01-01T12:00:00Z")
+        self.assertEqual(caught.exception.code, "authorization-expired")
+        with self.assertRaises(LifecycleError) as later:
+            check(
+                [event, {"recordedAt": "2026-01-01T12:00:01Z"}], authorized_at=start, expires_at="2026-01-01T12:00:01Z"
+            )
+        self.assertEqual(later.exception.code, "authorization-expired")
+
+    def test_fractional_operator_window_inside_a_second_is_partial_coverage(self):
+        second = datetime(2026, 1, 1, 12, tzinfo=UTC)
+        start = second.replace(microsecond=100_000)
+        expiry = second.replace(microsecond=900_000)
+        sample, covered = chain_verification._operator_observation_sample(second, start, expiry)
+        self.assertEqual(sample, start)
+        self.assertFalse(covered)
+
     def test_both_roots_are_verified_with_zero_writes(self):
         with TemporaryDirectory() as temp:
             root = Path(temp).resolve(strict=True)
