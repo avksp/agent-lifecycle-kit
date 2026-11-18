@@ -187,7 +187,7 @@ class ChainTamperTests(TestCase):
         for offset in (-1, 0, 1):
             with self.subTest(adoptionSecondsFromGrant=offset):
 
-                def with_observed_adoption(raw, state):
+                def with_observed_adoption(raw, state, *, offset=offset):
                     events = verify_events(raw, state)
                     grant = datetime.fromisoformat(events[1]["recordedAt"].replace("Z", "+00:00"))
                     observed = (grant + timedelta(seconds=offset)).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -196,7 +196,7 @@ class ChainTamperTests(TestCase):
 
                 check_window = chain_verification._verify_admission_window
 
-                def with_prior_freeze(receipt, *, latest, earliest=None):
+                def with_prior_freeze(receipt, *, latest, earliest=None, offset=offset, check_window=check_window):
                     if earliest is None and offset == -1:
                         receipt = {"reviewerAdmission": {"observedAt": latest}}
                     return check_window(receipt, latest=latest, earliest=earliest)
@@ -328,7 +328,7 @@ class ChainTamperTests(TestCase):
             with self.subTest(admission_index=selected):
                 index = 0
 
-                def with_invalid_time(receipt, *, earliest=None, latest):
+                def with_invalid_time(receipt, *, earliest=None, latest, selected=selected):
                     nonlocal index
                     if index == selected:
                         later = datetime.fromisoformat(latest.replace("Z", "+00:00")) + timedelta(seconds=1)
@@ -372,7 +372,7 @@ class ChainTamperTests(TestCase):
                 self.assertEqual(report["firstFailure"], {"check": "input", "code": code})
                 self.assertFalse(report["authorityGranted"])
                 self.assertEqual(inventory(self.fixture.repo), before)
-                self.assertEqual(os.readlink(cycle), cycle.name)
+                self.assertEqual(cycle.readlink(), Path(cycle.name))
 
     def test_windows_resolution_error_keeps_selector_specific_diagnostic(self):
         class WindowsResolutionError(OSError):
