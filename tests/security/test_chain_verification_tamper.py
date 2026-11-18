@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import io
 import json
 import os
@@ -372,6 +373,29 @@ class ChainTamperTests(TestCase):
                 self.assertFalse(report["authorityGranted"])
                 self.assertEqual(inventory(self.fixture.repo), before)
                 self.assertEqual(os.readlink(cycle), cycle.name)
+
+    def test_windows_resolution_error_keeps_selector_specific_diagnostic(self):
+        class WindowsResolutionError(OSError):
+            winerror = 1921
+
+        before = inventory(self.root)
+        selectors = (
+            ([], "chain-evidence-root-not-canonical"),
+            ([self.fixture.repo], "chain-trust-path-not-canonical"),
+        )
+        for resolved_paths, selector_code in selectors:
+            errors = (
+                (WindowsResolutionError(errno.EINVAL, "Unable to resolve file name"), selector_code),
+                (PermissionError(errno.EACCES, "Permission denied"), "chain-input-unreadable"),
+            )
+            for failure, expected_code in errors:
+                with self.subTest(selector=selector_code, error=type(failure).__name__):
+                    with patch.object(Path, "resolve", side_effect=[*resolved_paths, failure]):
+                        report = self.fixture.verify()
+                    self.assertEqual((report["exitCode"], report["status"]), (2, "INVALID_INPUT"))
+                    self.assertEqual(report["firstFailure"], {"check": "input", "code": expected_code})
+                    self.assertFalse(report["authorityGranted"])
+                    self.assertEqual(inventory(self.root), before)
 
     def test_nonregular_review_is_refused(self):
         name = self.fixture.repo / "plan/plan-review.json"

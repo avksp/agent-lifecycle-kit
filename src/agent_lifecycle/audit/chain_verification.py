@@ -52,6 +52,7 @@ from agent_lifecycle.workflow.reviews import validate_archived_task_result, vali
 _MAX_FILES = 1024
 _MAX_FILE_BYTES = 8 * 1024 * 1024
 _MAX_TOTAL_BYTES = 64 * 1024 * 1024
+_WINDOWS_CANT_RESOLVE_FILENAME = 1921
 _START_EVENTS = ("plan-adopted", "execution-authorized", "execution-started")
 _FINISH_EVENTS = ("final-audit-outcome-applied", "run-finalized")
 _TASK_EVENTS = ("task-started", "task-result-committed", "task-accepted")
@@ -241,7 +242,7 @@ def _require_canonical_selector(path: Path, code: str) -> None:
         # Path.resolve uses RuntimeError for a symlink loop on Python 3.11 and 3.12.
         raise LifecycleError(code, "Unable to resolve an explicit verification input") from exc
     except OSError as exc:
-        if exc.errno != errno.ELOOP:
+        if exc.errno != errno.ELOOP and getattr(exc, "winerror", None) != _WINDOWS_CANT_RESOLVE_FILENAME:
             raise
         raise LifecycleError(code, "Unable to resolve an explicit verification input") from exc
     _ensure(resolved == path, code)
