@@ -6,6 +6,8 @@ import re
 import unittest
 from pathlib import Path
 
+from tools.ci.qualify_pr_evidence import PLATFORMS, PYTHONS
+
 ROOT = Path(__file__).resolve().parents[2]
 ACTION_USE_RE = re.compile(r"^\s*(?:-\s+)?uses:\s+[^@\s]+@([0-9a-f]{40})\s+#.*\bv\d")
 
@@ -48,7 +50,32 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 self.assertEqual(set(matrix_keys), expected_axes)
                 actual = matrix_keys["python-version" if name == "foundation" else "python"]
                 actual_platforms = matrix_keys.get("os")
-                self.assertIn(f"needs.decide.outputs.{role}_has_fresh == 'true'", workflow)
+                condition = re.search(r"^    if: >-\n((?:^      .+\n)+)", workflow, re.MULTILINE)
+                self.assertIsNotNone(condition, name)
+                self.assertEqual(
+                    " ".join(condition.group(1).split()),
+                    "${{ !cancelled() && (github.event_name == 'pull_request' || "
+                    "(github.event_name == 'push' && needs.decide.result == 'success' && "
+                    "(needs.decide.outputs.mode == 'FULL' || needs.decide.outputs.mode == 'PARTIAL_REUSE') && "
+                    f"needs.decide.outputs.{role}_has_fresh == 'true') || "
+                    "(github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}",
+                )
+                probe = _job_block(ci, f"probe-{role}")
+                probe_axes = re.search(r"^      matrix:\n((?:^        \w[\w-]*: \[.*\]\n)+)", probe, re.MULTILINE)
+                self.assertIsNotNone(probe_axes, name)
+                axes = {}
+                for line in probe_axes.group(1).splitlines():
+                    axis, values = line.strip().split(": ", 1)
+                    axes[axis] = (
+                        [value.strip() for value in values[1:-1].split(",")]
+                        if axis == "os"
+                        else json.loads(values)
+                    )
+                canonical = {"python-version" if role == "foundation" else "python": list(PYTHONS)}
+                if role == "ci":
+                    canonical["os"] = list(PLATFORMS)
+                self.assertEqual(axes, canonical)
+                self.assertEqual(matrix_keys, canonical)
             self.assertEqual(actual, versions, name)
             self.assertNotIn("continue-on-error", workflow, name)
             if name in ("platform", "manual"):

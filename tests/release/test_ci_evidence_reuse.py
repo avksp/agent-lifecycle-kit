@@ -476,6 +476,47 @@ def quality_binding(index: dict, digest: str, key: str) -> dict:
 
 
 class CiEvidenceReuseTests(unittest.TestCase):
+    def test_pr_execution_outcome_pairs(self):
+        for conclusion in (
+            "success", "action_required", "cancelled", "failure", "neutral",
+            "skipped", "stale", "startup_failure", "timed_out",
+        ):
+            with self.subTest(conclusion=conclusion):
+                self.assertEqual(
+                    ci.pr_outcome_passes({"status": "completed", "conclusion": conclusion}),
+                    conclusion == "success",
+                )
+        for status in ("queued", "in_progress", "waiting", "pending", "requested"):
+            with self.subTest(status=status):
+                self.assertFalse(ci.pr_outcome_passes({"status": status, "conclusion": None}))
+        for invalid in (
+            {"status": "completed", "conclusion": None},
+            {"status": "completed", "conclusion": "unknown"},
+            {"status": "completed", "conclusion": []},
+            {"status": "in_progress", "conclusion": "success"},
+            {"status": "requested"},
+            {"status": [], "conclusion": None},
+            {"conclusion": None},
+        ):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ci.ProofError, "invalid PR execution"):
+                ci.pr_outcome_passes(invalid)
+
+    def test_malformed_pr_outcome_does_not_emit_fallback_candidate(self):
+        for target in ("run", "job"):
+            with self.subTest(target=target), tempfile.TemporaryDirectory() as folder:
+                fixture = ProviderFixture()
+                row = fixture.run if target == "run" else fixture.jobs[0]
+                row.update(status="completed", conclusion=None)
+                out = Path(folder) / "candidate.json"
+                with (
+                    mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+                    mock.patch.object(ci, "GitHub", return_value=fixture.api),
+                    mock.patch.object(ci, "native_output"),
+                    self.assertRaisesRegex(ci.ProofError, "invalid PR execution status/conclusion pair"),
+                ):
+                    ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
+                self.assertFalse(out.exists())
+
     def test_selective_pr_attempt_binds_untouched_archives_and_masks_unsuccessful_jobs(self):
         fixture = ProviderFixture()
         old_attempt = PR["attempt"] - 1

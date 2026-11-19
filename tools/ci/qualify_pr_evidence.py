@@ -681,11 +681,23 @@ def provider_run(
 def pr_outcome_passes(row: dict[str, Any]) -> bool:
     status, conclusion = row.get("status"), row.get("conclusion")
     require(
-        status in {"queued", "in_progress", "completed", "waiting", "pending", "requested"}
-        and (conclusion is None or isinstance(conclusion, str)),
+        isinstance(status, str)
+        and status in {"queued", "in_progress", "completed", "waiting", "pending", "requested"}
+        and "conclusion" in row,
         "invalid PR execution status",
     )
-    return status == "completed" and conclusion == "success"
+    if status != "completed":
+        require(conclusion is None, "invalid PR execution status/conclusion pair")
+        return False
+    require(
+        isinstance(conclusion, str)
+        and conclusion in {
+            "action_required", "cancelled", "failure", "neutral", "skipped",
+            "stale", "startup_failure", "success", "timed_out",
+        },
+        "invalid PR execution status/conclusion pair",
+    )
+    return conclusion == "success"
 
 
 def provider_jobs(api: GitHub, run: int, attempt: int) -> dict[str, dict[str, Any]]:
