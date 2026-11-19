@@ -1,298 +1,38 @@
 {
   "baseVersions": [
-    "2.49.0",
-    "2.50.0"
+    "2.51.0"
   ],
   "changes": [
     {
-      "domain": "authority",
-      "identifier": "operatorSignatureAuthority",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "authority",
-      "identifier": "operatorSignaturePolicy",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "authority",
-      "identifier": "orchestration.startMode",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "authority",
-      "identifier": "packageIntegrity",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "authority",
-      "identifier": "reviewerAttestationAuthority",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "authority",
-      "identifier": "reviewerAttestationPolicy",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "cli",
-      "identifier": "audit verify-chain",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "cli",
-      "identifier": "operator-signature request",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "cli",
-      "identifier": "operator-signature verify",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "cli",
-      "identifier": "review-mesh quorum --remedy-evidence",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "cli",
-      "identifier": "review-mesh synthesize --remedy-decisions",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "cli",
-      "identifier": "workflow authorization-renew",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "evidence",
-      "identifier": "operatorSignature",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "evidence",
-      "identifier": "plan.lock.operatorSignature",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "evidence",
-      "identifier": "reviewerAdmission",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "evidence",
-      "identifier": "terminalAnchor",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
       "domain": "path",
-      "identifier": "docs/architecture/threat-model.md",
+      "identifier": ".github/workflows/ci.yml",
       "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
+      "reason": "The repository delivery workflow may reuse qualified per-cell evidence. Downstream plan applicability is not established."
     },
     {
-      "domain": "path",
-      "identifier": "docs/guides/verify-chain-in-ci.md",
+      "domain": "quality",
+      "identifier": "validation.commands",
       "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "path",
-      "identifier": "docs/reference/operator-signatures.md",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "path",
-      "identifier": "docs/ru/architecture/threat-model.md",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "path",
-      "identifier": "docs/ru/guides/verify-chain-in-ci.md",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "path",
-      "identifier": "docs/ru/reference/evidence-imports.md",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "path",
-      "identifier": "docs/ru/reference/operator-signatures.md",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "path",
-      "identifier": "src/agent_lifecycle/data/plugin-updates/release-impact.v1.json",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "review",
-      "identifier": "reviewerProvenance",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-chain-terminal-anchor.v1",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-chain-verification-bundle.v1",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-chain-verification-report.v1",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-chain-verification-trust.v1",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-decision.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-signature-authority.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-signature-policy.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-signature-request.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-signature-validation.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-signature.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-operator-trust-root.v1",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-plan-lock.v4",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-plan-manifest.v1 optional signature fields",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-reviewer-attestation-authority.v1",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-reviewer-attestation-policy.v1",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-workflow-state.v7",
-      "impact": "UNKNOWN",
-      "reason": "Base2.49-relative optional public signature profile and documented boundaries; required nativev7 refuses older readers. No universal existing-plan or host semantic compatibility attestation; default off is retained."
-    },
-    {
-      "domain": "schema",
-      "identifier": "agent-workflow-state.v8",
-      "impact": "UNKNOWN",
-      "reason": "Selected reviewer and operator authority seams and offline evidence contracts. Existing-plan compatibility requires an exact review."
+      "reason": "Source-bound GitHub delivery results do not attest compatibility for arbitrary plan commands."
     }
   ],
   "domains": {
     "authority": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        "operatorSignatureAuthority",
-        "operatorSignaturePolicy",
-        "orchestration.startMode",
-        "packageIntegrity",
-        "reviewerAttestationAuthority",
-        "reviewerAttestationPolicy"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     },
     "cli": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        "audit verify-chain",
-        "operator-signature request",
-        "operator-signature verify",
-        "review-mesh quorum --remedy-evidence",
-        "review-mesh synthesize --remedy-decisions",
-        "workflow authorization-renew"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     },
     "evidence": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        "operatorSignature",
-        "plan.lock.operatorSignature",
-        "reviewerAdmission",
-        "terminalAnchor"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     },
     "host": {
@@ -305,14 +45,7 @@
       "coverage": "PARTIAL",
       "evidenceRefs": [],
       "identifiers": [
-        "docs/architecture/threat-model.md",
-        "docs/guides/verify-chain-in-ci.md",
-        "docs/reference/operator-signatures.md",
-        "docs/ru/architecture/threat-model.md",
-        "docs/ru/guides/verify-chain-in-ci.md",
-        "docs/ru/reference/evidence-imports.md",
-        "docs/ru/reference/operator-signatures.md",
-        "src/agent_lifecycle/data/plugin-updates/release-impact.v1.json"
+        ".github/workflows/ci.yml"
       ],
       "semanticReview": "UNVERIFIED"
     },
@@ -326,57 +59,30 @@
       "coverage": "PARTIAL",
       "evidenceRefs": [],
       "identifiers": [
-        "validation.commands",
-        "securityGates"
+        "validation.commands"
       ],
       "semanticReview": "UNVERIFIED"
     },
     "review": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        "orchestration.finalAuditRequired",
-        "orchestration.stepReviewRequired",
-        "planReview",
-        "reviewerProvenance"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     },
     "schema": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        "agent-chain-terminal-anchor.v1",
-        "agent-chain-verification-bundle.v1",
-        "agent-chain-verification-report.v1",
-        "agent-chain-verification-trust.v1",
-        "agent-operator-decision.v1",
-        "agent-operator-signature-authority.v1",
-        "agent-operator-signature-policy.v1",
-        "agent-operator-signature-request.v1",
-        "agent-operator-signature-validation.v1",
-        "agent-operator-signature.v1",
-        "agent-operator-trust-root.v1",
-        "agent-plan-lock.v4",
-        "agent-plan-manifest.v1 optional signature fields",
-        "agent-reviewer-attestation-authority.v1",
-        "agent-reviewer-attestation-policy.v1",
-        "agent-workflow-state.v7",
-        "agent-workflow-state.v8"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     }
   },
   "exclusions": [
-    "Explicit identifiers only; arbitrary plan command and host semantics are not qualified.",
-    "Required operator signatures need reviewed opt-in and nativev7; no automatic migration or downgrade is offered.",
-    "Scoped/v3 update assessment remains unsupported by bounded advisory semantics.",
-    "Root selection remains declared; key custody, human identity and host enforcement are not attested by this descriptor.",
-    "Native install, automatic update and notification triggers remain unqualified.",
-    "Strict reviewer lock v4 and state v8 require reviewed opt-in. The advisory does not qualify a migration or an external verifier deployment."
+    "Internal GitHub delivery changes only.",
+    "No universal plan semantic compatibility or new host route is qualified.",
+    "No automatic installation, update or plan migration is authorized."
   ],
   "origin": "https://github.com/avksp/agent-lifecycle-kit",
   "schemaVersion": "agent-plugin-release-impact.v1",
   "sourceCommit": null,
-  "version": "2.51.0"
+  "version": "2.51.1"
 }

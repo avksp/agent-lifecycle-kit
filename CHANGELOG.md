@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.51.1
+
+- Qualify retained test evidence across GitHub Actions attempts on the
+  same pull request source. A newer unsuccessful attempt cannot use an
+  older passing result for that cell.
+- Reuse compatible pull request evidence by cell on main. Run the full
+  macOS/Python 3.11 suite fresh and preserve independent CodeQL, package,
+  integration and publication checks.
+
 ## 2.51.0
 
 - Add opt-in reviewer attestations for a strict full-plan review, task
