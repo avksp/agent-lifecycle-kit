@@ -403,7 +403,6 @@ jobs:
           path: work/ci/reuse-candidate.json
           if-no-files-found: error
           retention-days: 2
-          retention-days: 2
       - name: Record artifact origin ${{ steps.evidence-upload.outputs.artifact-id }} ${{ steps.evidence-upload.outputs.artifact-digest }}
         if: steps.evidence-upload.outcome == 'success'
         run: 'true'

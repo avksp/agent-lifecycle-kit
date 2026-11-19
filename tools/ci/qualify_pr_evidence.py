@@ -678,6 +678,16 @@ def provider_run(
         require(run.get("status") == "completed" and run.get("conclusion") == "success", "run attempt did not pass")
 
 
+def pr_outcome_passes(row: dict[str, Any]) -> bool:
+    status, conclusion = row.get("status"), row.get("conclusion")
+    require(
+        status in {"queued", "in_progress", "completed", "waiting", "pending", "requested"}
+        and (conclusion is None or isinstance(conclusion, str)),
+        "invalid PR execution status",
+    )
+    return status == "completed" and conclusion == "success"
+
+
 def provider_jobs(api: GitHub, run: int, attempt: int) -> dict[str, dict[str, Any]]:
     endpoint = f"/actions/runs/{run}/attempts/{attempt}/jobs?per_page=100"
     rows = provider_rows(api.json(endpoint), "jobs")
@@ -702,10 +712,11 @@ def pr_suite_jobs(api: GitHub, pr: dict[str, Any]) -> dict[str, dict[str, Any]]:
     seen_ids: set[int] = set()
     for attempt in range(pr["attempt"], max(0, pr["attempt"] - PR_ATTEMPT_WINDOW), -1):
         rows = provider_jobs(api, pr["run"], attempt)
-        require(
-            all(row.get("conclusion") != "success" or name in suite_names for name, row in rows.items()),
-            "unexpected successful PR job",
-        )
+        if attempt == pr["attempt"]:
+            require(
+                all(row.get("conclusion") != "success" or name in suite_names for name, row in rows.items()),
+                "unexpected successful PR job",
+            )
         for name, row in rows.items():
             require(row["id"] not in seen_ids, "PR job ID repeated across attempts")
             seen_ids.add(row["id"])
@@ -1148,7 +1159,10 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
             repository=repository,
             run_id=identifier,
             attempt=attempt,
+            completed=False,
         )
+        if not pr_outcome_passes(run):
+            raise ApplicabilityChanged("PR current attempt did not qualify")
         require(fresh(run.get("updated_at"), api.now), "stale PR run", error=ApplicabilityChanged)
         run_actor(run, pull)
         associations = run.get("pull_requests")
@@ -1320,17 +1334,11 @@ def recheck_pr(api: GitHub, pr: dict[str, Any], repository: int) -> None:
         attempt=cast(int, current_attempt),
         completed=False,
     )
-    status, conclusion = current.get("status"), current.get("conclusion")
-    require(
-        status in {"queued", "in_progress", "completed", "waiting", "pending", "requested"}
-        and (conclusion is None or isinstance(conclusion, str)),
-        "invalid current PR status",
-    )
+    passed = pr_outcome_passes(current)
     updated = utc_time(current.get("updated_at"))
     if (
         current_attempt != pr["attempt"]
-        or status != "completed"
-        or conclusion != "success"
+        or not passed
         or not api.now - MAX_AGE <= updated <= api.now
     ):
         raise ApplicabilityChanged("current PR attempt no longer qualifies")
@@ -1349,7 +1357,11 @@ def find_candidate(
     rows: dict[str, Any] = {}
     coverages: dict[str, bytes] = {}
     tested = None
-    for key, (role, _, _) in CELLS.items():
+    for key, (role, _, name) in CELLS.items():
+        selected = jobs[name]
+        require(selected.get("head_sha") == pr["head"], "selected PR job head differs")
+        if not pr_outcome_passes(selected):
+            raise ApplicabilityChanged(f"newest PR suite did not pass: {name}")
         job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key)
         expected = {"cell-evidence.json", "tests.json"}
         if role == "quality":
@@ -2511,6 +2523,7 @@ def main_checks_evidence(build_raw: bytes, smoke_raw: bytes, checked: dict[str, 
 
 
 def decision_proof(value: Any, main: dict[str, Any], checked: dict[str, Any]) -> dict[str, Any]:
+    """Verify v2 decisions and retain v1 parsing for existing historical proofs."""
     if isinstance(value, dict) and "transport" not in value:
         return legacy_decision_proof(value, main, checked)
     mixed = isinstance(value, dict) and value.get("schemaVersion") == DECISION_V2

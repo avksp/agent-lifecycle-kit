@@ -501,8 +501,11 @@ class CiEvidenceReuseTests(unittest.TestCase):
             **current_job, "id": 990, "run_attempt": old_attempt,
             "check_run_url": f"{fixture.api.base}/check-runs/990",
         }
+        historical_job = provider_job(
+            "historical auxiliary job", 991, [], {**PR, "attempt": old_attempt}, HEAD,
+        )
         fixture.job_listing.update(total_count=1, jobs=[current_job])
-        fixture.routes[old_route] = {"total_count": 25, "jobs": [prior_same_cell, *fixture.jobs[1:]]}
+        fixture.routes[old_route] = {"total_count": 26, "jobs": [prior_same_cell, historical_job, *fixture.jobs[1:]]}
         proof, _ = ci.find_candidate(fixture.api, MAIN, SOURCE)
         self.assertEqual(proof["cells"][keys[0]]["producerAttempt"], PR["attempt"])
         self.assertTrue(all(proof["cells"][key]["producerAttempt"] == old_attempt for key in keys[1:]))
@@ -512,8 +515,26 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 current_job.update(status=status, conclusion=conclusion)
                 fixture.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
                 fixture.api.opener = fixture
-                with self.assertRaises(ci.ProofError):
+                with self.assertRaisesRegex(ci.ApplicabilityChanged, "newest PR suite did not pass"):
                     ci.find_candidate(fixture.api, MAIN, SOURCE)
+        fixture.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+        fixture.api.opener = fixture
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+            mock.patch.object(ci, "GitHub", return_value=fixture.api),
+            mock.patch.object(ci, "native_output"),
+        ):
+            target = Path(folder) / "candidate.json"
+            ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], target)
+            unavailable = ci.read_object(target)
+            self.assertEqual(unavailable["schemaVersion"], ci.INDEX_V2)
+            self.assertEqual(unavailable["status"], "UNAVAILABLE")
+            self.assertIn("newest PR suite did not pass", unavailable["reason"])
+        with tempfile.TemporaryDirectory() as folder:
+            decision = self.decide_fixture(CurrentFixture("UNAVAILABLE", mixed=True), Path(folder))
+        self.assertEqual(decision["mode"], "FULL")
+        self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
 
     def test_mixed_main_records_only_fresh_suites_and_rebinds_producers(self):
         fixture = CurrentFixture(mixed=True)
@@ -778,6 +799,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     self.assertNotIn("        if:", marker)
         self.assertEqual(workflow.count("      - name: Record artifact origin "), 9)
         self.assertNotIn("Record artifact origin", jobs["decide"])
+        self.assertEqual(jobs["candidate"].count("retention-days: 2"), 1)
 
     def test_prepare_publishes_console_scripts_for_later_step_lookup(self):
         real_run = ci.subprocess.run
