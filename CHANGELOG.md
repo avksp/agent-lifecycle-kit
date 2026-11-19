@@ -11,6 +11,9 @@
   Verify the frozen inventory, state and journal, receipt chain and exact
   signatures against an independently selected terminal anchor. Report
   incomplete or unsupported checks with a nonzero exit.
+- Verify process-group exit during cancellation on macOS when the Linux
+  process table is unavailable. Keep cancellation limits and require
+  cleanup evidence before reporting success.
 - Add paired CI instructions and update advisory plan-impact metadata.
   Synthetic signature proofs qualify the implemented checks under the
   selected public roots. Deployment identity, key custody and account

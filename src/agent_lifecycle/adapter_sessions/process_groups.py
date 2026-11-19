@@ -67,15 +67,7 @@ class ProcessGroupOwner:
 
     def verify(self) -> dict[str, Any]:
         if os.name == "posix":
-            alive = _posix_group_has_live_processes(self.pid)
-            if alive is None:
-                try:
-                    os.killpg(self.pid, 0)
-                    alive = True
-                except ProcessLookupError:
-                    alive = False
-                except PermissionError:
-                    alive = True
+            alive = _posix_group_is_alive(self.pid)
             return {
                 "status": "BLOCKED" if alive else "PASS",
                 "attestation": self.attestation,
@@ -130,13 +122,25 @@ def _wait_process_group_exit(group_id: int, timeout: float) -> bool:
 
     deadline = time.monotonic() + max(0.01, timeout)
     while True:
-        alive = _posix_group_has_live_processes(group_id)
-        if alive is False:
+        if not _posix_group_is_alive(group_id):
             return True
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             return False
         time.sleep(min(0.02, remaining))
+
+
+def _posix_group_is_alive(group_id: int) -> bool:
+    alive = _posix_group_has_live_processes(group_id)
+    if alive is not None:
+        return alive
+    try:
+        os.killpg(group_id, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def _create_windows_job(process: subprocess.Popen[Any]) -> int | None:
