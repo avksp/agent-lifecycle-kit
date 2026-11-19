@@ -12,6 +12,7 @@ from threading import Thread
 from unittest.mock import patch
 
 from agent_lifecycle.adapter_sessions import process as process_module
+from agent_lifecycle.adapter_sessions import process_groups
 from agent_lifecycle.adapter_sessions.process import ProcessTelemetry, run_process
 from agent_lifecycle.contracts import canonical_digest
 
@@ -22,6 +23,28 @@ class ProcessCleanupTests(unittest.TestCase):
         if os.name == "nt":
             return "agent_lifecycle.adapter_sessions.windows_pipe.write_pipe"
         return "agent_lifecycle.adapter_sessions.process.os.write"
+
+    @unittest.skipUnless(os.name == "posix", "signal-zero group probe requires POSIX")
+    def test_group_poll_finishes_when_fallback_reports_group_missing(self) -> None:
+        with (
+            patch.object(process_groups, "_posix_group_has_live_processes", return_value=None),
+            patch.object(os, "killpg", side_effect=ProcessLookupError) as probe,
+            patch.object(process_groups.time, "monotonic", side_effect=[4.0, 5.0]),
+        ):
+            self.assertTrue(process_groups._wait_process_group_exit(123, 0.5))
+        probe.assert_called_once_with(123, 0)
+
+    @unittest.skipUnless(os.name == "posix", "signal-zero group probe requires POSIX")
+    def test_group_poll_preserves_deadline_for_present_or_inaccessible_group(self) -> None:
+        for error in (None, PermissionError):
+            with (
+                self.subTest(error=error),
+                patch.object(process_groups, "_posix_group_has_live_processes", return_value=None),
+                patch.object(os, "killpg", side_effect=error) as probe,
+                patch.object(process_groups.time, "monotonic", side_effect=[4.0, 5.0]),
+            ):
+                self.assertFalse(process_groups._wait_process_group_exit(123, 0.5))
+            probe.assert_called_once_with(123, 0)
 
     def test_popen_failure_has_no_start_or_input_observation(self) -> None:
         events: list[str] = []
