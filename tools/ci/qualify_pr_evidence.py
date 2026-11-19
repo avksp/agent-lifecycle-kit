@@ -1161,6 +1161,8 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
     identifier, attempt = listed.get("id"), listed.get("run_attempt")
     require(positive_id(identifier) and positive_id(attempt), "invalid PR run or attempt")
     checked = obj(api.json(f"/actions/runs/{identifier}/attempts/{attempt}"), "PR attempt")
+    outcomes = [pr_outcome_passes(run) for run in (listed, checked)]
+    fresh_runs = [fresh(run.get("updated_at"), api.now) for run in (listed, checked)]
     for run in (listed, checked):
         provider_run(
             run,
@@ -1173,9 +1175,6 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
             attempt=attempt,
             completed=False,
         )
-        if not pr_outcome_passes(run):
-            raise ApplicabilityChanged("PR current attempt did not qualify")
-        require(fresh(run.get("updated_at"), api.now), "stale PR run", error=ApplicabilityChanged)
         run_actor(run, pull)
         associations = run.get("pull_requests")
         require(isinstance(associations, list) and len(associations) <= 1, "ambiguous PR run association")
@@ -1191,6 +1190,8 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
                 and obj(base.get("repo"), "associated base repository").get("id") == repository,
                 "PR run association disagrees",
             )
+    require(all(outcomes), "PR current attempt did not qualify", error=ApplicabilityChanged)
+    require(all(fresh_runs), "stale PR run", error=ApplicabilityChanged)
     return {"run": identifier, "attempt": attempt, "workflow": workflow, "head": pull["head"], "number": pull["number"]}
 
 
@@ -1365,15 +1366,17 @@ def find_candidate(
     workflow = workflow_id(api, "ci.yml", "ci")
     pr = pr_attempt(api, workflow, pull, repository)
     jobs = pr_suite_jobs(api, pr)
+    outcomes = {}
+    for name, selected in jobs.items():
+        require(selected.get("head_sha") == pr["head"], "selected PR job head differs")
+        outcomes[name] = pr_outcome_passes(selected)
+    for name, passed in outcomes.items():
+        require(passed, f"newest PR suite did not pass: {name}", error=ApplicabilityChanged)
     artifacts = artifact_rows(api, pr["run"])
     rows: dict[str, Any] = {}
     coverages: dict[str, bytes] = {}
     tested = None
-    for key, (role, _, name) in CELLS.items():
-        selected = jobs[name]
-        require(selected.get("head_sha") == pr["head"], "selected PR job head differs")
-        if not pr_outcome_passes(selected):
-            raise ApplicabilityChanged(f"newest PR suite did not pass: {name}")
+    for key, (role, _, _) in CELLS.items():
         job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key)
         expected = {"cell-evidence.json", "tests.json"}
         if role == "quality":

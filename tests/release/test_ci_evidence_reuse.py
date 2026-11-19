@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import http.client
 import io
+import itertools
 import os
 import re
 import shutil
@@ -502,11 +503,16 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 ci.pr_outcome_passes(invalid)
 
     def test_malformed_pr_outcome_does_not_emit_fallback_candidate(self):
-        for target in ("run", "job"):
-            with self.subTest(target=target), tempfile.TemporaryDirectory() as folder:
+        for target, pair in itertools.product(("run", "job"), ((None, "failure"), ("failure", None))):
+            with self.subTest(target=target, pair=pair), tempfile.TemporaryDirectory() as folder:
                 fixture = ProviderFixture()
-                row = fixture.run if target == "run" else fixture.jobs[0]
-                row.update(status="completed", conclusion=None)
+                if target == "run":
+                    endpoint = f"/actions/runs/{PR['run']}/attempts/{PR['attempt']}"
+                    fixture.routes[endpoint] = {**fixture.run, "conclusion": pair[1]}
+                    fixture.run["conclusion"] = pair[0]
+                else:
+                    for job, conclusion in zip(fixture.jobs[:2], pair, strict=True):
+                        job.update(status="completed", conclusion=conclusion)
                 out = Path(folder) / "candidate.json"
                 with (
                     mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),

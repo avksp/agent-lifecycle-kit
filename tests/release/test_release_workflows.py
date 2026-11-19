@@ -61,11 +61,14 @@ class ReleaseWorkflowTests(unittest.TestCase):
                     "(github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}",
                 )
                 probe = _job_block(ci, f"probe-{role}")
-                probe_axes = re.search(r"^      matrix:\n((?:^        \w[\w-]*: \[.*\]\n)+)", probe, re.MULTILINE)
+                probe_axes = re.search(r"^      matrix:\n((?:^        [^\n]*\n)+)", probe, re.MULTILINE)
                 self.assertIsNotNone(probe_axes, name)
                 axes = {}
                 for line in probe_axes.group(1).splitlines():
-                    axis, values = line.strip().split(": ", 1)
+                    axis_match = re.fullmatch(r"        (os|python(?:-version)?): (\[.*\])", line)
+                    self.assertIsNotNone(axis_match, line)
+                    axis, values = axis_match.groups()
+                    self.assertNotIn(axis, axes)
                     axes[axis] = (
                         [value.strip() for value in values[1:-1].split(",")]
                         if axis == "os"
