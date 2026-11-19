@@ -5,6 +5,7 @@ import json
 import re
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools.ci.qualify_pr_evidence import PLATFORMS, PYTHONS
 
@@ -61,10 +62,8 @@ class ReleaseWorkflowTests(unittest.TestCase):
                     "(github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}",
                 )
                 probe = _job_block(ci, f"probe-{role}")
-                probe_axes = re.search(r"^      matrix:\n((?:^        [^\n]*\n)+)", probe, re.MULTILINE)
-                self.assertIsNotNone(probe_axes, name)
                 axes = {}
-                for line in probe_axes.group(1).splitlines():
+                for line in _probe_matrix_rows(probe):
                     axis_match = re.fullmatch(r"        (os|python(?:-version)?): (\[.*\])", line)
                     self.assertIsNotNone(axis_match, line)
                     axis, values = axis_match.groups()
@@ -88,6 +87,29 @@ class ReleaseWorkflowTests(unittest.TestCase):
                 )
                 self.assertNotIn("exclude:", workflow, name)
                 self.assertNotIn("include:", workflow, name)
+
+    def test_probe_matrix_checks_continue_after_blank_lines_and_comments(self) -> None:
+        path = ROOT / ".github/workflows/ci.yml"
+        source = path.read_text(encoding="utf-8")
+        manual = (ROOT / ".github/workflows/matrix.yml").read_text(encoding="utf-8")
+        for role, separator in itertools.product(
+            ("ci", "foundation", "quality"), ("\n", "        # matrix annotation\n", "\n# annotation\n"),
+        ):
+            block = _job_block(source, f"probe-{role}")
+            key = "python-version" if role == "foundation" else "python"
+            axis = f"        {key}: " + json.dumps(list(PYTHONS)) + "\n"
+            self.assertIn(axis, block)
+            with self.subTest(role=role, separator=separator):
+                annotated = block.replace(axis, axis + separator, 1)
+                with patch.object(Path, "read_text", side_effect=[source.replace(block, annotated, 1), manual]):
+                    self.test_complete_supported_runtime_and_quality_matrices()
+                exclusion = f'        exclude:\n          - {key}: "3.11"\n'
+                changed = block.replace(axis, axis + separator + exclusion, 1)
+                with (
+                    patch.object(Path, "read_text", side_effect=[source.replace(block, changed, 1), manual]),
+                    self.assertRaisesRegex(AssertionError, "exclude"),
+                ):
+                    self.test_complete_supported_runtime_and_quality_matrices()
 
     def test_each_full_family_keeps_its_own_discovery(self) -> None:
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -169,6 +191,20 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("package-ecosystem: github-actions", dependabot)
         self.assertIn("github/codeql-action/*", dependabot)
         self.assertIn("package-ecosystem: pip", dependabot)
+
+
+def _probe_matrix_rows(probe: str) -> list[str]:
+    header = re.search(r"^      matrix:$", probe, re.MULTILINE)
+    if header is None:
+        raise AssertionError("probe matrix not found")
+    rows = []
+    for line in probe[header.end():].splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line.startswith("        "):
+            break
+        rows.append(line)
+    return rows
 
 
 def _job_block(workflow: str, job_id: str) -> str:

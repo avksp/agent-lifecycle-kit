@@ -523,6 +523,51 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
                 self.assertFalse(out.exists())
 
+    def test_malformed_observed_outcome_precedes_provider_fallback(self):
+        prefix = f"/actions/runs/{PR['run']}/attempts/"
+        prior_jobs = f"{prefix}{PR['attempt'] - 1}/jobs?per_page=100"
+        for target, valid in itertools.product(("listed-run", "selected-job"), (True, False)):
+            with self.subTest(target=target, valid=valid), tempfile.TemporaryDirectory() as folder:
+                fixture = ProviderFixture()
+                row = fixture.run if target == "listed-run" else fixture.jobs[0]
+                row["conclusion"] = "success" if valid else None
+                next_read = f"{prefix}{PR['attempt']}" if target == "listed-run" else prior_jobs
+                if target == "selected-job":
+                    fixture.job_listing.update(total_count=1, jobs=[row])
+                    for attempt in range(PR["attempt"] - 1, 0, -1):
+                        fixture.routes[f"{prefix}{attempt}/jobs?per_page=100"] = {"total_count": 0, "jobs": []}
+                interrupted = next_read if target == "listed-run" else None
+
+                def provider_json(endpoint, read=fixture.api.json, blocked=interrupted):
+                    if endpoint == blocked:
+                        raise ci.ProviderUnavailable("fixture exact-attempt read interrupted")
+                    return read(endpoint)
+
+                out = Path(folder) / "candidate.json"
+                with (
+                    mock.patch.object(fixture.api, "json", side_effect=provider_json) as request,
+                    mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+                    mock.patch.object(ci, "GitHub", return_value=fixture.api),
+                    mock.patch.object(ci, "native_output"),
+                ):
+                    if valid:
+                        ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
+                        receipt = ci.read_object(out)
+                        self.assertEqual(receipt["status"], "UNAVAILABLE")
+                        reason = "interrupted" if target == "listed-run" else "bounded attempt history"
+                        self.assertIn(reason, receipt["reason"])
+                        self.assertIn(mock.call(next_read), request.call_args_list)
+                    else:
+                        with self.assertRaisesRegex(ci.ProofError, "invalid PR execution status/conclusion pair"):
+                            ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
+                        self.assertFalse(out.exists())
+                        self.assertNotIn(mock.call(next_read), request.call_args_list)
+                if valid:
+                    with tempfile.TemporaryDirectory() as decision_folder:
+                        decision = self.decide_fixture(CurrentFixture("UNAVAILABLE", mixed=True), Path(decision_folder))
+                    self.assertEqual(decision["mode"], "FULL")
+                    self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
+
     def test_selective_pr_attempt_binds_untouched_archives_and_masks_unsuccessful_jobs(self):
         fixture = ProviderFixture()
         old_attempt = PR["attempt"] - 1

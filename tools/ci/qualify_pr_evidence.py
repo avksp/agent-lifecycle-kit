@@ -732,8 +732,9 @@ def pr_suite_jobs(api: GitHub, pr: dict[str, Any]) -> dict[str, dict[str, Any]]:
         for name, row in rows.items():
             require(row["id"] not in seen_ids, "PR job ID repeated across attempts")
             seen_ids.add(row["id"])
-            if name in suite_names:
-                selected.setdefault(name, row)
+            if name in suite_names and name not in selected:
+                pr_outcome_passes(row)
+                selected[name] = row
         if set(selected) == suite_names:
             return selected
     raise ProviderUnavailable("PR suite coverage exceeds bounded attempt history")
@@ -1160,8 +1161,9 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
     listed = only(runs, "PR run")
     identifier, attempt = listed.get("id"), listed.get("run_attempt")
     require(positive_id(identifier) and positive_id(attempt), "invalid PR run or attempt")
+    listed_passed = pr_outcome_passes(listed)
     checked = obj(api.json(f"/actions/runs/{identifier}/attempts/{attempt}"), "PR attempt")
-    outcomes = [pr_outcome_passes(run) for run in (listed, checked)]
+    outcomes = (listed_passed, pr_outcome_passes(checked))
     fresh_runs = [fresh(run.get("updated_at"), api.now) for run in (listed, checked)]
     for run in (listed, checked):
         provider_run(
