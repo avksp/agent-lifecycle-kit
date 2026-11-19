@@ -7,6 +7,7 @@ import threading
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from agent_lifecycle.accounting.journal import Journal, RevisionConflict
 from agent_lifecycle.adapter_sessions.process_admission import (
@@ -198,12 +199,23 @@ class ProcessAdmissionTests(unittest.TestCase):
                         journal, preparation_operation(name), qualify,
                         clock=lambda: 100,
                     )
-                    try:
-                        admission.invoke(lambda: effects.append(name),
-                                         input_digest="b" * 64)
-                        outcomes.append("DISPATCHED")
-                    except RevisionConflict:
-                        outcomes.append("REVISION_CONFLICT")
+                    original_slot = journal._queue.slot
+
+                    def fixture_slot(observation, *, timeout):
+                        self.assertEqual(timeout, 1.0)
+                        return original_slot(observation, timeout=10.0)
+
+                    # Give both real writers time to reach the revision check.
+                    with patch.object(journal._queue, "slot", side_effect=fixture_slot) as slot:
+                        try:
+                            admission.invoke(lambda: effects.append(name),
+                                             input_digest="b" * 64)
+                        except RevisionConflict:
+                            outcome = "REVISION_CONFLICT"
+                        else:
+                            outcome = "DISPATCHED"
+                        slot.assert_called()
+                        outcomes.append(outcome)
             threads = [threading.Thread(target=worker, args=(str(i),)) for i in range(2)]
             for thread in threads:
                 thread.start()
