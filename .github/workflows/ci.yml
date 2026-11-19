@@ -29,14 +29,14 @@ jobs:
     needs: [decide, control]
     if: >-
       ${{ !cancelled() && (github.event_name == 'pull_request' ||
-        (github.event_name == 'push' && needs.decide.result == 'success' && needs.decide.outputs.mode == 'FULL') ||
+        (github.event_name == 'push' && needs.decide.result == 'success' &&
+        (needs.decide.outputs.mode == 'FULL' || needs.decide.outputs.mode == 'PARTIAL_REUSE') &&
+        needs.decide.outputs.ci_has_fresh == 'true') ||
         (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
     runs-on: ${{ matrix.os == 'macos-latest' && 'macos-26-intel' || matrix.os }}
-    strategy: &platform_matrix
+    strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+      matrix: ${{ fromJSON(github.event_name == 'push' && needs.decide.outputs.ci_matrix || '{"os":["ubuntu-latest","macos-latest","windows-latest"],"python":["3.11","3.12","3.13","3.14","3.15"]}') }}
     env:
       CI_ROLE: ci
       CI_CELL: ${{ matrix.os }}-py${{ matrix.python }}
@@ -202,13 +202,14 @@ jobs:
     needs: [decide, control]
     if: >-
       ${{ !cancelled() && (github.event_name == 'pull_request' ||
-        (github.event_name == 'push' && needs.decide.result == 'success' && needs.decide.outputs.mode == 'FULL') ||
+        (github.event_name == 'push' && needs.decide.result == 'success' &&
+        (needs.decide.outputs.mode == 'FULL' || needs.decide.outputs.mode == 'PARTIAL_REUSE') &&
+        needs.decide.outputs.foundation_has_fresh == 'true') ||
         (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
     runs-on: ubuntu-latest
-    strategy: &foundation_matrix
+    strategy:
       fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+      matrix: ${{ fromJSON(github.event_name == 'push' && needs.decide.outputs.foundation_matrix || '{"python-version":["3.11","3.12","3.13","3.14","3.15"]}') }}
     env:
       CI_ROLE: foundation
       CI_CELL: ubuntu-latest-py${{ matrix.python-version }}
@@ -260,13 +261,14 @@ jobs:
     needs: [decide, control]
     if: >-
       ${{ !cancelled() && (github.event_name == 'pull_request' ||
-        (github.event_name == 'push' && needs.decide.result == 'success' && needs.decide.outputs.mode == 'FULL') ||
+        (github.event_name == 'push' && needs.decide.result == 'success' &&
+        (needs.decide.outputs.mode == 'FULL' || needs.decide.outputs.mode == 'PARTIAL_REUSE') &&
+        needs.decide.outputs.quality_has_fresh == 'true') ||
         (github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}
     runs-on: ubuntu-latest
-    strategy: &quality_matrix
+    strategy:
       fail-fast: false
-      matrix:
-        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+      matrix: ${{ fromJSON(github.event_name == 'push' && needs.decide.outputs.quality_matrix || '{"python":["3.11","3.12","3.13","3.14","3.15"]}') }}
     env:
       CI_ROLE: quality
       CI_CELL: ubuntu-latest-py${{ matrix.python }}
@@ -401,6 +403,7 @@ jobs:
           path: work/ci/reuse-candidate.json
           if-no-files-found: error
           retention-days: 2
+          retention-days: 2
       - name: Record artifact origin ${{ steps.evidence-upload.outputs.artifact-id }} ${{ steps.evidence-upload.outputs.artifact-digest }}
         if: steps.evidence-upload.outcome == 'success'
         run: 'true'
@@ -421,7 +424,11 @@ jobs:
     permissions:
       contents: read
       actions: read
-    strategy: *platform_matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     env:
       CI_CELL: ${{ matrix.os }}-py${{ matrix.python }}
       QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
@@ -492,7 +499,10 @@ jobs:
     permissions:
       contents: read
       actions: read
-    strategy: *foundation_matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     env:
       CI_CELL: ubuntu-latest-py${{ matrix.python-version }}
       QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
@@ -554,7 +564,10 @@ jobs:
     permissions:
       contents: read
       actions: read
-    strategy: *quality_matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
     env:
       CI_CELL: ubuntu-latest-py${{ matrix.python }}
       QUALIFIED_INDEX_SHA256: ${{ needs.candidate.outputs.sha256 }}
@@ -618,6 +631,12 @@ jobs:
     outputs:
       mode: ${{ steps.decision.outputs.mode }}
       sha256: ${{ steps.decision.outputs.sha256 }}
+      ci_matrix: ${{ steps.decision.outputs.ci_matrix }}
+      ci_has_fresh: ${{ steps.decision.outputs.ci_has_fresh }}
+      foundation_matrix: ${{ steps.decision.outputs.foundation_matrix }}
+      foundation_has_fresh: ${{ steps.decision.outputs.foundation_has_fresh }}
+      quality_matrix: ${{ steps.decision.outputs.quality_matrix }}
+      quality_has_fresh: ${{ steps.decision.outputs.quality_has_fresh }}
     steps:
       - name: Set git line ending policy
         run: git config --global core.autocrlf false

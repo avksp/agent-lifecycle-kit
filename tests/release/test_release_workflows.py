@@ -29,15 +29,29 @@ class ReleaseWorkflowTests(unittest.TestCase):
             "quality": _job_block(ci, "quality"),
             "foundation": _job_block(ci, "foundation"),
         }.items():
-            found = re.search(r"python(?:-version)?: \[(.*?)\]", workflow)
-            self.assertIsNotNone(found, name)
-            actual = json.loads("[" + found.group(1) + "]")
+            if name == "manual":
+                found = re.search(r"python(?:-version)?: \[(.*?)\]", workflow)
+                self.assertIsNotNone(found, name)
+                actual = json.loads("[" + found.group(1) + "]")
+                operating_systems = re.search(r"os: \[(.*?)\]", workflow)
+                self.assertIsNotNone(operating_systems, name)
+                actual_platforms = [value.strip() for value in operating_systems.group(1).split(",")]
+            else:
+                role = "ci" if name == "platform" else name
+                found = re.search(r"fromJSON\(github\.event_name == 'push' && needs\.decide\.outputs\."
+                                  + role + r"_matrix \|\| '(\{[^']+\})'\)", workflow)
+                self.assertIsNotNone(found, name)
+                matrix_keys = json.loads(found.group(1))
+                expected_axes = {"python-version" if name == "foundation" else "python"}
+                if name == "platform":
+                    expected_axes.add("os")
+                self.assertEqual(set(matrix_keys), expected_axes)
+                actual = matrix_keys["python-version" if name == "foundation" else "python"]
+                actual_platforms = matrix_keys.get("os")
+                self.assertIn(f"needs.decide.outputs.{role}_has_fresh == 'true'", workflow)
             self.assertEqual(actual, versions, name)
             self.assertNotIn("continue-on-error", workflow, name)
             if name in ("platform", "manual"):
-                operating_systems = re.search(r"os: \[(.*?)\]", workflow)
-                self.assertIsNotNone(operating_systems)
-                actual_platforms = [value.strip() for value in operating_systems.group(1).split(",")]
                 self.assertEqual(actual_platforms, platforms, name)
                 self.assertEqual(
                     set(itertools.product(actual_platforms, actual)), set(itertools.product(platforms, versions)), name
