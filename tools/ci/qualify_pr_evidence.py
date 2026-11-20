@@ -718,20 +718,31 @@ def provider_jobs(api: GitHub, run: int, attempt: int) -> dict[str, dict[str, An
     return jobs
 
 
-def pr_suite_jobs(api: GitHub, pr: dict[str, Any]) -> dict[str, dict[str, Any]]:
+PrJobAttempts = dict[int, dict[str, dict[str, Any]]]
+
+
+def pr_attempt_jobs(
+    api: GitHub, run: int, attempt: int, attempts: PrJobAttempts,
+) -> dict[str, dict[str, Any]]:
+    if attempt not in attempts:
+        rows = provider_jobs(api, run, attempt)
+        known_ids = {job["id"] for prior in attempts.values() for job in prior.values()}
+        require(known_ids.isdisjoint(job["id"] for job in rows.values()), "PR job ID repeated across attempts")
+        attempts[attempt] = rows
+    return attempts[attempt]
+
+
+def pr_suite_jobs(api: GitHub, pr: dict[str, Any], attempts: PrJobAttempts) -> dict[str, dict[str, Any]]:
     selected: dict[str, dict[str, Any]] = {}
     suite_names = {name for _, _, name in CELLS.values()}
-    seen_ids: set[int] = set()
     for attempt in range(pr["attempt"], max(0, pr["attempt"] - PR_ATTEMPT_WINDOW), -1):
-        rows = provider_jobs(api, pr["run"], attempt)
+        rows = pr_attempt_jobs(api, pr["run"], attempt, attempts)
         if attempt == pr["attempt"]:
             require(
                 all(row.get("conclusion") != "success" or name in suite_names for name, row in rows.items()),
                 "unexpected successful PR job",
             )
         for name, row in rows.items():
-            require(row["id"] not in seen_ids, "PR job ID repeated across attempts")
-            seen_ids.add(row["id"])
             if name in suite_names and name not in selected:
                 pr_outcome_passes(row)
                 selected[name] = row
@@ -787,7 +798,7 @@ def artifact_rows(api: GitHub, run: int) -> dict[str, dict[str, Any]]:
     return artifacts
 
 
-def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[str, Any]) -> None:
+def artifact_origin_identity(job: dict[str, Any], upload: dict[str, Any]) -> tuple[int, str]:
     steps = job.get("steps")
     require(isinstance(steps, list) and len(steps) <= 100, "missing bounded artifact origin steps")
     markers = [
@@ -802,14 +813,18 @@ def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[
         raise ProofError("malformed artifact origin marker")
     job_step(job, marker["name"])
     require(
-        positive_id(artifact.get("id")) and int(match.group(1)) == artifact["id"]
-        and "sha256:" + match.group(2) == artifact["digest"],
-        "native artifact origin differs from provider metadata",
-    )
-    require(
         positive_id(upload.get("number")) and marker["number"] > upload["number"]
         and cast(list[Any], steps).index(marker) > cast(list[Any], steps).index(upload),
         "artifact origin marker precedes its uploader",
+    )
+    return int(match.group(1)), "sha256:" + match.group(2)
+
+
+def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[str, Any]) -> None:
+    identifier, digest = artifact_origin_identity(job, upload)
+    require(
+        positive_id(artifact.get("id")) and identifier == artifact["id"] and digest == artifact["digest"],
+        "native artifact origin differs from provider metadata",
     )
 
 
@@ -1367,7 +1382,8 @@ def find_candidate(
     pull = trusted_pr(api, checked, repository)
     workflow = workflow_id(api, "ci.yml", "ci")
     pr = pr_attempt(api, workflow, pull, repository)
-    jobs = pr_suite_jobs(api, pr)
+    attempts: PrJobAttempts = {}
+    jobs = pr_suite_jobs(api, pr, attempts)
     outcomes = {}
     for name, selected in jobs.items():
         require(selected.get("head_sha") == pr["head"], "selected PR job head differs")
@@ -1379,7 +1395,7 @@ def find_candidate(
     coverages: dict[str, bytes] = {}
     tested = None
     for key, (role, _, _) in CELLS.items():
-        job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key)
+        job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key, attempts)
         expected = {"cell-evidence.json", "tests.json"}
         if role == "quality":
             expected.add("coverage.json")
@@ -1404,6 +1420,45 @@ def find_candidate(
     }, coverages
 
 
+def carried_pr_job(
+    api: GitHub,
+    pr: dict[str, Any],
+    job: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    key: str,
+    attempts: PrJobAttempts,
+) -> dict[str, Any]:
+    identifier, digest = artifact_origin_identity(job, job_step(job, CELL_UPLOAD))
+    artifact = next((row for row in artifacts.values() if row["id"] == identifier), None)
+    if artifact is None:
+        raise ProviderUnavailable("selected PR artifact absent or expired")
+    attempt_text = artifact["name"].split("-", 5)[4:5]
+    require(
+        len(attempt_text) == 1 and re.fullmatch(r"[1-9][0-9]{0,19}", attempt_text[0]) is not None,
+        "carried PR artifact origin differs",
+    )
+    origin_attempt = int(attempt_text[0])
+    require(
+        artifact["name"] == artifact_name("pr-ci", pr["run"], origin_attempt, key)
+        and origin_attempt < job["run_attempt"]
+        and artifact["digest"] == digest,
+        "carried PR artifact origin differs",
+    )
+    if pr["attempt"] - origin_attempt >= PR_ATTEMPT_WINDOW or artifact["expired"] is True:
+        raise ProviderUnavailable("selected PR artifact absent, expired, or outside bounded attempt history")
+    original = successful_job(pr_attempt_jobs(api, pr["run"], origin_attempt, attempts), job["name"], pr["head"])
+    require(
+        positive_id(job.get("runner_id"))
+        and utc_time(job.get("started_at")) <= utc_time(job.get("completed_at"))
+        and all(
+            job.get(field) == original.get(field)
+            for field in ("runner_id", "started_at", "completed_at", "steps")
+        ),
+        "carried PR job execution differs from its original producer",
+    )
+    return original
+
+
 def pr_suite_artifact(
     api: GitHub,
     main: dict[str, Any],
@@ -1411,10 +1466,14 @@ def pr_suite_artifact(
     jobs: dict[str, dict[str, Any]],
     artifacts: dict[str, dict[str, Any]],
     key: str,
+    attempts: PrJobAttempts,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     role, cell, name = CELLS[key]
     job = suite_job(jobs, role, cell, name, pr["head"])
     artifact_key = artifact_name("pr-ci", pr["run"], job["run_attempt"], key)
+    if artifact_key not in artifacts and job["run_attempt"] > 1:
+        job = carried_pr_job(api, pr, job, artifacts, key, attempts)
+        artifact_key = artifact_name("pr-ci", pr["run"], job["run_attempt"], key)
     if artifact_key not in artifacts or artifacts[artifact_key].get("expired") is True:
         raise ProviderUnavailable("selected PR artifact absent or expired")
     artifact = joined_artifact(
@@ -2846,10 +2905,11 @@ def transport_graph(
 
 def rebind_pr_cells(api: GitHub, main: dict[str, Any], index: dict[str, Any], reused: set[str]) -> None:
     pr = index["pr"]
-    jobs = pr_suite_jobs(api, pr)
+    attempts: PrJobAttempts = {}
+    jobs = pr_suite_jobs(api, pr, attempts)
     artifacts = artifact_rows(api, pr["run"])
     for key in sorted(reused):
-        job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key)
+        job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key, attempts)
         row = index["cells"][key]
         require(
             row["producerAttempt"] == job["run_attempt"]

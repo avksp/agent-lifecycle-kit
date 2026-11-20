@@ -568,7 +568,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     self.assertEqual(decision["mode"], "FULL")
                     self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
 
-    def test_selective_pr_attempt_binds_untouched_archives_and_masks_unsuccessful_jobs(self):
+    def selective_pr_fixture(self, *, carried: bool = False) -> tuple[ProviderFixture, list[str]]:
         fixture = ProviderFixture()
         old_attempt = PR["attempt"] - 1
         old_route = f"/actions/runs/{PR['run']}/attempts/{old_attempt}/jobs?per_page=100"
@@ -596,8 +596,24 @@ class CiEvidenceReuseTests(unittest.TestCase):
         historical_job = provider_job(
             "historical auxiliary job", 991, [], {**PR, "attempt": old_attempt}, HEAD,
         )
-        fixture.job_listing.update(total_count=1, jobs=[current_job])
+        current_rows = [current_job]
+        if carried:
+            for job in fixture.jobs[1:]:
+                job.update(started_at=STARTED, completed_at=COMPLETED, runner_id=100)
+                copy_id = job["id"] + 10_000
+                carried_row = copy.deepcopy(job)
+                carried_row.update(
+                    id=copy_id, run_attempt=PR["attempt"], check_run_url=f"{fixture.api.base}/check-runs/{copy_id}",
+                )
+                current_rows.append(carried_row)
+        fixture.job_listing.update(total_count=len(current_rows), jobs=current_rows)
         fixture.routes[old_route] = {"total_count": 26, "jobs": [prior_same_cell, historical_job, *fixture.jobs[1:]]}
+        return fixture, keys
+
+    def test_selective_pr_attempt_binds_untouched_archives_and_masks_unsuccessful_jobs(self):
+        fixture, keys = self.selective_pr_fixture()
+        old_attempt = PR["attempt"] - 1
+        current_job = fixture.jobs[0]
         proof, _ = ci.find_candidate(fixture.api, MAIN, SOURCE)
         self.assertEqual(proof["cells"][keys[0]]["producerAttempt"], PR["attempt"])
         self.assertTrue(all(proof["cells"][key]["producerAttempt"] == old_attempt for key in keys[1:]))
@@ -627,6 +643,68 @@ class CiEvidenceReuseTests(unittest.TestCase):
             decision = self.decide_fixture(CurrentFixture("UNAVAILABLE", mixed=True), Path(folder))
         self.assertEqual(decision["mode"], "FULL")
         self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
+
+    def test_carried_attempt_rows_resolve_and_rebind_actual_producers(self) -> None:
+        fixture, keys = self.selective_pr_fixture(carried=True)
+        proof, _ = ci.find_candidate(fixture.api, MAIN, SOURCE)
+        self.assertEqual(proof["cells"][keys[0]]["producerAttempt"], PR["attempt"])
+        for key, original, copied in zip(
+            keys[1:], fixture.jobs[1:], fixture.job_listing["jobs"][1:], strict=True,
+        ):
+            self.assertNotEqual(original["id"], copied["id"])
+            self.assertEqual(proof["cells"][key]["job"], original["id"])
+            self.assertEqual(proof["cells"][key]["producerAttempt"], PR["attempt"] - 1)
+        self.assertEqual(proof["provider"], {"authenticated": 37, "total": 62})
+        api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+        api.opener = fixture
+        fixture.requests.clear()
+        ci.rebind_pr_cells(api, MAIN, proof, set(keys))
+        history = [url for url, _ in fixture.requests if f"/actions/runs/{PR['run']}/attempts/" in url]
+        self.assertEqual(len([url for url in history if "/jobs?" in url]), 2)
+        self.assertFalse(any(url.endswith("/zip") for url, _ in fixture.requests))
+
+    def test_carried_attempt_rows_refuse_bad_outcomes_and_origins(self) -> None:
+        cases = {
+            "failed": (ci.ApplicabilityChanged, "newest PR suite did not pass"),
+            "malformed": (ci.ProofError, "invalid PR execution status/conclusion pair"),
+            "runner": (ci.ProofError, "carried PR job execution differs"),
+            "timestamp": (ci.ProofError, "carried PR job execution differs"),
+            "digest": (ci.ProofError, "carried PR artifact origin differs"),
+            "foreign": (ci.ProofError, "carried PR artifact origin differs"),
+            "missing": (ci.ProviderUnavailable, "selected PR artifact absent or expired"),
+            "expired": (ci.ProviderUnavailable, "outside bounded attempt history"),
+        }
+        for case, (error, message) in cases.items():
+            with self.subTest(case=case):
+                fixture, _ = self.selective_pr_fixture(carried=True)
+                job = fixture.job_listing["jobs"][1]
+                artifact = fixture.artifacts[1]
+                if case in {"failed", "malformed"}:
+                    job["conclusion"] = "failure" if case == "failed" else None
+                elif case == "runner":
+                    job["runner_id"] += 1
+                elif case == "timestamp":
+                    job["started_at"] = "2026-10-12T11:00:01Z"
+                elif case == "digest":
+                    bind_artifact_origin(job, ci.CELL_UPLOAD, {**artifact, "digest": f"sha256:{'f' * 64}"})
+                elif case == "foreign":
+                    bind_artifact_origin(job, ci.CELL_UPLOAD, fixture.artifacts[2])
+                elif case == "missing":
+                    fixture.artifacts.remove(artifact)
+                    fixture.artifact_listing["total_count"] -= 1
+                else:
+                    artifact["expired"] = True
+                with self.assertRaisesRegex(error, message):
+                    ci.find_candidate(fixture.api, MAIN, SOURCE)
+
+    def test_carried_origin_outside_history_is_unavailable_without_fetch(self) -> None:
+        fixture, keys = self.selective_pr_fixture(carried=True)
+        attempt = PR["attempt"] - 1 + ci.PR_ATTEMPT_WINDOW
+        job = {**fixture.job_listing["jobs"][1], "run_attempt": attempt}
+        artifacts = {row["name"]: row for row in fixture.artifacts}
+        with self.assertRaisesRegex(ci.ProviderUnavailable, "outside bounded attempt history"):
+            ci.carried_pr_job(fixture.api, {**PR, "attempt": attempt}, job, artifacts, keys[1], {})
+        self.assertEqual(fixture.requests, [])
 
     def test_mixed_main_records_only_fresh_suites_and_rebinds_producers(self):
         fixture = CurrentFixture(mixed=True)
