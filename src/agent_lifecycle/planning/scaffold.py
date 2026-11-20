@@ -1,0 +1,121 @@
+"""Portable, non-executable inputs for authoring a full S2 plan."""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Iterator
+from typing import Any
+
+_MARKER = re.compile(r"(?<![A-Za-z0-9])ALK_FILL_[A-Z][A-Z0-9_]*")
+
+
+def scaffold_placeholders(value: object) -> Iterator[str]:
+    """Find reserved placeholders in manifest values, including path values."""
+    if isinstance(value, str):
+        yield from _MARKER.findall(value)
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from scaffold_placeholders(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from scaffold_placeholders(child)
+
+
+def s2_scaffold(
+    plan_root: str,
+    artifact_root: str,
+    *,
+    author: str,
+    owner: str,
+    base_ref: str,
+    base_sha: str,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Return five authoring inputs, with one illustrative R/AC/EV chain."""
+    documents = {
+        "specification.md": "# Specification\n\nDescribe the goal, constraints, alternatives and rollback.\n",
+        "00-developer-overview.md": "# Developer overview\n\nExplain the intended result, boundaries and owner.\n",
+        "acceptance-criteria.md": (
+            "| ID | Requirement | Evidence | Criterion |\n| --- | --- | --- | --- |\n"
+            "| `AC-01` | `REQ-01` | `EV-01` | Write the same observable criterion as in the manifest. |\n"
+        ),
+        "review-request.md": (
+            "# Independent review request\n\n"
+            "Review the specification and plan before freeze. Confirm ownership, scope, checks and evidence.\n"
+        ),
+    }
+    package_id = plan_root.rsplit("/", 1)[-1]
+    manifest = {
+        "schemaVersion": "agent-plan-manifest.v1",
+        "status": "DRAFT",
+        "planRevision": 1,
+        "package": {
+            "id": package_id,
+            "title": "ALK_FILL_PLAN_TITLE",
+            "workspaceRoot": ".",
+            "planArtifactRoot": plan_root,
+            "artifactRoot": artifact_root,
+        },
+        "author": {"id": author, "runId": "ALK_FILL_AUTHOR_RUN"},
+        "baseRevision": {"ref": base_ref, "sha": base_sha},
+        "developerOverview": f"{plan_root}/00-developer-overview.md",
+        "specification": {
+            "tier": "S2",
+            "status": "DRAFT",
+            "source": f"{plan_root}/specification.md",
+            "tierResolutionRequest": {"taskCount": 1, "executableOwners": [owner], "externalSpecification": True},
+            "requirements": [{"id": "REQ-01", "description": "ALK_FILL_REQUIREMENT"}],
+        },
+        "planFiles": [f"{plan_root}/{name}" for name in sorted([*documents, "plan.manifest.json"])],
+        "planReview": {
+            "required": True,
+            "report": f"{plan_root}/independent-plan-review.json",
+            "reviewedRevision": 1,
+            "verdict": "PENDING",
+        },
+        "packageIntegrity": {
+            "required": True,
+            "inventorySource": "planFiles",
+            "lockSchemaVersion": "agent-plan-lock.v2",
+            "undeclaredTopLevelFiles": "reject",
+        },
+        "acceptance": {
+            "criteria": [
+                {
+                    "id": "AC-01",
+                    "requirementIds": ["REQ-01"],
+                    "evidenceIds": ["EV-01"],
+                    "statement": "ALK_FILL_ACCEPTANCE",
+                }
+            ],
+            "evidence": [
+                {
+                    "id": "EV-01",
+                    "artifactPath": f"{artifact_root}/evidence.json",
+                    "description": "ALK_FILL_EVIDENCE",
+                    "required": True,
+                }
+            ],
+        },
+        "workstreams": [
+            {
+                "id": "WS-01",
+                "owner": owner,
+                "reviewer": "ALK_FILL_REVIEWER",
+                "title": "ALK_FILL_WORKSTREAM_TITLE",
+                "plannedItems": ["ALK_FILL_REQUIREMENT"],
+                "dependsOn": [],
+                "writes": ["src/ALK_FILL_WRITE_PATH.py"],
+                "acceptanceIds": ["AC-01"],
+                "evidenceIds": ["EV-01"],
+            }
+        ],
+        "validation": {"commands": ["ALK_FILL_VALIDATION_COMMAND"]},
+        "finalAuditGates": ["[AC-01|EV-01] ALK_FILL_ACCEPTANCE"],
+        "releaseImpact": "ALK_FILL_RELEASE_IMPACT",
+        "implementationAudit": {"required": True, "finalRequired": True},
+        "orchestration": {"startMode": "approval-required", "maxParallelTasks": 1},
+        "budgets": {"maxInvocations": 12, "maxWallSeconds": 3600},
+        "contextLimits": {"targetTokens": 4096},
+        "forbiddenWrites": [".git", ".alk"],
+    }
+    return manifest, documents

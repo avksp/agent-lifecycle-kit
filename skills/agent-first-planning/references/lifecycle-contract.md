@@ -92,3 +92,11 @@ Example: Release 2.24 WS-03 keeps `resolve_declared_ledger_context`'s
 usage-interface fixture is UNIT_ONLY. Isolating legacy paths is a refactor;
 a generic financial ledger or a newly qualified host route would be a separate
 capability requiring lower-layer ownership and end-to-end evidence.
+
+## Traceability ownership
+
+Each acceptance ID and each evidence ID has exactly one owning workstream.
+Give the owner the checks and write paths that produce the evidence.
+
+У каждого идентификатора критерия приёмки и доказательства ровно один рабочий
+поток-владелец. Укажите у владельца проверки и пути записи доказательств.

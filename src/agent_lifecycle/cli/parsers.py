@@ -495,7 +495,11 @@ def _add_model_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
 def _add_tier_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     tier = subparsers.add_parser("tier", help="SDD tier commands")
     tier_sub = tier.add_subparsers(dest="tier_command", required=True)
-    tier_resolve = tier_sub.add_parser("resolve")
+    tier_resolve = tier_sub.add_parser(
+        "resolve",
+        description="Resolve SDD tier from an agent-sdd-tier-resolution-request.v1 JSON file.",
+        epilog='Minimal request: {"taskCount":1,"executableOwners":["owner"]}',
+    )
     tier_resolve.add_argument("--request", required=True)
 
 

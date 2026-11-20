@@ -9,6 +9,7 @@ from typing import Any
 from agent_lifecycle.audit.review_packet import prepare_review_packet
 from agent_lifecycle.cli.compact_plan_commands import compact_package_profiles, compact_plan_command
 from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock, prepare_freeze_candidate
+from agent_lifecycle.cli.plan_scaffold_commands import create_plan_scaffold
 from agent_lifecycle.compiler import build_phase_packet, compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
     LifecycleError,
@@ -106,6 +107,16 @@ def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
+    if args.plan_command == "scaffold":
+        return create_plan_scaffold(
+            out=args.out,
+            artifact_root=args.artifact_root,
+            repository_root=Path(args.repository_root),
+            author=args.author,
+            owner=args.owner,
+            base_ref=args.base_ref,
+            base_sha=args.base_sha,
+        )
     if args.plan_command == "package-profiles":
         return compact_package_profiles()
     if args.plan_command in {"compact-compile", "compact-explain"}:
@@ -133,14 +144,22 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         completeness_profile = (
             load_plan_completeness_profile(Path(args.completeness_profile)) if args.completeness_profile else None
         )
+        try:
+            result = validate_plan_manifest(
+                manifest, require_completeness=True, completeness_profile=completeness_profile
+            )
+        except LifecycleError as exc:
+            if exc.code == "plan-completeness-failed":
+                validation = exc.details["validation"]
+                raise LifecycleError(
+                    exc.code, exc.message, {**exc.details, **_completeness_projection(validation)}
+                ) from None
+            raise
         return {
             "schemaVersion": "agent-plan-check.v1",
-            "manifest": validate_plan_manifest(
-                manifest,
-                require_completeness=True,
-                completeness_profile=completeness_profile,
-            ),
+            "manifest": result,
             "lock": verify_plan_lock(manifest, lock) if lock else None,
+            **_completeness_projection(result["completeness"]),
         }
     if args.plan_command == "completeness-check":
         manifest = read_json_object(Path(args.manifest), label="plan manifest")
@@ -253,6 +272,10 @@ def _plan_review_packet(args: argparse.Namespace) -> dict[str, Any]:
         subject_out=args.subject_out,
     )
     return prepare_review_packet(Path(args.repository_root), request)
+
+
+def _completeness_projection(validation: dict[str, Any]) -> dict[str, Any]:
+    return {"requiredChecks": validation["requiredChecks"], "blockers": validation["blockers"]}
 
 
 def _verify_plan(args: argparse.Namespace) -> dict[str, Any]:

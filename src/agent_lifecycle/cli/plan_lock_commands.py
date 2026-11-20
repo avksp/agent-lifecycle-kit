@@ -27,7 +27,7 @@ from agent_lifecycle.freeze.package_integrity import (
     build_reviewed_plan_lock_v2,
     verify_plan_package_integrity,
 )
-from agent_lifecycle.planning.verification import build_plan_verification
+from agent_lifecycle.planning.verification import build_plan_verification, require_manifest_package_location
 
 PLAN_LOCK_CREATION_RECEIPT = "agent-plan-lock-creation-receipt.v1"
 
@@ -43,15 +43,7 @@ def create_reviewed_plan_lock(
     root = repository_root.resolve(strict=True)
     manifest_rel, manifest_data = _read_repository_json(root, manifest_path, label="plan manifest")
     manifest = load_json_object(manifest_data, label="plan manifest")
-    package_value = manifest.get("package")
-    package = package_value if isinstance(package_value, dict) else {}
-    raw_plan_root = package.get("planArtifactRoot")
-    if not isinstance(raw_plan_root, str):
-        raise LifecycleError("invalid-plan-manifest", "package.planArtifactRoot is required")
-    plan_root = normalize_repo_path(raw_plan_root, label="package.planArtifactRoot")
-    expected_manifest = f"{plan_root}/plan.manifest.json"
-    if manifest_rel != expected_manifest:
-        raise LifecycleError("plan-manifest-path-mismatch", "manifest path does not match package.planArtifactRoot")
+    plan_root = require_manifest_package_location(manifest, root / manifest_rel, root)
 
     review_rel, review_data = _read_repository_json(root, review_path, label="plan review")
     review = load_json_object(review_data, label="plan review")
@@ -81,7 +73,7 @@ def create_reviewed_plan_lock(
     body = {
         "schemaVersion": PLAN_LOCK_CREATION_RECEIPT,
         "status": "PASS",
-        "packageId": package.get("id"),
+        "packageId": manifest["package"].get("id"),
         "planRevision": manifest.get("planRevision"),
         "manifestPath": manifest_rel,
         "manifestHash": canonical_digest(manifest),
@@ -118,9 +110,7 @@ def prepare_freeze_candidate(
     manifest = load_json_object(raw)
     if manifest.get("status") != "DRAFT":
         raise LifecycleError("freeze-prepare-requires-draft", "Only a draft may be prepared")
-    old = normalize_repo_path(manifest.get("package", {}).get("planArtifactRoot"))
-    if manifest_rel != old + "/plan.manifest.json":
-        raise LifecycleError("plan-manifest-path-mismatch", "Manifest must match its declared package")
+    old = require_manifest_package_location(manifest, root / manifest_rel, root)
     if not manifest.get("packageIntegrity", {}).get("required"):
         raise LifecycleError("plan-lock-v2-required", "Freeze preparation requires package integrity")
     if (root / old / "plan.lock.json").exists():
