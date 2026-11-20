@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "agent-lifecycle-kit"
-version = "2.51.1"
+version = "2.52.0"
 source = { editable = "." }
 
 [package.dev-dependencies]
