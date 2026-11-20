@@ -38,6 +38,14 @@ MAX_FILE = 8 * 1024 * 1024
 MAX_TOTAL = 64 * 1024 * 1024
 MAX_INDEX = 262144
 MAX_AGE = timedelta(hours=24)
+PR_ATTEMPT_WINDOW = 3
+FRESH_MAIN_CELL = "ci/macos-latest-py3.11"
+INDEX_V1 = "alk-ci-qualification-index.v1"
+INDEX_V2 = "alk-ci-qualification-index.v2"
+DECISION_V1 = "alk-ci-decision.v1"
+DECISION_V2 = "alk-ci-decision.v2"
+TERMINAL_V1 = "alk-ci-main-qualification.v1"
+TERMINAL_V2 = "alk-ci-main-qualification.v2"
 PYTHONS = ("3.11", "3.12", "3.13", "3.14", "3.15")
 PLATFORMS = ("ubuntu-latest", "macos-latest", "windows-latest")
 ROLES = ("ci", "foundation", "quality")
@@ -114,9 +122,9 @@ class EnvironmentMismatch(ProofError):
     """A current cell could not reproduce the producer environment."""
 
 
-def require(condition: Any, reason: str) -> None:
+def require(condition: Any, reason: str, *, error: type[ProofError] = ProofError) -> None:
     if not condition:
-        raise ProofError(reason)
+        raise error(reason)
 
 
 def sha256(raw: bytes) -> str:
@@ -615,8 +623,11 @@ def archive_members(raw: bytes, expected: set[str], available: int) -> dict[str,
 def provider_rows(payload: Any, name: str) -> list[dict[str, Any]]:
     envelope = obj(payload, name)
     rows = envelope.get(name)
+    total = envelope.get("total_count")
+    if isinstance(rows, list) and type(total) is int and 0 < len(rows) <= 100 and total > len(rows):
+        raise ProviderUnavailable(f"provider {name} exceed bounded listing")
     require(
-        isinstance(rows, list) and len(rows) <= 100 and envelope.get("total_count") == len(rows),
+        isinstance(rows, list) and len(rows) <= 100 and type(total) is int and total == len(rows),
         f"incomplete provider {name}",
     )
     return [obj(row, name) for row in cast(list[Any], rows)]
@@ -667,6 +678,28 @@ def provider_run(
         require(run.get("status") == "completed" and run.get("conclusion") == "success", "run attempt did not pass")
 
 
+def pr_outcome_passes(row: dict[str, Any]) -> bool:
+    status, conclusion = row.get("status"), row.get("conclusion")
+    require(
+        isinstance(status, str)
+        and status in {"queued", "in_progress", "completed", "waiting", "pending", "requested"}
+        and "conclusion" in row,
+        "invalid PR execution status",
+    )
+    if status != "completed":
+        require(conclusion is None, "invalid PR execution status/conclusion pair")
+        return False
+    require(
+        isinstance(conclusion, str)
+        and conclusion in {
+            "action_required", "cancelled", "failure", "neutral", "skipped",
+            "stale", "startup_failure", "success", "timed_out",
+        },
+        "invalid PR execution status/conclusion pair",
+    )
+    return conclusion == "success"
+
+
 def provider_jobs(api: GitHub, run: int, attempt: int) -> dict[str, dict[str, Any]]:
     endpoint = f"/actions/runs/{run}/attempts/{attempt}/jobs?per_page=100"
     rows = provider_rows(api.json(endpoint), "jobs")
@@ -683,6 +716,39 @@ def provider_jobs(api: GitHub, run: int, attempt: int) -> dict[str, dict[str, An
         jobs[cast(str, name)] = row
         ids.add(cast(int, identifier))
     return jobs
+
+
+PrJobAttempts = dict[int, dict[str, dict[str, Any]]]
+
+
+def pr_attempt_jobs(
+    api: GitHub, run: int, attempt: int, attempts: PrJobAttempts,
+) -> dict[str, dict[str, Any]]:
+    if attempt not in attempts:
+        rows = provider_jobs(api, run, attempt)
+        known_ids = {job["id"] for prior in attempts.values() for job in prior.values()}
+        require(known_ids.isdisjoint(job["id"] for job in rows.values()), "PR job ID repeated across attempts")
+        attempts[attempt] = rows
+    return attempts[attempt]
+
+
+def pr_suite_jobs(api: GitHub, pr: dict[str, Any], attempts: PrJobAttempts) -> dict[str, dict[str, Any]]:
+    selected: dict[str, dict[str, Any]] = {}
+    suite_names = {name for _, _, name in CELLS.values()}
+    for attempt in range(pr["attempt"], max(0, pr["attempt"] - PR_ATTEMPT_WINDOW), -1):
+        rows = pr_attempt_jobs(api, pr["run"], attempt, attempts)
+        if attempt == pr["attempt"]:
+            require(
+                all(row.get("conclusion") != "success" or name in suite_names for name, row in rows.items()),
+                "unexpected successful PR job",
+            )
+        for name, row in rows.items():
+            if name in suite_names and name not in selected:
+                pr_outcome_passes(row)
+                selected[name] = row
+        if set(selected) == suite_names:
+            return selected
+    raise ProviderUnavailable("PR suite coverage exceeds bounded attempt history")
 
 
 def job_step(job: dict[str, Any], name: str, conclusion: str = "success") -> dict[str, Any]:
@@ -732,7 +798,7 @@ def artifact_rows(api: GitHub, run: int) -> dict[str, dict[str, Any]]:
     return artifacts
 
 
-def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[str, Any]) -> None:
+def artifact_origin_identity(job: dict[str, Any], upload: dict[str, Any]) -> tuple[int, str]:
     steps = job.get("steps")
     require(isinstance(steps, list) and len(steps) <= 100, "missing bounded artifact origin steps")
     markers = [
@@ -747,14 +813,18 @@ def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[
         raise ProofError("malformed artifact origin marker")
     job_step(job, marker["name"])
     require(
-        positive_id(artifact.get("id")) and int(match.group(1)) == artifact["id"]
-        and "sha256:" + match.group(2) == artifact["digest"],
-        "native artifact origin differs from provider metadata",
-    )
-    require(
         positive_id(upload.get("number")) and marker["number"] > upload["number"]
         and cast(list[Any], steps).index(marker) > cast(list[Any], steps).index(upload),
         "artifact origin marker precedes its uploader",
+    )
+    return int(match.group(1)), "sha256:" + match.group(2)
+
+
+def artifact_origin(job: dict[str, Any], upload: dict[str, Any], artifact: dict[str, Any]) -> None:
+    identifier, digest = artifact_origin_identity(job, upload)
+    require(
+        positive_id(artifact.get("id")) and identifier == artifact["id"] and digest == artifact["digest"],
+        "native artifact origin differs from provider metadata",
     )
 
 
@@ -1034,6 +1104,8 @@ def repository_identity(api: GitHub, repository: int) -> None:
 
 def trusted_pr(api: GitHub, checked: dict[str, Any], repository: int) -> dict[str, Any]:
     associated = api.json(f"/commits/{checked['sha']}/pulls?per_page=100")
+    if associated == []:
+        raise ApplicabilityChanged("no merged PR for this main commit")
     require(isinstance(associated, list) and len(associated) == 1, "missing or ambiguous merged PR association")
     association = obj(associated[0], "associated PR")
     number = association.get("number")
@@ -1065,6 +1137,7 @@ def trusted_pr(api: GitHub, checked: dict[str, Any], repository: int) -> dict[st
         and login.lower() != "dependabot"
         and pull.get("author_association") in {"OWNER", "MEMBER", "COLLABORATOR"},
         "unsupported, stale or untrusted merged PR",
+        error=ApplicabilityChanged,
     )
     permission = obj(api.json(f"/collaborators/{login}/permission"), "collaborator permission")
     permission_user = obj(permission.get("user"), "collaborator")
@@ -1098,10 +1171,15 @@ def run_actor(run: dict[str, Any], pull: dict[str, Any]) -> None:
 
 def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int) -> dict[str, Any]:
     query = urllib.parse.urlencode({"event": "pull_request", "head_sha": pull["head"], "per_page": 100})
-    listed = only(provider_rows(api.json(f"/actions/workflows/{workflow}/runs?{query}"), "workflow_runs"), "PR run")
+    runs = provider_rows(api.json(f"/actions/workflows/{workflow}/runs?{query}"), "workflow_runs")
+    require(bool(runs), "no same-source PR run", error=ApplicabilityChanged)
+    listed = only(runs, "PR run")
     identifier, attempt = listed.get("id"), listed.get("run_attempt")
     require(positive_id(identifier) and positive_id(attempt), "invalid PR run or attempt")
+    listed_passed = pr_outcome_passes(listed)
     checked = obj(api.json(f"/actions/runs/{identifier}/attempts/{attempt}"), "PR attempt")
+    outcomes = (listed_passed, pr_outcome_passes(checked))
+    fresh_runs = [fresh(run.get("updated_at"), api.now) for run in (listed, checked)]
     for run in (listed, checked):
         provider_run(
             run,
@@ -1112,8 +1190,8 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
             repository=repository,
             run_id=identifier,
             attempt=attempt,
+            completed=False,
         )
-        require(fresh(run.get("updated_at"), api.now), "stale PR run")
         run_actor(run, pull)
         associations = run.get("pull_requests")
         require(isinstance(associations, list) and len(associations) <= 1, "ambiguous PR run association")
@@ -1129,6 +1207,8 @@ def pr_attempt(api: GitHub, workflow: int, pull: dict[str, Any], repository: int
                 and obj(base.get("repo"), "associated base repository").get("id") == repository,
                 "PR run association disagrees",
             )
+    require(all(outcomes), "PR current attempt did not qualify", error=ApplicabilityChanged)
+    require(all(fresh_runs), "stale PR run", error=ApplicabilityChanged)
     return {"run": identifier, "attempt": attempt, "workflow": workflow, "head": pull["head"], "number": pull["number"]}
 
 
@@ -1284,17 +1364,11 @@ def recheck_pr(api: GitHub, pr: dict[str, Any], repository: int) -> None:
         attempt=cast(int, current_attempt),
         completed=False,
     )
-    status, conclusion = current.get("status"), current.get("conclusion")
-    require(
-        status in {"queued", "in_progress", "completed", "waiting", "pending", "requested"}
-        and (conclusion is None or isinstance(conclusion, str)),
-        "invalid current PR status",
-    )
+    passed = pr_outcome_passes(current)
     updated = utc_time(current.get("updated_at"))
     if (
         current_attempt != pr["attempt"]
-        or status != "completed"
-        or conclusion != "success"
+        or not passed
         or not api.now - MAX_AGE <= updated <= api.now
     ):
         raise ApplicabilityChanged("current PR attempt no longer qualifies")
@@ -1308,33 +1382,27 @@ def find_candidate(
     pull = trusted_pr(api, checked, repository)
     workflow = workflow_id(api, "ci.yml", "ci")
     pr = pr_attempt(api, workflow, pull, repository)
-    jobs = provider_jobs(api, pr["run"], pr["attempt"])
+    attempts: PrJobAttempts = {}
+    jobs = pr_suite_jobs(api, pr, attempts)
+    outcomes = {}
+    for name, selected in jobs.items():
+        require(selected.get("head_sha") == pr["head"], "selected PR job head differs")
+        outcomes[name] = pr_outcome_passes(selected)
+    for name, passed in outcomes.items():
+        require(passed, f"newest PR suite did not pass: {name}", error=ApplicabilityChanged)
     artifacts = artifact_rows(api, pr["run"])
-    require(
-        {name for name, job in jobs.items() if job.get("conclusion") == "success"}
-        == {name for _, _, name in CELLS.values()},
-        "PR successful job inventory is incomplete or unexpected",
-    )
     rows: dict[str, Any] = {}
     coverages: dict[str, bytes] = {}
     tested = None
-    for key, (role, cell, name) in CELLS.items():
-        job = suite_job(jobs, role, cell, name, pr["head"])
-        artifact = joined_artifact(
-            artifacts,
-            artifact_name("pr-ci", pr["run"], pr["attempt"], key),
-            job,
-            CELL_UPLOAD,
-            run=pr["run"],
-            repository=repository,
-            head=pr["head"],
-            now=api.now,
-        )
+    for key, (role, _, _) in CELLS.items():
+        job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key, attempts)
         expected = {"cell-evidence.json", "tests.json"}
         if role == "quality":
             expected.add("coverage.json")
         members = api.archive(artifact, expected)
-        checkout, rows[key] = cell_evidence(members, key, pr, pull, main, job, artifact)
+        producer = {**pr, "attempt": job["run_attempt"]}
+        checkout, rows[key] = cell_evidence(members, key, producer, pull, main, job, artifact)
+        rows[key]["producerAttempt"] = producer["attempt"]
         if tested is None:
             verify_pr_checkout(api, checked, checkout, pull)
             tested = checkout
@@ -1352,17 +1420,86 @@ def find_candidate(
     }, coverages
 
 
+def carried_pr_job(
+    api: GitHub,
+    pr: dict[str, Any],
+    job: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    key: str,
+    attempts: PrJobAttempts,
+) -> dict[str, Any]:
+    identifier, digest = artifact_origin_identity(job, job_step(job, CELL_UPLOAD))
+    artifact = next((row for row in artifacts.values() if row["id"] == identifier), None)
+    if artifact is None:
+        raise ProviderUnavailable("selected PR artifact absent or expired")
+    attempt_text = artifact["name"].split("-", 5)[4:5]
+    require(
+        len(attempt_text) == 1 and re.fullmatch(r"[1-9][0-9]{0,19}", attempt_text[0]) is not None,
+        "carried PR artifact origin differs",
+    )
+    origin_attempt = int(attempt_text[0])
+    require(
+        artifact["name"] == artifact_name("pr-ci", pr["run"], origin_attempt, key)
+        and origin_attempt < job["run_attempt"]
+        and artifact["digest"] == digest,
+        "carried PR artifact origin differs",
+    )
+    if pr["attempt"] - origin_attempt >= PR_ATTEMPT_WINDOW or artifact["expired"] is True:
+        raise ProviderUnavailable("selected PR artifact absent, expired, or outside bounded attempt history")
+    original = successful_job(pr_attempt_jobs(api, pr["run"], origin_attempt, attempts), job["name"], pr["head"])
+    require(
+        positive_id(job.get("runner_id"))
+        and utc_time(job.get("started_at")) <= utc_time(job.get("completed_at"))
+        and all(
+            job.get(field) == original.get(field)
+            for field in ("runner_id", "started_at", "completed_at", "steps")
+        ),
+        "carried PR job execution differs from its original producer",
+    )
+    return original
+
+
+def pr_suite_artifact(
+    api: GitHub,
+    main: dict[str, Any],
+    pr: dict[str, Any],
+    jobs: dict[str, dict[str, Any]],
+    artifacts: dict[str, dict[str, Any]],
+    key: str,
+    attempts: PrJobAttempts,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    role, cell, name = CELLS[key]
+    job = suite_job(jobs, role, cell, name, pr["head"])
+    artifact_key = artifact_name("pr-ci", pr["run"], job["run_attempt"], key)
+    if artifact_key not in artifacts and job["run_attempt"] > 1:
+        job = carried_pr_job(api, pr, job, artifacts, key, attempts)
+        artifact_key = artifact_name("pr-ci", pr["run"], job["run_attempt"], key)
+    if artifact_key not in artifacts or artifacts[artifact_key].get("expired") is True:
+        raise ProviderUnavailable("selected PR artifact absent or expired")
+    artifact = joined_artifact(
+        artifacts,
+        artifact_key,
+        job,
+        CELL_UPLOAD,
+        run=pr["run"],
+        repository=main["repository"],
+        head=pr["head"],
+        now=api.now,
+    )
+    return job, artifact
+
+
 def candidate(root: Path, repository: str, main_sha: str, out: Path) -> None:
     main, checked = main_context(root)
     require(main_sha == checked["sha"] and repository == REPOSITORY, "candidate invocation source differs")
     try:
         api = GitHub(repository, os.environ.get("GH_TOKEN", ""))
         proof, _coverages = find_candidate(api, main, checked)
-    except ProofError as exc:
+    except (ProviderUnavailable, ApplicabilityChanged) as exc:
         proof, _coverages = {"status": "UNAVAILABLE", "reason": str(exc)}, {}
     except (TypeError, KeyError, IndexError):
-        proof, _coverages = {"status": "UNAVAILABLE", "reason": "provider or PR evidence fields are malformed"}, {}
-    index = {"schemaVersion": "alk-ci-qualification-index.v1", "main": main, "source": checked, **proof}
+        raise ProofError("provider or PR evidence fields are malformed") from None
+    index = {"schemaVersion": INDEX_V2, "main": main, "source": checked, **proof}
     raw = json_bytes(index)
     require(len(raw) <= MAX_INDEX, "candidate index exceeds its bound")
     write_bytes(out, raw)
@@ -1382,7 +1519,7 @@ def verified_index_bytes(raw: bytes, digest: str, main: dict[str, Any], checked:
     index = obj(strict_json(raw), "candidate index")
     common = {"schemaVersion", "main", "source", "status"}
     require(
-        index.get("schemaVersion") == "alk-ci-qualification-index.v1"
+        index.get("schemaVersion") in {INDEX_V1, INDEX_V2}
         and index.get("main") == main
         and source_shape(index.get("source")) == checked,
         "candidate index is outside the current main invocation",
@@ -1413,6 +1550,7 @@ def verified_index_bytes(raw: bytes, digest: str, main: dict[str, Any], checked:
         "candidate provider budget differs",
     )
     rows = obj(index["cells"], "candidate cells", set(CELLS))
+    mixed = index["schemaVersion"] == INDEX_V2
     jobs: set[int] = set()
     artifacts: set[int] = set()
     for key, data in rows.items():
@@ -1429,10 +1567,17 @@ def verified_index_bytes(raw: bytes, digest: str, main: dict[str, Any], checked:
                 "environmentSha256",
                 "coverageSha256",
                 "quality",
-            },
+            } | ({"producerAttempt"} if mixed else set()),
         )
         require(
             all(positive_id(row[field]) for field in ("job", "artifact", "testsRun"))
+            and (
+                not mixed
+                or (
+                    positive_id(row["producerAttempt"])
+                    and 0 <= pr["attempt"] - row["producerAttempt"] < PR_ATTEMPT_WINDOW
+                )
+            )
             and row["job"] not in jobs
             and row["artifact"] not in artifacts
             and all(
@@ -1516,7 +1661,7 @@ def qualification_binding(root: Path, policy: Path, args: QualityInputs) -> tupl
         "main": main,
         "sourceTree": checked["tree"],
         "policySha256": checked["inputs"][POLICY],
-        "producer": {**index["pr"], "job": row["job"], "artifact": row["artifact"]},
+        "producer": coverage_producer(index, row),
     }
 
 
@@ -1696,11 +1841,18 @@ def current_archive(
     return api.archive(row, expected), row, job, sender_success
 
 
+def coverage_producer(index: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    pr = index["pr"]
+    return {**pr, "attempt": row.get("producerAttempt", pr["attempt"]),
+            "job": row["job"], "artifact": row["artifact"]}
+
+
 def original_coverage(api: GitHub, index: dict[str, Any], key: str) -> bytes:
     pr, cell = index["pr"], index["cells"][key]
     artifacts = artifact_rows(api, pr["run"])
     identity = {"run": pr["run"], "repository": index["main"]["repository"], "sha": pr["head"]}
-    row = listed_artifact(artifacts, artifact_name("pr-ci", pr["run"], pr["attempt"], key), identity, api.now)
+    producer_attempt = cell.get("producerAttempt", pr["attempt"])
+    row = listed_artifact(artifacts, artifact_name("pr-ci", pr["run"], producer_attempt, key), identity, api.now)
     require(
         row["id"] == cell["artifact"] and row["digest"] == "sha256:" + cell["archiveSha256"],
         "original quality archive identity differs",
@@ -1777,8 +1929,10 @@ def validate_probe_without_index(
         and row["status"] in {"MATCH", "MISMATCH"},
         "observed probe identity differs",
     )
+    observed_producer = obj(row["producer"], "observed producer")
+    optional = {"producerAttempt"} if "producerAttempt" in observed_producer else set()
     producer = obj(
-        row["producer"],
+        observed_producer,
         "observed producer",
         {
             "job",
@@ -1790,10 +1944,11 @@ def validate_probe_without_index(
             "environmentSha256",
             "coverageSha256",
             "quality",
-        },
+        } | optional,
     )
     require(
-        all(positive_id(producer[field]) for field in ("job", "artifact", "testsRun"))
+        (not optional or positive_id(producer["producerAttempt"]))
+        and all(positive_id(producer[field]) for field in ("job", "artifact", "testsRun"))
         and all(
             is_hex(producer[field], 64)
             for field in ("archiveSha256", "receiptSha256", "testsSha256", "environmentSha256")
@@ -2066,7 +2221,7 @@ def probe_result(payload: Any, key: str, index: dict[str, Any], digest: str) -> 
             "main": index["main"],
             "sourceTree": index["source"]["tree"],
             "policySha256": index["source"]["inputs"][POLICY],
-            "producer": {**index["pr"], "job": row["job"], "artifact": row["artifact"]},
+            "producer": coverage_producer(index, row),
         },
         "fresh quality receipts do not bind the exact coverage bytes",
     )
@@ -2077,7 +2232,9 @@ def transport_failure(transport: dict[str, Any], phase: str, cell: str | None, r
     transport["failures"].append({"phase": phase, "cell": cell, "reason": reason[:500]})
 
 
-def decide(root: Path, _candidate_path: Path, _probes: Path, out: Path, needs: Any) -> None:
+def decide(
+    root: Path, _candidate_path: Path, _probes: Path, out: Path, needs: Any, *, mixed: bool = False
+) -> None:
     main, checked = main_context(root)
     outcomes = needs_outcomes(needs, {"candidate", *(f"probe-{role}" for role in ROLES)})
     require(outcomes["candidate"] == "success", "candidate job must report success")
@@ -2129,6 +2286,7 @@ def decide(root: Path, _candidate_path: Path, _probes: Path, out: Path, needs: A
         else:
             index = verified_index_bytes(members["reuse-candidate.json"], digest, main, checked)
             require(index["status"] == status, "candidate status differs from native output")
+            require(not mixed or index["schemaVersion"] == INDEX_V2, "main candidate uses another proof version")
             transport["indexVerified"] = True
     bindings: dict[str, Any] = {}
     if status == "CANDIDATE":
@@ -2183,7 +2341,7 @@ def decide(root: Path, _candidate_path: Path, _probes: Path, out: Path, needs: A
             mode, reason = "FULL", f"PR applicability changed: {exc}"
             transport_failure(transport, "pr", None, reason)
     decision = {
-        "schemaVersion": "alk-ci-decision.v1",
+        "schemaVersion": DECISION_V2 if mixed else DECISION_V1,
         "mode": mode,
         "reason": reason[:500],
         "main": main,
@@ -2194,11 +2352,86 @@ def decide(root: Path, _candidate_path: Path, _probes: Path, out: Path, needs: A
         "probes": bindings,
         "transport": transport,
     }
+    if mixed:
+        cell_decisions = mixed_cells(decision, index)
+        decision["cells"] = cell_decisions
+        reuse = any(row["disposition"] == "REUSE" for row in cell_decisions.values())
+        decision["mode"] = mode = "PARTIAL_REUSE" if reuse else "FULL"
+        if reuse:
+            decision["reason"] = "exact compatible cells qualify for reuse"
     decision_proof(decision, main, checked)
     decision_digest = write_object(out, decision)
     native_output("mode", mode)
     native_output("sha256", decision_digest)
-    print(mode, reason)
+    if mixed:
+        fresh = fresh_keys(decision)
+        for role in ROLES:
+            matrix = fresh_matrix(role, fresh)
+            native_output(f"{role}_matrix", json_bytes(matrix).decode().strip())
+            native_output(f"{role}_has_fresh", "true" if matrix["include"] else "false")
+    print(mode, decision["reason"])
+
+
+def mixed_cells(decision: dict[str, Any], index: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    failures = {row["cell"] for row in decision["transport"]["failures"]}
+    can_reuse = (
+        index is not None
+        and index["status"] == "CANDIDATE"
+        and None not in failures
+        and not decision["probeProviderUnavailable"]
+    )
+    cells: dict[str, dict[str, Any]] = {}
+    for key in CELLS:
+        probe = decision["probes"].get(key)
+        reason = "unstable-fresh" if key == FRESH_MAIN_CELL else "full-fallback"
+        producer_ref = probe_ref = None
+        if key != FRESH_MAIN_CELL and can_reuse and index is not None:
+            if probe is None or key in failures:
+                reason = "probe-unavailable"
+            elif probe["matched"] is not True:
+                reason = "environment-mismatch"
+            else:
+                reason = "compatible"
+                source = index["cells"][key]
+                producer_ref = {
+                    "run": index["pr"]["run"],
+                    "attempt": source["producerAttempt"],
+                    **{field: source[field] for field in ("job", "artifact", "archiveSha256")},
+                }
+                probe_ref = {"attempt": decision["main"]["attempt"], **{
+                    field: probe[field] for field in ("job", "artifact", "sha256")
+                }}
+        cells[key] = {
+            "disposition": "REUSE" if producer_ref is not None else "FRESH",
+            "reason": reason,
+            "producer": producer_ref,
+            "probe": probe_ref,
+        }
+    return cells
+
+
+def fresh_keys(decision: dict[str, Any]) -> set[str]:
+    if decision["schemaVersion"] == DECISION_V2:
+        return {key for key, row in decision["cells"].items() if row["disposition"] == "FRESH"}
+    return set(CELLS) if decision["mode"] == "FULL" else set()
+
+
+def fresh_matrix(role: str, keys: set[str]) -> dict[str, list[dict[str, str]]]:
+    rows = []
+    for key, (family, cell, _) in CELLS.items():
+        if family != role or key not in keys:
+            continue
+        os_name, python = cell.rsplit("-py", 1)
+        row = {"python-version" if role == "foundation" else "python": python}
+        if role == "ci":
+            row["os"] = os_name
+        rows.append(row)
+    return {"include": rows}
+
+
+def family_outcomes(decision: dict[str, Any]) -> dict[str, str]:
+    families = {CELLS[key][0] for key in fresh_keys(decision)}
+    return {job: "success" if role in families else "skipped" for role, job in JOB_IDS.items()}
 
 
 def control_context(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -2367,8 +2600,10 @@ def main_checks_evidence(build_raw: bytes, smoke_raw: bytes, checked: dict[str, 
 
 
 def decision_proof(value: Any, main: dict[str, Any], checked: dict[str, Any]) -> dict[str, Any]:
+    """Verify v2 decisions and retain v1 parsing for existing historical proofs."""
     if isinstance(value, dict) and "transport" not in value:
         return legacy_decision_proof(value, main, checked)
+    mixed = isinstance(value, dict) and value.get("schemaVersion") == DECISION_V2
     proof = obj(
         value,
         "transport decision",
@@ -2383,11 +2618,11 @@ def decision_proof(value: Any, main: dict[str, Any], checked: dict[str, Any]) ->
             "probeProviderUnavailable",
             "probes",
             "transport",
-        },
+        } | ({"cells"} if mixed else set()),
     )
     require(
-        proof["schemaVersion"] == "alk-ci-decision.v1"
-        and proof["mode"] in {"FULL", "QUALIFIED_REUSE"}
+        proof["schemaVersion"] in {DECISION_V1, DECISION_V2}
+        and proof["mode"] in {"FULL", "PARTIAL_REUSE" if mixed else "QUALIFIED_REUSE"}
         and proof["main"] == main
         and proof["source"] == checked
         and is_hex(proof["indexSha256"], 64)
@@ -2498,7 +2733,48 @@ def decision_proof(value: Any, main: dict[str, Any], checked: dict[str, Any]) ->
         )
     elif transport["missingCells"] or transport["unavailableCells"] or proof["probeProviderUnavailable"]:
         require(bool(failures), "unavailable evidence has no retained cause")
+    if mixed:
+        validate_mixed_cells(proof)
     return proof
+
+
+def validate_mixed_cells(proof: dict[str, Any]) -> None:
+    cells = obj(proof["cells"], "mixed decision cells", set(CELLS))
+    invalid = {failure["cell"] for failure in proof["transport"]["failures"]}
+    for key, data in cells.items():
+        row = obj(data, "mixed decision cell", {"disposition", "reason", "producer", "probe"})
+        if row["disposition"] == "FRESH":
+            require(
+                row["reason"] in {"unstable-fresh", "full-fallback", "probe-unavailable", "environment-mismatch"}
+                and (row["reason"] == "unstable-fresh") == (key == FRESH_MAIN_CELL)
+                and row["producer"] is None and row["probe"] is None,
+                "invalid fresh cell or reuse binding",
+            )
+            continue
+        producer = obj(row["producer"], "mixed PR producer", {"run", "attempt", "job", "artifact", "archiveSha256"})
+        probe = obj(row["probe"], "mixed main probe", {"attempt", "job", "artifact", "sha256"})
+        observed = proof["probes"].get(key)
+        pr = proof["pr"]
+        require(
+            row["disposition"] == "REUSE"
+            and row["reason"] == "compatible"
+            and key != FRESH_MAIN_CELL
+            and key not in invalid and None not in invalid
+            and not proof["probeProviderUnavailable"]
+            and proof["transport"]["indexVerified"]
+            and pr is not None
+            and producer["run"] == pr["run"]
+            and all(positive_id(producer[field]) for field in ("attempt", "job", "artifact"))
+            and 0 <= pr["attempt"] - producer["attempt"] < PR_ATTEMPT_WINDOW
+            and is_hex(producer["archiveSha256"], 64)
+            and observed is not None and observed["matched"] is True
+            and probe == {"attempt": proof["main"]["attempt"], **{
+                field: observed[field] for field in ("job", "artifact", "sha256")
+            }},
+            "mixed reuse cell has no eligible producer or probe",
+        )
+    expected = "FULL" if len(fresh_keys(proof)) == len(CELLS) else "PARTIAL_REUSE"
+    require(proof["mode"] == expected, "mixed decision mode disagrees with cell coverage")
 
 
 def legacy_decision_proof(value: Any, main: dict[str, Any], checked: dict[str, Any]) -> dict[str, Any]:
@@ -2570,7 +2846,8 @@ def transport_graph(
     artifacts: dict[str, dict[str, Any]],
 ) -> None:
     transport = decision["transport"]
-    reuse = decision["mode"] == "QUALIFIED_REUSE"
+    reused = set(CELLS) - fresh_keys(decision)
+    mixed = decision["schemaVersion"] == DECISION_V2
     candidate_job = successful_job(jobs, CANDIDATE_JOB, main["sha"])
     job_step(candidate_job, CANDIDATE_GENERATION)
     candidate_sender = optional_upload_succeeded(candidate_job)
@@ -2578,11 +2855,12 @@ def transport_graph(
     try:
         members, _, _, _ = current_archive(api, main, jobs, artifacts, None)
     except ProviderUnavailable:
-        require(not reuse, "qualified candidate archive is unavailable")
+        require(not reused, "qualified candidate archive is unavailable")
     else:
         index = verified_index_bytes(members["reuse-candidate.json"], decision["indexSha256"], main, decision["source"])
+        require(index["schemaVersion"] == (INDEX_V2 if mixed else INDEX_V1), "candidate proof version differs")
         require(index["status"] == transport["candidateStatus"], "current candidate status differs")
-    if reuse:
+    if reused:
         require(index is not None and candidate_sender, "reuse candidate sender did not succeed")
     for key in CELLS:
         if transport["candidateStatus"] == "UNAVAILABLE":
@@ -2597,7 +2875,7 @@ def transport_graph(
         try:
             members, artifact, _, _ = current_archive(api, main, jobs, artifacts, key)
         except ProviderUnavailable:
-            require(not reuse, "qualified probe archive is unavailable")
+            require(key not in reused, "qualified probe archive is unavailable")
             continue
         raw = members["probe.json"]
         payload = strict_json(raw)
@@ -2616,8 +2894,31 @@ def transport_graph(
                     binding["job"] == job["id"] and binding["artifact"] == artifact["id"],
                     "current probe provider join differs",
                 )
-        if reuse:
+        if key in reused:
             require(sender and matched and not unavailable, "qualified probe is incomplete")
+    if mixed and reused:
+        if index is None or index.get("pr") != decision["pr"]:
+            raise ProofError("current PR binding differs")
+        require(mixed_cells(decision, index) == decision["cells"], "mixed decision no longer matches verified inputs")
+        rebind_pr_cells(api, main, index, reused)
+
+
+def rebind_pr_cells(api: GitHub, main: dict[str, Any], index: dict[str, Any], reused: set[str]) -> None:
+    pr = index["pr"]
+    attempts: PrJobAttempts = {}
+    jobs = pr_suite_jobs(api, pr, attempts)
+    artifacts = artifact_rows(api, pr["run"])
+    for key in sorted(reused):
+        job, artifact = pr_suite_artifact(api, main, pr, jobs, artifacts, key, attempts)
+        row = index["cells"][key]
+        require(
+            row["producerAttempt"] == job["run_attempt"]
+            and row["job"] == job["id"]
+            and row["artifact"] == artifact["id"]
+            and "sha256:" + row["archiveSha256"] == artifact["digest"],
+            "reused PR job or immutable archive changed",
+        )
+    recheck_pr(api, pr, main["repository"])
 
 
 def main_job_graph(
@@ -2651,23 +2952,26 @@ def main_job_graph(
     )
     active_names = {name for name, row in jobs.items() if row.get("conclusion") == "success"}
     suites: dict[str, Any] = {}
-    if decision["mode"] == "FULL":
-        for key, (role, cell, name) in CELLS.items():
-            job = suite_job(jobs, role, cell, name, head)
-            artifact = joined_artifact(
-                artifacts,
-                artifact_name("main-full", run, attempt, key),
-                job,
-                CELL_UPLOAD,
-                **identity,
-            )
-            suites[key] = {"job": job["id"], "artifact": artifact["id"], "archiveSha256": artifact["digest"][7:]}
-    else:
-        require(
-            all(name not in jobs or jobs[name].get("conclusion") == "skipped" for _, _, name in CELLS.values())
-            and not any(name.startswith(f"alk-main-full-{run}-{attempt}-") for name in artifacts),
-            "a complete suite ran in qualified reuse mode",
+    fresh = fresh_keys(decision)
+    for key, (role, cell, name) in CELLS.items():
+        if key not in fresh:
+            require(name not in jobs or jobs[name].get("conclusion") == "skipped", "unexpected full suite ran")
+            continue
+        job = suite_job(jobs, role, cell, name, head)
+        if decision["schemaVersion"] == DECISION_V2 and key == FRESH_MAIN_CELL:
+            labels = job.get("labels")
+            require(isinstance(labels, list) and "macos-26-intel" in labels, "unstable suite runner differs")
+        artifact = joined_artifact(
+            artifacts,
+            artifact_name("main-full", run, attempt, key),
+            job,
+            CELL_UPLOAD,
+            **identity,
         )
+        suites[key] = {"job": job["id"], "artifact": artifact["id"], "archiveSha256": artifact["digest"][7:]}
+    if decision["schemaVersion"] == DECISION_V2 or not fresh:
+        actual = {name for name in artifacts if name.startswith(f"alk-main-full-{run}-{attempt}-")}
+        require(actual == {artifact_name("main-full", run, attempt, key) for key in fresh}, "full suite inventory differs")
     if "transport" in decision:
         transport_graph(api, main, decision, jobs, artifacts)
     else:
@@ -2721,8 +3025,8 @@ def terminal(root: Path, decision_path: Path, checks_dir: Path, out: Path, needs
             and decision["indexSha256"] == expected_digest,
             "terminal native candidate binding differs",
         )
-    expected = "success" if decision["mode"] == "FULL" else "skipped"
-    require(all(outcomes[job] == expected for job in JOB_IDS.values()), "full family results differ from main mode")
+    require(all(outcomes[job] == expected for job, expected in family_outcomes(decision).items()),
+            "full family results differ from main mode")
     api = GitHub(REPOSITORY, os.environ.get("GH_TOKEN", ""))
     jobs = provider_jobs(api, main["run"], main["attempt"])
     artifacts = artifact_rows(api, main["run"])
@@ -2741,7 +3045,7 @@ def terminal(root: Path, decision_path: Path, checks_dir: Path, out: Path, needs
     write_object(
         out,
         {
-            "schemaVersion": "alk-ci-main-qualification.v1",
+            "schemaVersion": TERMINAL_V2 if decision["schemaVersion"] == DECISION_V2 else TERMINAL_V1,
             "status": "PASS",
             "main": main,
             "source": checked,
@@ -2818,14 +3122,14 @@ def verified_main(api: GitHub, checked: dict[str, Any], repository: int) -> dict
             "completeSuitesRun",
         },
     )
+    decision = decision_proof(proof["decision"], main, checked)
     require(
-        proof["schemaVersion"] == "alk-ci-main-qualification.v1"
+        proof["schemaVersion"] == (TERMINAL_V2 if decision["schemaVersion"] == DECISION_V2 else TERMINAL_V1)
         and proof["status"] == "PASS"
         and proof["main"] == main
         and proof["source"] == checked,
         "main qualification identity differs",
     )
-    decision = decision_proof(proof["decision"], main, checked)
     require(sha256(json_bytes(decision)) == proof["decisionSha256"], "recorded main decision digest differs")
     graph = main_job_graph(api, main, decision, jobs, artifacts)
     require(
@@ -2838,10 +3142,9 @@ def verified_main(api: GitHub, checked: dict[str, Any], repository: int) -> dict
     )
     if "transport" in decision:
         require(outcomes["candidate"] == "success", "recorded native candidate generation did not succeed")
-    expected = "success" if decision["mode"] == "FULL" else "skipped"
     require(
         outcomes["decide"] == outcomes["main-checks"] == "success"
-        and all(outcomes[name] == expected for name in JOB_IDS.values()),
+        and all(outcomes[name] == expected for name, expected in family_outcomes(decision).items()),
         "invalid recorded main outcomes",
     )
     checks = obj(artifacts.get(artifact_name("main-checks", run, attempt)), "main checks artifact")
@@ -2963,7 +3266,8 @@ def main() -> int:
         elif args.command == "probe":
             probe(root, args.role, args.cell, args.candidate, args.out)
         elif args.command == "decide":
-            decide(root, args.candidate, args.probes, args.out, strict_json(os.environ["CI_NEEDS_JSON"].encode()))
+            decide(root, args.candidate, args.probes, args.out, strict_json(os.environ["CI_NEEDS_JSON"].encode()),
+                   mixed=True)
         elif args.command == "terminal":
             terminal(root, args.decision, args.checks, args.out, strict_json(os.environ["CI_NEEDS_JSON"].encode()))
         elif args.command == "build-package":

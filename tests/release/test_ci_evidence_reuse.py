@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import http.client
 import io
+import itertools
 import os
 import re
 import shutil
@@ -259,15 +260,15 @@ class ProviderFixture:
 
 
 class CurrentFixture(ProviderFixture):
-    def __init__(self, status="CANDIDATE") -> None:
+    def __init__(self, status="CANDIDATE", *, mixed=False) -> None:
         super().__init__()
         self.blocked = set()
         self.interrupted = set()
         evidence, _ = ci.find_candidate(self.api, MAIN, SOURCE)
-        self.index = {"schemaVersion": "alk-ci-qualification-index.v1", "main": MAIN, "source": SOURCE, **evidence}
+        self.index = fixture_index(evidence, mixed=mixed)
         if status == "UNAVAILABLE":
             self.index = {
-                "schemaVersion": "alk-ci-qualification-index.v1",
+                "schemaVersion": ci.INDEX_V2 if mixed else ci.INDEX_V1,
                 "main": MAIN,
                 "source": SOURCE,
                 "status": "UNAVAILABLE",
@@ -391,8 +392,10 @@ class CurrentFixture(ProviderFixture):
             raise http.client.IncompleteRead(b"partial archive")
         return super().open(request, timeout=timeout)
 
-    def add_main_full(self):
+    def add_main_full(self, selected=None):
         for number, (key, (role, cell, name)) in enumerate(ci.CELLS.items(), 1):
+            if selected is not None and key not in selected:
+                continue
             steps = [
                 ci.PREPARE,
                 "Restore versioned release test fixture",
@@ -403,6 +406,8 @@ class CurrentFixture(ProviderFixture):
             if ci.is_windows315(role, cell):
                 steps.extend((ci.BACKEND, ci.BACKEND_AFTER))
             job = provider_job(name, 9000 + number, steps, MAIN, MAIN["sha"])
+            if key == ci.FRESH_MAIN_CELL:
+                job["labels"] = ["macos-26-intel"]
             self.current_jobs.append(job)
             raw = zipped([("fresh.json", b"{}")])
             artifact = provider_artifact(
@@ -442,10 +447,18 @@ class CurrentFixture(ProviderFixture):
         self.sync_counts()
 
 
+def fixture_index(evidence: dict, *, mixed: bool = False) -> dict:
+    cells = evidence["cells"]
+    if not mixed:
+        cells = {key: {k: v for k, v in row.items() if k != "producerAttempt"} for key, row in cells.items()}
+    return {**evidence, "schemaVersion": ci.INDEX_V2 if mixed else ci.INDEX_V1,
+            "main": MAIN, "source": SOURCE, "cells": cells}
+
+
 def valid_index() -> tuple[dict, dict[str, bytes]]:
     fixture = ProviderFixture()
     evidence, coverage = ci.find_candidate(fixture.api, MAIN, SOURCE)
-    return {"schemaVersion": "alk-ci-qualification-index.v1", "main": MAIN, "source": SOURCE, **evidence}, coverage
+    return fixture_index(evidence), coverage
 
 
 def quality_binding(index: dict, digest: str, key: str) -> dict:
@@ -458,11 +471,298 @@ def quality_binding(index: dict, digest: str, key: str) -> dict:
         "main": MAIN,
         "sourceTree": TREE,
         "policySha256": SOURCE["inputs"][ci.POLICY],
-        "producer": {**index["pr"], "job": row["job"], "artifact": row["artifact"]},
+        "producer": {**index["pr"], "attempt": row.get("producerAttempt", index["pr"]["attempt"]),
+                     "job": row["job"], "artifact": row["artifact"]},
     }
 
 
 class CiEvidenceReuseTests(unittest.TestCase):
+    def test_pr_execution_outcome_pairs(self):
+        for conclusion in (
+            "success", "action_required", "cancelled", "failure", "neutral",
+            "skipped", "stale", "startup_failure", "timed_out",
+        ):
+            with self.subTest(conclusion=conclusion):
+                self.assertEqual(
+                    ci.pr_outcome_passes({"status": "completed", "conclusion": conclusion}),
+                    conclusion == "success",
+                )
+        for status in ("queued", "in_progress", "waiting", "pending", "requested"):
+            with self.subTest(status=status):
+                self.assertFalse(ci.pr_outcome_passes({"status": status, "conclusion": None}))
+        for invalid in (
+            {"status": "completed", "conclusion": None},
+            {"status": "completed", "conclusion": "unknown"},
+            {"status": "completed", "conclusion": []},
+            {"status": "in_progress", "conclusion": "success"},
+            {"status": "requested"},
+            {"status": [], "conclusion": None},
+            {"conclusion": None},
+        ):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ci.ProofError, "invalid PR execution"):
+                ci.pr_outcome_passes(invalid)
+
+    def test_malformed_pr_outcome_does_not_emit_fallback_candidate(self):
+        for target, pair in itertools.product(("run", "job"), ((None, "failure"), ("failure", None))):
+            with self.subTest(target=target, pair=pair), tempfile.TemporaryDirectory() as folder:
+                fixture = ProviderFixture()
+                if target == "run":
+                    endpoint = f"/actions/runs/{PR['run']}/attempts/{PR['attempt']}"
+                    fixture.routes[endpoint] = {**fixture.run, "conclusion": pair[1]}
+                    fixture.run["conclusion"] = pair[0]
+                else:
+                    for job, conclusion in zip(fixture.jobs[:2], pair, strict=True):
+                        job.update(status="completed", conclusion=conclusion)
+                out = Path(folder) / "candidate.json"
+                with (
+                    mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+                    mock.patch.object(ci, "GitHub", return_value=fixture.api),
+                    mock.patch.object(ci, "native_output"),
+                    self.assertRaisesRegex(ci.ProofError, "invalid PR execution status/conclusion pair"),
+                ):
+                    ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
+                self.assertFalse(out.exists())
+
+    def test_malformed_observed_outcome_precedes_provider_fallback(self):
+        prefix = f"/actions/runs/{PR['run']}/attempts/"
+        prior_jobs = f"{prefix}{PR['attempt'] - 1}/jobs?per_page=100"
+        for target, valid in itertools.product(("listed-run", "selected-job"), (True, False)):
+            with self.subTest(target=target, valid=valid), tempfile.TemporaryDirectory() as folder:
+                fixture = ProviderFixture()
+                row = fixture.run if target == "listed-run" else fixture.jobs[0]
+                row["conclusion"] = "success" if valid else None
+                next_read = f"{prefix}{PR['attempt']}" if target == "listed-run" else prior_jobs
+                if target == "selected-job":
+                    fixture.job_listing.update(total_count=1, jobs=[row])
+                    for attempt in range(PR["attempt"] - 1, 0, -1):
+                        fixture.routes[f"{prefix}{attempt}/jobs?per_page=100"] = {"total_count": 0, "jobs": []}
+                interrupted = next_read if target == "listed-run" else None
+
+                def provider_json(endpoint, read=fixture.api.json, blocked=interrupted):
+                    if endpoint == blocked:
+                        raise ci.ProviderUnavailable("fixture exact-attempt read interrupted")
+                    return read(endpoint)
+
+                out = Path(folder) / "candidate.json"
+                with (
+                    mock.patch.object(fixture.api, "json", side_effect=provider_json) as request,
+                    mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+                    mock.patch.object(ci, "GitHub", return_value=fixture.api),
+                    mock.patch.object(ci, "native_output"),
+                ):
+                    if valid:
+                        ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
+                        receipt = ci.read_object(out)
+                        self.assertEqual(receipt["status"], "UNAVAILABLE")
+                        reason = "interrupted" if target == "listed-run" else "bounded attempt history"
+                        self.assertIn(reason, receipt["reason"])
+                        self.assertIn(mock.call(next_read), request.call_args_list)
+                    else:
+                        with self.assertRaisesRegex(ci.ProofError, "invalid PR execution status/conclusion pair"):
+                            ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], out)
+                        self.assertFalse(out.exists())
+                        self.assertNotIn(mock.call(next_read), request.call_args_list)
+                if valid:
+                    with tempfile.TemporaryDirectory() as decision_folder:
+                        decision = self.decide_fixture(CurrentFixture("UNAVAILABLE", mixed=True), Path(decision_folder))
+                    self.assertEqual(decision["mode"], "FULL")
+                    self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
+
+    def selective_pr_fixture(self, *, carried: bool = False) -> tuple[ProviderFixture, list[str]]:
+        fixture = ProviderFixture()
+        old_attempt = PR["attempt"] - 1
+        old_route = f"/actions/runs/{PR['run']}/attempts/{old_attempt}/jobs?per_page=100"
+        keys = list(ci.CELLS)
+        for key, job, artifact in zip(keys[1:], fixture.jobs[1:], fixture.artifacts[1:], strict=True):
+            job["run_attempt"] = old_attempt
+            with zipfile.ZipFile(io.BytesIO(fixture.archives[str(artifact["id"])])) as archive:
+                members = {name: archive.read(name) for name in archive.namelist()}
+            receipt = ci.strict_json(members["cell-evidence.json"])
+            receipt["invocation"]["attempt"] = old_attempt
+            members["cell-evidence.json"] = ci.json_bytes(receipt)
+            raw = zipped(list(members.items()))
+            artifact.update(
+                name=ci.artifact_name("pr-ci", PR["run"], old_attempt, key),
+                size_in_bytes=len(raw),
+                digest="sha256:" + ci.sha256(raw),
+            )
+            fixture.archives[str(artifact["id"])] = raw
+            bind_artifact_origin(job, ci.CELL_UPLOAD, artifact)
+        current_job = fixture.jobs[0]
+        prior_same_cell = {
+            **current_job, "id": 990, "run_attempt": old_attempt,
+            "check_run_url": f"{fixture.api.base}/check-runs/990",
+        }
+        historical_job = provider_job(
+            "historical auxiliary job", 991, [], {**PR, "attempt": old_attempt}, HEAD,
+        )
+        current_rows = [current_job]
+        if carried:
+            for job in fixture.jobs[1:]:
+                job.update(started_at=STARTED, completed_at=COMPLETED, runner_id=100)
+                copy_id = job["id"] + 10_000
+                carried_row = copy.deepcopy(job)
+                carried_row.update(
+                    id=copy_id, run_attempt=PR["attempt"], check_run_url=f"{fixture.api.base}/check-runs/{copy_id}",
+                )
+                current_rows.append(carried_row)
+        fixture.job_listing.update(total_count=len(current_rows), jobs=current_rows)
+        fixture.routes[old_route] = {"total_count": 26, "jobs": [prior_same_cell, historical_job, *fixture.jobs[1:]]}
+        return fixture, keys
+
+    def test_selective_pr_attempt_binds_untouched_archives_and_masks_unsuccessful_jobs(self):
+        fixture, keys = self.selective_pr_fixture()
+        old_attempt = PR["attempt"] - 1
+        current_job = fixture.jobs[0]
+        proof, _ = ci.find_candidate(fixture.api, MAIN, SOURCE)
+        self.assertEqual(proof["cells"][keys[0]]["producerAttempt"], PR["attempt"])
+        self.assertTrue(all(proof["cells"][key]["producerAttempt"] == old_attempt for key in keys[1:]))
+        self.assertEqual(proof["provider"], {"authenticated": 37, "total": 62})
+        for status, conclusion in (("completed", "failure"), ("completed", "cancelled"), ("in_progress", None)):
+            with self.subTest(status=status, conclusion=conclusion):
+                current_job.update(status=status, conclusion=conclusion)
+                fixture.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+                fixture.api.opener = fixture
+                with self.assertRaisesRegex(ci.ApplicabilityChanged, "newest PR suite did not pass"):
+                    ci.find_candidate(fixture.api, MAIN, SOURCE)
+        fixture.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+        fixture.api.opener = fixture
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+            mock.patch.object(ci, "GitHub", return_value=fixture.api),
+            mock.patch.object(ci, "native_output"),
+        ):
+            target = Path(folder) / "candidate.json"
+            ci.candidate(Path(folder), ci.REPOSITORY, MAIN["sha"], target)
+            unavailable = ci.read_object(target)
+            self.assertEqual(unavailable["schemaVersion"], ci.INDEX_V2)
+            self.assertEqual(unavailable["status"], "UNAVAILABLE")
+            self.assertIn("newest PR suite did not pass", unavailable["reason"])
+        with tempfile.TemporaryDirectory() as folder:
+            decision = self.decide_fixture(CurrentFixture("UNAVAILABLE", mixed=True), Path(folder))
+        self.assertEqual(decision["mode"], "FULL")
+        self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
+
+    def test_carried_attempt_rows_resolve_and_rebind_actual_producers(self) -> None:
+        fixture, keys = self.selective_pr_fixture(carried=True)
+        proof, _ = ci.find_candidate(fixture.api, MAIN, SOURCE)
+        self.assertEqual(proof["cells"][keys[0]]["producerAttempt"], PR["attempt"])
+        for key, original, copied in zip(
+            keys[1:], fixture.jobs[1:], fixture.job_listing["jobs"][1:], strict=True,
+        ):
+            self.assertNotEqual(original["id"], copied["id"])
+            self.assertEqual(proof["cells"][key]["job"], original["id"])
+            self.assertEqual(proof["cells"][key]["producerAttempt"], PR["attempt"] - 1)
+        self.assertEqual(proof["provider"], {"authenticated": 37, "total": 62})
+        api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+        api.opener = fixture
+        fixture.requests.clear()
+        ci.rebind_pr_cells(api, MAIN, proof, set(keys))
+        history = [url for url, _ in fixture.requests if f"/actions/runs/{PR['run']}/attempts/" in url]
+        self.assertEqual(len([url for url in history if "/jobs?" in url]), 2)
+        self.assertFalse(any(url.endswith("/zip") for url, _ in fixture.requests))
+
+    def test_carried_attempt_rows_refuse_bad_outcomes_and_origins(self) -> None:
+        cases = {
+            "failed": (ci.ApplicabilityChanged, "newest PR suite did not pass"),
+            "malformed": (ci.ProofError, "invalid PR execution status/conclusion pair"),
+            "runner": (ci.ProofError, "carried PR job execution differs"),
+            "timestamp": (ci.ProofError, "carried PR job execution differs"),
+            "digest": (ci.ProofError, "carried PR artifact origin differs"),
+            "foreign": (ci.ProofError, "carried PR artifact origin differs"),
+            "missing": (ci.ProviderUnavailable, "selected PR artifact absent or expired"),
+            "expired": (ci.ProviderUnavailable, "outside bounded attempt history"),
+        }
+        for case, (error, message) in cases.items():
+            with self.subTest(case=case):
+                fixture, _ = self.selective_pr_fixture(carried=True)
+                job = fixture.job_listing["jobs"][1]
+                artifact = fixture.artifacts[1]
+                if case in {"failed", "malformed"}:
+                    job["conclusion"] = "failure" if case == "failed" else None
+                elif case == "runner":
+                    job["runner_id"] += 1
+                elif case == "timestamp":
+                    job["started_at"] = "2026-10-12T11:00:01Z"
+                elif case == "digest":
+                    bind_artifact_origin(job, ci.CELL_UPLOAD, {**artifact, "digest": f"sha256:{'f' * 64}"})
+                elif case == "foreign":
+                    bind_artifact_origin(job, ci.CELL_UPLOAD, fixture.artifacts[2])
+                elif case == "missing":
+                    fixture.artifacts.remove(artifact)
+                    fixture.artifact_listing["total_count"] -= 1
+                else:
+                    artifact["expired"] = True
+                with self.assertRaisesRegex(error, message):
+                    ci.find_candidate(fixture.api, MAIN, SOURCE)
+
+    def test_carried_origin_outside_history_is_unavailable_without_fetch(self) -> None:
+        fixture, keys = self.selective_pr_fixture(carried=True)
+        attempt = PR["attempt"] - 1 + ci.PR_ATTEMPT_WINDOW
+        job = {**fixture.job_listing["jobs"][1], "run_attempt": attempt}
+        artifacts = {row["name"]: row for row in fixture.artifacts}
+        with self.assertRaisesRegex(ci.ProviderUnavailable, "outside bounded attempt history"):
+            ci.carried_pr_job(fixture.api, {**PR, "attempt": attempt}, job, artifacts, keys[1], {})
+        self.assertEqual(fixture.requests, [])
+
+    def test_mixed_main_records_only_fresh_suites_and_rebinds_producers(self):
+        fixture = CurrentFixture(mixed=True)
+        extra_fresh = "ci/ubuntu-latest-py3.11"
+        probe_archive = fixture.artifact(extra_fresh)
+        fixture.blocked.add(probe_archive["archive_download_url"])
+        with tempfile.TemporaryDirectory() as folder:
+            decision = self.decide_fixture(fixture, Path(folder))
+        self.assertEqual(decision["mode"], "PARTIAL_REUSE")
+        fresh = {ci.FRESH_MAIN_CELL, extra_fresh}
+        self.assertEqual(ci.fresh_keys(decision), fresh)
+        self.assertEqual(ci.family_outcomes(decision), {"test": "success", "foundation": "skipped", "quality": "skipped"})
+        self.assertEqual(
+            ci.fresh_matrix("ci", fresh),
+            {"include": [{"python": "3.11", "os": "ubuntu-latest"}, {"python": "3.11", "os": "macos-latest"}]},
+        )
+        self.assertEqual(ci.fresh_matrix("quality", fresh), {"include": []})
+        self.assertLessEqual(fixture.api.total_requests, 80)
+        fixture.add_main_full(fresh)
+        jobs = {job["name"]: job for job in fixture.current_jobs}
+        artifacts = {row["name"]: row for row in fixture.current_artifacts}
+        fixture.reset_api()
+        graph = ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
+        self.assertEqual(set(graph["freshSuites"]), fresh)
+        self.assertLessEqual(fixture.api.auth_requests, 48)
+        self.assertLessEqual(fixture.api.total_requests, 80)
+        self.assertFalse(any(f"/artifacts/{row['artifact']}/zip" in url for url, _ in fixture.requests
+                             for row in fixture.index["cells"].values()))
+        changed = copy.deepcopy(decision)
+        changed["schemaVersion"] = ci.DECISION_V1
+        with self.assertRaises(ci.ProofError):
+            ci.decision_proof(changed, MAIN, SOURCE)
+        changed = copy.deepcopy(decision)
+        del changed["cells"][extra_fresh]
+        with self.assertRaises(ci.ProofError):
+            ci.decision_proof(changed, MAIN, SOURCE)
+        changed = copy.deepcopy(decision)
+        changed["cells"][ci.FRESH_MAIN_CELL] = copy.deepcopy(changed["cells"]["ci/ubuntu-latest-py3.12"])
+        with self.assertRaises(ci.ProofError):
+            ci.decision_proof(changed, MAIN, SOURCE)
+        unstable_name = ci.CELLS[ci.FRESH_MAIN_CELL][2]
+        removed = jobs.pop(unstable_name)
+        fixture.reset_api()
+        with self.assertRaises(ci.ProofError):
+            ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
+        jobs[unstable_name] = removed
+        removed["labels"] = ["macos-latest"]
+        fixture.reset_api()
+        with self.assertRaisesRegex(ci.ProofError, "unstable suite runner differs"):
+            ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
+        removed["labels"] = ["macos-26-intel"]
+        reused = fixture.index["cells"]["ci/ubuntu-latest-py3.12"]
+        reused_artifact = next(row for row in fixture.artifacts if row["id"] == reused["artifact"])
+        reused_artifact["expired"] = True
+        fixture.reset_api()
+        with self.assertRaises(ci.ProofError):
+            ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
+
     def test_native_origin_accepts_creation_outside_upload_interval_without_job_id(self):
         for created in ("2026-10-12T11:02:23Z", "2026-10-12T10:59:37Z"):
             with self.subTest(created=created):
@@ -567,20 +867,21 @@ class CiEvidenceReuseTests(unittest.TestCase):
                             self.decide_fixture(fixture, Path(folder))
 
     def test_main_graph_and_publication_receiver_require_native_origin(self):
-        fixture = CurrentFixture()
+        for mixed in (False, True):
+            with self.subTest(mixed=mixed):
+                self.check_main_graph_and_publication(mixed)
+
+    def check_main_graph_and_publication(self, mixed):
+        fixture = CurrentFixture(mixed=mixed)
         with tempfile.TemporaryDirectory() as folder:
             decision = self.decide_fixture(fixture, Path(folder))
-        fixture.add_main_full()
-        suite_names = {name for _, _, name in ci.CELLS.values()}
-        fixture.current_jobs[:] = [job for job in fixture.current_jobs if job["name"] not in suite_names]
-        full_prefix = ci.artifact_name("main-full", MAIN["run"], MAIN["attempt"]) + "-"
-        fixture.current_artifacts[:] = [row for row in fixture.current_artifacts if not row["name"].startswith(full_prefix)]
-        fixture.sync_counts()
+        fresh = ci.fresh_keys(decision)
+        fixture.add_main_full(fresh)
         jobs = {job["name"]: job for job in fixture.current_jobs}
         artifacts = {row["name"]: row for row in fixture.current_artifacts}
         fixture.reset_api()
         graph = ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
-        self.assertEqual(graph["freshSuites"], {})
+        self.assertEqual(set(graph["freshSuites"]), fresh)
         checks_job = jobs[ci.MAIN_CHECKS_JOB]
         checks_marker = next(step for step in checks_job["steps"] if step["name"].startswith(ci.ORIGIN_PREFIX))
         saved = checks_marker["name"]
@@ -589,11 +890,11 @@ class CiEvidenceReuseTests(unittest.TestCase):
         with self.assertRaises(ci.ProofError):
             ci.main_job_graph(fixture.api, MAIN, decision, jobs, artifacts)
         checks_marker["name"] = saved
-        proof = {"schemaVersion": "alk-ci-main-qualification.v1", "status": "PASS", "main": MAIN, "source": SOURCE,
+        proof = {"schemaVersion": ci.TERMINAL_V2 if mixed else ci.TERMINAL_V1, "status": "PASS", "main": MAIN, "source": SOURCE,
                  "decision": decision, "decisionSha256": ci.sha256(ci.json_bytes(decision)),
                  "outcomes": {"candidate": "success", "decide": "success", "main-checks": "success",
-                              **{name: "skipped" for name in ci.JOB_IDS.values()}},
-                 "graph": graph, "checks": {"unit": "package proof separately validated"}, "completeSuitesRun": 0}
+                              **ci.family_outcomes(decision)},
+                 "graph": graph, "checks": {"unit": "package proof separately validated"}, "completeSuitesRun": len(fresh)}
         terminal = provider_job(ci.TERMINAL_JOB, 14000, [ci.TERMINAL_STEP, ci.TERMINAL_UPLOAD], MAIN, MAIN["sha"])
         raw = zipped([("qualification.json", ci.json_bytes(proof))])
         artifact = provider_artifact(ci.artifact_name("main-qualification", MAIN["run"], MAIN["attempt"]), 14001,
@@ -610,6 +911,19 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 "workflow_id": workflow, "event": "push", "head_sha": MAIN["sha"], "head_branch": "main",
                 "path": ci.WORKFLOW if workflow == 120 else ".github/workflows/codeql.yml"}
         terminal_marker = next(step for step in terminal["steps"] if step["name"].startswith(ci.ORIGIN_PREFIX))
+        provider_jobs = ci.provider_jobs
+        artifact_rows = ci.artifact_rows
+
+        def jobs_for(api, run, attempt):
+            if run == MAIN["run"]:
+                return jobs
+            if run == codeql_run["run"]:
+                return {"CodeQL / Python": codeql_job}
+            return provider_jobs(api, run, attempt)
+
+        def archives_for(api, run):
+            return artifacts if run == MAIN["run"] else artifact_rows(api, run)
+
         for corrupt in (False, True):
             with self.subTest(corrupt=corrupt):
                 fixture.reset_api()
@@ -618,8 +932,8 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 with (mock.patch.object(ci, "repository_identity"),
                       mock.patch.object(ci, "workflow_id", side_effect=[120, 121] if not corrupt else [120]),
                       mock.patch.object(ci, "verified_push_run", side_effect=[(MAIN["run"], MAIN["attempt"]), (16000, 1)] if not corrupt else [(MAIN["run"], MAIN["attempt"])]),
-                      mock.patch.object(ci, "provider_jobs", side_effect=lambda api, run, attempt: jobs if run == MAIN["run"] else {"CodeQL / Python": codeql_job}),
-                      mock.patch.object(ci, "artifact_rows", return_value=artifacts),
+                      mock.patch.object(ci, "provider_jobs", side_effect=jobs_for),
+                      mock.patch.object(ci, "artifact_rows", side_effect=archives_for),
                       mock.patch.object(ci, "main_checks_evidence", return_value=proof["checks"])):
                     if corrupt:
                         with self.assertRaises(ci.ProofError):
@@ -655,6 +969,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     self.assertNotIn("        if:", marker)
         self.assertEqual(workflow.count("      - name: Record artifact origin "), 9)
         self.assertNotIn("Record artifact origin", jobs["decide"])
+        self.assertEqual(jobs["candidate"].count("retention-days: 2"), 1)
 
     def test_prepare_publishes_console_scripts_for_later_step_lookup(self):
         real_run = ci.subprocess.run
@@ -1000,7 +1315,10 @@ class CiEvidenceReuseTests(unittest.TestCase):
             mock.patch.object(ci, "native_output"),
             mock.patch.object(ci, "GitHub", return_value=fixture.api),
         ):
-            ci.decide(root, root / "missing-index.json", root / "missing-probes", root / name, needs)
+            ci.decide(
+                root, root / "missing-index.json", root / "missing-probes", root / name, needs,
+                mixed=fixture.index["schemaVersion"] == ci.INDEX_V2,
+            )
         return ci.decision_proof(ci.read_object(root / name), MAIN, SOURCE)
 
     def test_candidate_unavailable_requires_deliberate_probe_skip_and_full(self):

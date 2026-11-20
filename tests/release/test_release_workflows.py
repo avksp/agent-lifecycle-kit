@@ -5,6 +5,9 @@ import json
 import re
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+
+from tools.ci.qualify_pr_evidence import PLATFORMS, PYTHONS
 
 ROOT = Path(__file__).resolve().parents[2]
 ACTION_USE_RE = re.compile(r"^\s*(?:-\s+)?uses:\s+[^@\s]+@([0-9a-f]{40})\s+#.*\bv\d")
@@ -29,21 +32,84 @@ class ReleaseWorkflowTests(unittest.TestCase):
             "quality": _job_block(ci, "quality"),
             "foundation": _job_block(ci, "foundation"),
         }.items():
-            found = re.search(r"python(?:-version)?: \[(.*?)\]", workflow)
-            self.assertIsNotNone(found, name)
-            actual = json.loads("[" + found.group(1) + "]")
+            if name == "manual":
+                found = re.search(r"python(?:-version)?: \[(.*?)\]", workflow)
+                self.assertIsNotNone(found, name)
+                actual = json.loads("[" + found.group(1) + "]")
+                operating_systems = re.search(r"os: \[(.*?)\]", workflow)
+                self.assertIsNotNone(operating_systems, name)
+                actual_platforms = [value.strip() for value in operating_systems.group(1).split(",")]
+            else:
+                role = "ci" if name == "platform" else name
+                found = re.search(r"fromJSON\(github\.event_name == 'push' && needs\.decide\.outputs\."
+                                  + role + r"_matrix \|\| '(\{[^']+\})'\)", workflow)
+                self.assertIsNotNone(found, name)
+                matrix_keys = json.loads(found.group(1))
+                expected_axes = {"python-version" if name == "foundation" else "python"}
+                if name == "platform":
+                    expected_axes.add("os")
+                self.assertEqual(set(matrix_keys), expected_axes)
+                actual = matrix_keys["python-version" if name == "foundation" else "python"]
+                actual_platforms = matrix_keys.get("os")
+                condition = re.search(r"^    if: >-\n((?:^      .+\n)+)", workflow, re.MULTILINE)
+                self.assertIsNotNone(condition, name)
+                self.assertEqual(
+                    " ".join(condition.group(1).split()),
+                    "${{ !cancelled() && (github.event_name == 'pull_request' || "
+                    "(github.event_name == 'push' && needs.decide.result == 'success' && "
+                    "(needs.decide.outputs.mode == 'FULL' || needs.decide.outputs.mode == 'PARTIAL_REUSE') && "
+                    f"needs.decide.outputs.{role}_has_fresh == 'true') || "
+                    "(github.event_name == 'workflow_dispatch' && needs.control.result == 'success')) }}",
+                )
+                probe = _job_block(ci, f"probe-{role}")
+                axes = {}
+                for line in _probe_matrix_rows(probe):
+                    axis_match = re.fullmatch(r"        (os|python(?:-version)?): (\[.*\])", line)
+                    self.assertIsNotNone(axis_match, line)
+                    axis, values = axis_match.groups()
+                    self.assertNotIn(axis, axes)
+                    axes[axis] = (
+                        [value.strip() for value in values[1:-1].split(",")]
+                        if axis == "os"
+                        else json.loads(values)
+                    )
+                canonical = {"python-version" if role == "foundation" else "python": list(PYTHONS)}
+                if role == "ci":
+                    canonical["os"] = list(PLATFORMS)
+                self.assertEqual(axes, canonical)
+                self.assertEqual(matrix_keys, canonical)
             self.assertEqual(actual, versions, name)
             self.assertNotIn("continue-on-error", workflow, name)
             if name in ("platform", "manual"):
-                operating_systems = re.search(r"os: \[(.*?)\]", workflow)
-                self.assertIsNotNone(operating_systems)
-                actual_platforms = [value.strip() for value in operating_systems.group(1).split(",")]
                 self.assertEqual(actual_platforms, platforms, name)
                 self.assertEqual(
                     set(itertools.product(actual_platforms, actual)), set(itertools.product(platforms, versions)), name
                 )
                 self.assertNotIn("exclude:", workflow, name)
                 self.assertNotIn("include:", workflow, name)
+
+    def test_probe_matrix_checks_continue_after_blank_lines_and_comments(self) -> None:
+        path = ROOT / ".github/workflows/ci.yml"
+        source = path.read_text(encoding="utf-8")
+        manual = (ROOT / ".github/workflows/matrix.yml").read_text(encoding="utf-8")
+        for role, separator in itertools.product(
+            ("ci", "foundation", "quality"), ("\n", "        # matrix annotation\n", "\n# annotation\n"),
+        ):
+            block = _job_block(source, f"probe-{role}")
+            key = "python-version" if role == "foundation" else "python"
+            axis = f"        {key}: " + json.dumps(list(PYTHONS)) + "\n"
+            self.assertIn(axis, block)
+            with self.subTest(role=role, separator=separator):
+                annotated = block.replace(axis, axis + separator, 1)
+                with patch.object(Path, "read_text", side_effect=[source.replace(block, annotated, 1), manual]):
+                    self.test_complete_supported_runtime_and_quality_matrices()
+                exclusion = f'        exclude:\n          - {key}: "3.11"\n'
+                changed = block.replace(axis, axis + separator + exclusion, 1)
+                with (
+                    patch.object(Path, "read_text", side_effect=[source.replace(block, changed, 1), manual]),
+                    self.assertRaisesRegex(AssertionError, "exclude"),
+                ):
+                    self.test_complete_supported_runtime_and_quality_matrices()
 
     def test_each_full_family_keeps_its_own_discovery(self) -> None:
         workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -125,6 +191,20 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("package-ecosystem: github-actions", dependabot)
         self.assertIn("github/codeql-action/*", dependabot)
         self.assertIn("package-ecosystem: pip", dependabot)
+
+
+def _probe_matrix_rows(probe: str) -> list[str]:
+    header = re.search(r"^      matrix:$", probe, re.MULTILINE)
+    if header is None:
+        raise AssertionError("probe matrix not found")
+    rows = []
+    for line in probe[header.end():].splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if not line.startswith("        "):
+            break
+        rows.append(line)
+    return rows
 
 
 def _job_block(workflow: str, job_id: str) -> str:
