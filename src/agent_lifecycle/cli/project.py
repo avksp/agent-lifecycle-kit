@@ -110,7 +110,7 @@ def add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
 
 
 def _dispatch_archive(args: argparse.Namespace) -> dict[str, Any]:
-    from agent_lifecycle.project.archive import create_package_archive, inventory_packages
+    from agent_lifecycle.workflow.package_archive import create_package_archive, inventory_packages
 
     root = Path(args.project_root)
     if args.archive_command == "inventory":

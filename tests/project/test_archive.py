@@ -12,7 +12,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 
 from agent_lifecycle.contracts import canonical_bytes, canonical_digest, write_json_create
-from agent_lifecycle.project import archive
+from agent_lifecycle.workflow import package_archive as archive
 from agent_lifecycle.workflow.finalization import finalize_run
 from tests.cli.helpers import _run_cli
 from tests.workflow.helpers import _final_audit, _write_state
