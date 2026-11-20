@@ -2294,8 +2294,9 @@ def decide(
         "transport": transport,
     }
     if mixed:
-        decision["cells"] = mixed_cells(decision, index)
-        reuse = any(row["disposition"] == "REUSE" for row in decision["cells"].values())
+        cell_decisions = mixed_cells(decision, index)
+        decision["cells"] = cell_decisions
+        reuse = any(row["disposition"] == "REUSE" for row in cell_decisions.values())
         decision["mode"] = mode = "PARTIAL_REUSE" if reuse else "FULL"
         if reuse:
             decision["reason"] = "exact compatible cells qualify for reuse"
