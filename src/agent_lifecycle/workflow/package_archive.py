@@ -97,6 +97,7 @@ def create_package_archive(
     _require_plan_files(root, selected, members)
     _require_ignored(root, members)
     payload, manifest = _archive_bytes(root, members, selected, inventory)
+    _require_archived_closure(members, selected, manifest["members"])
     if _members(root, *roots) != members:
         raise LifecycleError("archive-source-drift", "package membership or file identity changed during the copy")
     _require_ignored(root, members)
@@ -215,6 +216,8 @@ def _package_row(root: Path, entry: _Entry, referenced: bool) -> dict[str, Any]:
         "planRoot": plan,
         "workRoot": work,
         "manifestPath": entry.manifest,
+        "statePath": entry.state,
+        "proofPath": entry.proof,
         "manifestSha256": sha256(raw).hexdigest(),
         "closureEligible": eligible,
         "reason": reason,
@@ -288,7 +291,7 @@ def _destination(root: Path, path: Path) -> Path:
         parent = path.parent.resolve(strict=True)
         if not path.is_absolute() or parent != path.parent or not parent.is_dir():
             raise LifecycleError("archive-target-invalid", "provide a canonical path in an existing directory")
-        if parent.is_relative_to(root) or root.is_relative_to(parent):
+        if _overlapping_directories(root, parent):
             raise LifecycleError("archive-target-overlap", "archive destination must be disjoint from the project")
         if path.suffix != ".zip" or _local_path(path.name) != path.name:
             raise LifecycleError("archive-target-invalid", "archive target must have a safe .zip name")
@@ -300,6 +303,12 @@ def _destination(root: Path, path: Path) -> Path:
             raise LifecycleError("archive-target-exists", "archive destination already exists")
     except OSError as exc:
         raise LifecycleError("archive-target-invalid", "archive destination parent is unavailable") from exc
+
+
+def _overlapping_directories(root: Path, parent: Path) -> bool:
+    return any(root.samefile(path) for path in (parent, *parent.parents)) or any(
+        parent.samefile(path) for path in root.parents
+    )
 
 
 def _members(root: Path, plan_root: str, work_root: str) -> list[_Member]:
@@ -392,6 +401,17 @@ def _require_ignored(root: Path, members: list[_Member]) -> None:
         raise LifecycleError(
             "archive-member-tracked-or-unignored", "every archived member must be ignored and untracked"
         )
+
+
+def _require_archived_closure(
+    members: list[_Member], selected: dict[str, Any], entries: dict[str, dict[str, Any]]
+) -> None:
+    by_repository_path = {member.repository_path: member.archive_path for member in members}
+    for kind in ("manifest", "state", "proof"):
+        actual = entries.get(by_repository_path.get(selected[f"{kind}Path"], ""), {})
+        expected = selected[f"{kind}Sha256"]
+        if not expected or actual.get("sha256") != expected:
+            raise LifecycleError("archive-source-drift", "archived closure differs from the verified inventory")
 
 
 def _archive_bytes(

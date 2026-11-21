@@ -11,7 +11,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from zipfile import ZipFile
 
-from agent_lifecycle.contracts import canonical_bytes, canonical_digest, write_json_create
+from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest, write_json_create
 from agent_lifecycle.workflow import package_archive as archive
 from agent_lifecycle.workflow.finalization import finalize_run
 from tests.cli.helpers import _run_cli
@@ -146,6 +146,13 @@ class ArchiveTests(unittest.TestCase):
         with ZipFile(self.output) as zipped:
             manifest = json.loads(zipped.read("archive-manifest.json"))
             self.assertEqual(set(zipped.namelist()), {*manifest["members"], "archive-manifest.json"})
+            selected = inventory["packages"][0]
+            for kind, name in (
+                ("manifest", "plan/plan.manifest.json"),
+                ("state", "work/run.state.json"),
+                ("proof", "work/final-proof.json"),
+            ):
+                self.assertEqual(manifest["members"][name]["sha256"], selected[f"{kind}Sha256"])
             for name, member in manifest["members"].items():
                 kind, _, relative = name.partition("/")
                 folder = "work/frozen-package" if kind == "plan" else "work/package"
@@ -235,4 +242,26 @@ class ArchiveTests(unittest.TestCase):
         with patch.object(archive, "_archive_bytes", side_effect=copy_then_add_member):
             code, result = self._create(old_inventory["inventoryDigest"])
         self.assertEqual((code, result["code"]), (2, "archive-source-drift"))
+        self.assertFalse(self.output.exists())
+
+    def test_archive_guard_rejects_inconsistent_copied_closure(self) -> None:
+        inventory = self._select()
+        original = archive._archive_bytes
+        for kind, member in (("missing", "work/run.state.json"), ("different", "work/final-proof.json")):
+
+            def inconsistent_metadata(*args, mismatch=kind, name=member):
+                payload, manifest = original(*args)
+                if mismatch == "missing":
+                    manifest["members"].pop(name)
+                else:
+                    manifest["members"][name]["sha256"] = "0" * 64
+                return payload, manifest
+
+            with self.subTest(kind=kind), patch.object(archive, "_archive_bytes", side_effect=inconsistent_metadata):
+                self._assert_refusal(inventory, "archive-source-drift")
+
+    def test_archive_guard_checks_directory_identity(self) -> None:
+        with patch.object(Path, "samefile", return_value=True), self.assertRaises(LifecycleError) as denied:
+            archive._destination(self.root, self.output)
+        self.assertEqual(denied.exception.code, "archive-target-overlap")
         self.assertFalse(self.output.exists())
