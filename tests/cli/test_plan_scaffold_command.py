@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tests.cli.helpers import _run_cli
 
@@ -105,3 +106,31 @@ class PlanScaffoldCommandTests(unittest.TestCase):
                     )
                     self.assertEqual(code, 2)
             self.assertEqual(list((root / ".git").iterdir()), [])
+
+    def test_scaffold_refuses_unbound_output_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "tasks").mkdir()
+            with patch("agent_lifecycle.cli.plan_scaffold_commands.os.path.samestat", return_value=False):
+                code, receipt = _run_cli(
+                    [
+                        "plan",
+                        "scaffold",
+                        "--repository-root",
+                        str(root),
+                        "--out",
+                        "tasks/demo",
+                        "--artifact-root",
+                        "work/demo",
+                        "--author",
+                        "author",
+                        "--owner",
+                        "owner",
+                        "--base-ref",
+                        "main",
+                        "--base-sha",
+                        "1" * 40,
+                    ]
+                )
+            self.assertEqual((code, receipt["code"]), (2, "scaffold-output-changed"))
+            self.assertEqual(list((root / "tasks/demo").iterdir()), [])
