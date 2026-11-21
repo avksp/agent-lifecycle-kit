@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes
-from agent_lifecycle.contracts.authority_io import hold_authority_directory
+from agent_lifecycle.contracts.authority_io import create_authority_directory
 from agent_lifecycle.contracts.ownership_paths import repository_authority_name, require_declared_output_footprint
 from agent_lifecycle.planning.scaffold import s2_scaffold, scaffold_placeholders
 
@@ -36,7 +35,14 @@ def create_plan_scaffold(
     target = root / name
     payloads = {filename: text.encode("utf-8") for filename, text in files.items()}
     payloads["plan.manifest.json"] = canonical_bytes(manifest) + b"\n"
-    _write_scaffold(root, target, payloads)
+    try:
+        create_authority_directory(target, payloads, root=root)
+    except LifecycleError as exc:
+        if exc.code == "authority-directory-exists":
+            raise LifecycleError("scaffold-output-exists", "scaffold destination already exists", exc.details) from None
+        raise
+    except OSError:
+        raise LifecycleError("scaffold-output-unavailable", "scaffold parent must already exist") from None
     return {
         "schemaVersion": "agent-plan-scaffold.v1",
         "status": "DRAFT",
@@ -46,32 +52,3 @@ def create_plan_scaffold(
         "authorityClaimed": False,
         "modelCallsStarted": False,
     }
-
-
-def _write_scaffold(root: Path, target: Path, payloads: dict[str, bytes]) -> None:
-    try:
-        with hold_authority_directory(target.parent, root=root, writable=True) as parent:
-            try:
-                parent.mkdir_child(target.name, 0o755)
-            except FileExistsError:
-                raise LifecycleError("scaffold-output-exists", "scaffold destination already exists") from None
-            created = parent.stat_child(target.name)
-            parent.sync()
-            with hold_authority_directory(target, root=root, writable=True) as directory:
-                held = os.fstat(directory.fd) if directory.fd is not None else directory.identity
-                _require_scaffold_identity(created, held)
-                for filename, data in payloads.items():
-                    fd = directory.write_child(filename, append=False, mode=0o644)
-                    with os.fdopen(fd, "wb") as stream:
-                        stream.write(data)
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                directory.sync()
-                _require_scaffold_identity(created, parent.stat_child(target.name))
-    except OSError:
-        raise LifecycleError("scaffold-output-unavailable", "scaffold output could not be safely written") from None
-
-
-def _require_scaffold_identity(created: os.stat_result, actual: os.stat_result | None) -> None:
-    if actual is None or not os.path.samestat(created, actual):
-        raise LifecycleError("scaffold-output-changed", "scaffold output directory identity changed")

@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from agent_lifecycle.contracts import LifecycleError
 from tests.cli.helpers import _run_cli
 
 
@@ -107,11 +108,14 @@ class PlanScaffoldCommandTests(unittest.TestCase):
                     self.assertEqual(code, 2)
             self.assertEqual(list((root / ".git").iterdir()), [])
 
-    def test_scaffold_refuses_unbound_output_directory(self) -> None:
+    def test_scaffold_refuses_without_atomic_publication(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "tasks").mkdir()
-            with patch("agent_lifecycle.cli.plan_scaffold_commands.os.path.samestat", return_value=False):
+            with patch(
+                "agent_lifecycle.contracts.authority_io._directory_no_replace",
+                side_effect=LifecycleError("authority-directory-publish-unavailable", "unsupported filesystem"),
+            ):
                 code, receipt = _run_cli(
                     [
                         "plan",
@@ -132,5 +136,5 @@ class PlanScaffoldCommandTests(unittest.TestCase):
                         "1" * 40,
                     ]
                 )
-            self.assertEqual((code, receipt["code"]), (2, "scaffold-output-changed"))
-            self.assertEqual(list((root / "tasks/demo").iterdir()), [])
+            self.assertEqual((code, receipt["code"]), (2, "authority-directory-publish-unavailable"))
+            self.assertEqual(list((root / "tasks").iterdir()), [])

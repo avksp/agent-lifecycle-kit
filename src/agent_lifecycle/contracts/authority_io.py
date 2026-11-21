@@ -10,7 +10,7 @@ import tempfile
 import threading
 import time
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager, suppress
 from functools import cache
 from pathlib import Path
@@ -471,6 +471,99 @@ def create_authority_bytes(path: Path, data: bytes, *, root: Path | None = None,
     except OSError:
         raise LifecycleError("authority-output-unavailable", "authority output cannot be safely created") from None
     return data
+
+
+def create_authority_directory(path: Path, files: dict[str, bytes], *, root: Path) -> None:
+    """Publish a private, complete directory without replacing an existing name."""
+    root, name = authority_location(path, root=root)
+    path = root / name
+    if not files or any(_relative_parts(name) != (name,) for name in files):
+        raise LifecycleError("authority-directory-members-invalid", "provide relative leaf file names")
+    with hold_authority_directory(path.parent, root=root, writable=True) as parent:
+        try:
+            parent.stat_child(path.name)
+        except FileNotFoundError:
+            pass
+        else:
+            raise LifecycleError("authority-directory-exists", "authority directory already exists")
+        rename = _directory_no_replace(parent)
+        stage_name = f".alk-stage-{uuid.uuid4().hex}"
+        parent.mkdir_child(stage_name, 0o700)
+        published = False
+        try:
+            prepared = _prepare_directory(parent, stage_name, files, root)
+            _same_identity(prepared, parent.stat_child(stage_name))
+            rename(stage_name, path.name)
+            published = True
+            _same_identity(prepared, parent.stat_child(path.name))
+            parent.sync()
+        except FileExistsError:
+            raise LifecycleError(
+                "authority-directory-exists", "authority directory already exists", {"stagingName": stage_name}
+            ) from None
+        except (OSError, LifecycleError) as exc:
+            code = exc.code if isinstance(exc, LifecycleError) else "authority-directory-publish-failed"
+            message = exc.message if isinstance(exc, LifecycleError) else "authority directory publication failed"
+            detail = {"destinationMayHaveBeenPublished": True} if published else {"stagingName": stage_name}
+            raise LifecycleError(code, message, detail) from None
+
+
+def _prepare_directory(parent: _Directory, stage_name: str, files: dict[str, bytes], root: Path) -> os.stat_result:
+    expected = parent.stat_child(stage_name)
+    stage = parent.path / stage_name
+    with hold_authority_directory(stage, root=root, writable=True, held_directories={parent.path: parent}) as held:
+        if held.fd is not None:
+            opened = os.fstat(held.fd)
+            if opened.st_uid != os.geteuid() or stat.S_IMODE(opened.st_mode) & 0o077:
+                raise LifecycleError("authority-directory-not-private", "prepared directory must be owner-only")
+        else:
+            from .windows_security import private_handle_fingerprint
+
+            if held.handle is None or held.identity is None:
+                raise LifecycleError("authority-io-unavailable", "prepared directory identity is unavailable")
+            private_handle_fingerprint(held.handle)
+            opened = held.identity
+        _same_identity(expected, opened)
+        for name, data in files.items():
+            _write_fd(held.write_child(name, append=False, mode=0o600), data, mode=0o600)
+        with os.scandir(held.fd if held.fd is not None else stage) as entries:
+            if {entry.name for entry in entries} != files.keys():
+                raise LifecycleError("authority-input-changed", "prepared directory members changed")
+        held.sync()
+    return opened
+
+
+def _directory_no_replace(parent: _Directory) -> Callable[[str, str], None]:
+    if sys.platform == "win32":
+
+        def rename_windows(source: str, destination: str) -> None:
+            (parent.path / source).rename(parent.path / destination)
+
+        return rename_windows
+    if parent.fd is None or sys.platform not in {"darwin", "linux"}:
+        raise LifecycleError("authority-directory-publish-unavailable", "atomic directory publication is unavailable")
+
+    import ctypes
+
+    symbol, flags = ("renameatx_np", 4) if sys.platform == "darwin" else ("renameat2", 1)
+    rename = getattr(ctypes.CDLL(None, use_errno=True), symbol, None)
+    if rename is None:
+        raise LifecycleError("authority-directory-publish-unavailable", "no-replace directory primitive is unavailable")
+    rename.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
+    rename.restype = ctypes.c_int
+    fd = parent.fd
+
+    def rename_posix(source: str, destination: str) -> None:
+        if rename(fd, os.fsencode(source), fd, os.fsencode(destination), flags) == 0:
+            return
+        error = ctypes.get_errno()
+        if error in {errno.EINVAL, errno.ENOSYS, errno.ENOTSUP}:
+            raise LifecycleError(
+                "authority-directory-publish-unavailable", "filesystem lacks atomic no-replace support"
+            )
+        raise OSError(error, "authority directory publication failed")
+
+    return rename_posix
 
 
 def replace_authority_bytes(path: Path, data: bytes, *, root: Path | None = None) -> bytes:
