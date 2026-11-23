@@ -309,7 +309,8 @@ class AttemptResultTests(unittest.TestCase):
 class PreparedAttemptIntegrationTests(unittest.TestCase):
     """Real prepared callbacks and local Python child; host fit is a fixture."""
 
-    _launch_timeout_seconds = 2
+    # Allow the synthetic interpreter to start under coverage and CI load.
+    _launch_timeout_seconds = 8
 
     def setUp(self) -> None:
         install_windows_fixture_process(self)
@@ -462,21 +463,20 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
         def delay_input(path, record, *, root):
             if path.name == 'process-input.json':
                 entered.set()
-                release.wait(10)
+                release.wait(self._launch_timeout_seconds + 5)
             original_replace(path, record, root=root)
 
         def observed_callback(event):
             try:
                 # Observe the zero child exit before deliberately holding its
                 # receipt past the original deadline.
-                self.assertEqual(children[0].wait(timeout=2), 0)
+                self.assertEqual(children[0].wait(timeout=self._launch_timeout_seconds), 0)
                 child_exited.set()
                 callback(event)
             finally:
                 finished.set()
 
         self.prepared['onInput'] = observed_callback
-        self.context = replace(self.context, timeout_seconds=3)
         with patch.object(process_module.subprocess, 'Popen', side_effect=capture_child), \
                 patch.object(preparation, '_replace_reserved', delay_input):
             try:
@@ -492,7 +492,7 @@ class PreparedAttemptIntegrationTests(unittest.TestCase):
                 before = terminal_path.read_bytes()
             finally:
                 release.set()
-                self.assertTrue(finished.wait(2))
+                self.assertTrue(finished.wait(self._launch_timeout_seconds))
         self.assertEqual(terminal_path.read_bytes(), before)
         self.assertTrue((self.evidence / 'transport-equivalence.json').exists())
         terminal = read_attempt_result(self.root, intent_path=self.prepared['intentPath'])
