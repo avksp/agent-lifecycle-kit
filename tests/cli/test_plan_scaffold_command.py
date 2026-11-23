@@ -38,6 +38,21 @@ class PlanScaffoldCommandTests(unittest.TestCase):
             code, receipt = _run_cli(args)
             self.assertEqual(code, 0, receipt)
             self.assertEqual(receipt["status"], "DRAFT")
+            self.assertEqual(
+                receipt["placeholders"],
+                [
+                    "ALK_FILL_ACCEPTANCE",
+                    "ALK_FILL_AUTHOR_RUN",
+                    "ALK_FILL_EVIDENCE",
+                    "ALK_FILL_PLAN_TITLE",
+                    "ALK_FILL_RELEASE_IMPACT",
+                    "ALK_FILL_REQUIREMENT",
+                    "ALK_FILL_REVIEWER",
+                    "ALK_FILL_VALIDATION_COMMAND",
+                    "ALK_FILL_WORKSTREAM_TITLE",
+                    "ALK_FILL_WRITE_PATH",
+                ],
+            )
             self.assertFalse(receipt["authorityClaimed"])
             self.assertFalse(receipt["modelCallsStarted"])
             self.assertEqual(

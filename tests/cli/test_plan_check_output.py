@@ -20,6 +20,19 @@ class PlanCheckOutputTests(unittest.TestCase):
         self.assertEqual(result["requiredChecks"], result["manifest"]["completeness"]["requiredChecks"])
         self.assertEqual(result["blockers"], [])
 
+    def test_quoted_scaffold_marker_is_valid_authored_prose(self) -> None:
+        manifest = json.loads(_FIXTURE.read_bytes())
+        manifest["specification"]["requirements"][0]["description"] = (
+            "The operator guide quotes the literal ALK_FILL_REQUIREMENT marker."
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "plan.json"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            code, result = _run_cli(["plan", "check", "--manifest", str(path)])
+        self.assertEqual(code, 0, result)
+        self.assertEqual(result["blockers"], [])
+        self.assertEqual(result["requiredChecks"], result["manifest"]["completeness"]["requiredChecks"])
+
     def test_failed_completeness_keeps_original_details_and_adds_projection(self) -> None:
         manifest = json.loads(_FIXTURE.read_bytes())
         manifest["workstreams"][0]["evidenceIds"] = []
