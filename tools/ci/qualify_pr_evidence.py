@@ -538,13 +538,21 @@ class GitHub:
 
     def artifact_metadata(self, identifier: int) -> tuple[dict[str, Any], datetime | None]:
         sent = self._clock()
+        started = time.monotonic()
         payload, dates = self._json_response(f"/actions/artifacts/{identifier}")
         received = self._clock()
-        require(time.monotonic() < self.deadline, "provider read deadline exceeded")
+        finished = time.monotonic()
+        require(started <= finished < self.deadline, "provider read deadline exceeded")
         row = obj(payload, "artifact")
         require(
             row.get("archive_download_url") == f"{self.base}/actions/artifacts/{identifier}/zip",
             "unexpected archive API origin",
+        )
+        elapsed = timedelta(seconds=finished - started)
+        latest = min(received, sent + elapsed)
+        require(
+            sent <= received and abs(received - sent - elapsed) <= PROVIDER_CLOCK_SKEW,
+            "artifact response time outside the request window",
         )
         if not dates:
             return row, None
@@ -559,9 +567,8 @@ class GitHub:
             "invalid artifact response time",
         )
         require(
-            sent <= received
-            and sent.replace(microsecond=0) - PROVIDER_CLOCK_SKEW <= observed
-            <= received.replace(microsecond=0) + PROVIDER_CLOCK_SKEW,
+            sent.replace(microsecond=0) - PROVIDER_CLOCK_SKEW <= observed
+            <= latest.replace(microsecond=0) + PROVIDER_CLOCK_SKEW,
             "artifact response time outside the request window",
         )
         return row, observed

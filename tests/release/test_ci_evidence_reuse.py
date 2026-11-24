@@ -1461,7 +1461,8 @@ class CiEvidenceReuseTests(unittest.TestCase):
         outcomes = (
             "MATCH", "UNAVAILABLE", "future artifact", "bad digest", "wrong run",
             "wrong ID", "wrong source", "expired", "other attempt", "malformed row", "wrong archive URL",
-            "invalid response", "duplicate response", "backdated response", "future response",
+            "invalid response", "duplicate response", "backdated response", "future response", "wall clock jump",
+            "missing date after wall clock jump",
         )
         for outcome in outcomes:
             with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
@@ -1480,6 +1481,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     artifact["created_at"] = created.isoformat()
                 if outcome in {
                     "UNAVAILABLE", "bad digest", "wrong run", "wrong ID", "malformed row", "wrong archive URL",
+                    "missing date after wall clock jump",
                 }:
                     fixture.response_dates = []
                 if outcome == "malformed row":
@@ -1508,6 +1510,11 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     fixture.response_dates = [format_datetime(sent - timedelta(seconds=3), usegmt=True)]
                 elif outcome == "future response":
                     fixture.response_dates = [format_datetime(received + timedelta(seconds=3), usegmt=True)]
+                elif outcome == "wall clock jump":
+                    fixture.api._clock = mock.Mock(side_effect=(sent, sent + timedelta(seconds=601)))
+                    fixture.response_dates = [format_datetime(sent + timedelta(seconds=300), usegmt=True)]
+                elif outcome == "missing date after wall clock jump":
+                    fixture.api._clock = mock.Mock(side_effect=(sent, sent + timedelta(seconds=601)))
                 root = Path(directory)
                 with (
                     mock.patch.dict(
@@ -1545,6 +1552,31 @@ class CiEvidenceReuseTests(unittest.TestCase):
             self.assertRaisesRegex(ci.ProofError, "provider read deadline exceeded"),
         ):
             fixture.api.artifact_metadata(fixture.artifact(None)["id"])
+
+    def test_candidate_metadata_limits_response_date_by_elapsed_time(self):
+        cases = (
+            (5, 5, 4, True), (1, 3, 3, True), (1, 3, 4, False),
+            (1, 4, 3, False), (1, 61, 30, False), (1, 601, 300, False),
+        )
+        for elapsed, wall_elapsed, date_offset, accepted in cases:
+            with self.subTest(elapsed=elapsed, wall_elapsed=wall_elapsed, date_offset=date_offset):
+                fixture = CurrentFixture()
+                artifact = fixture.artifact(None)
+                date = NOW + timedelta(seconds=date_offset)
+                fixture.api._clock = mock.Mock(side_effect=(NOW, NOW + timedelta(seconds=wall_elapsed)))
+                start = fixture.api.deadline - 20
+                with (
+                    mock.patch.object(
+                        fixture.api, "_json_response", return_value=(artifact, [format_datetime(date, usegmt=True)])
+                    ) as response,
+                    mock.patch.object(ci.time, "monotonic", side_effect=(start, start + elapsed)),
+                ):
+                    if accepted:
+                        self.assertEqual(fixture.api.artifact_metadata(artifact["id"]), (artifact, date))
+                    else:
+                        with self.assertRaisesRegex(ci.ProofError, "outside the request window"):
+                            fixture.api.artifact_metadata(artifact["id"])
+                    response.assert_called_once_with(f"/actions/artifacts/{artifact['id']}")
 
     def test_optional_sender_upload_failure_preserves_outcome_and_full_route(self):
         for key in (None, next(iter(ci.CELLS))):
