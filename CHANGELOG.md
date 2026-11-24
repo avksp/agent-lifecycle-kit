@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.52.0
+
+- Create a full S2 draft with `plan scaffold`. List unfilled fields and make
+  the one-owner traceability rule visible before review.
+- Show the SDD tier request schema and example. Report structural checks in
+  `plan check` and reject a moved canonical draft during `plan verify`.
+- Inventory a named local catalogue and copy a proven closed package to a
+  fresh private ZIP. Preserve source files and refuse unsafe or referenced
+  packages.
+
 ## 2.51.1
 
 - Qualify retained test evidence across GitHub Actions attempts on the

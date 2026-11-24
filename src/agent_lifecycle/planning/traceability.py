@@ -333,7 +333,11 @@ def _check_workstream_links(
                     _blocker(
                         "traceability-owner-count",
                         f"{label} id must have exactly one workstream owner",
-                        {"id": identifier, "owners": sorted(assigned)},
+                        {
+                            "id": identifier,
+                            "owners": sorted(assigned),
+                            "reference": "docs/reference/tier-proportional-plan-packages.md#one-owner-per-id",
+                        },
                     )
                 )
     if not workstream_ids:

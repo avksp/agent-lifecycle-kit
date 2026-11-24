@@ -10,6 +10,8 @@ from urllib.error import URLError
 
 import agent_lifecycle
 from agent_lifecycle.contracts import LifecycleError, canonical_bytes, canonical_digest
+from agent_lifecycle.contracts.launch_qualification import stable_version
+from agent_lifecycle.contracts.plugin_update_validation import validate_release_impact
 from agent_lifecycle.diagnostics.plugin_updates import (
     check_plugin_updates,
     observe_update_identities,
@@ -28,14 +30,14 @@ class PluginUpdatesTests(unittest.TestCase):
             .joinpath("data/plugin-updates/release-impact.v1.json")
             .read_bytes()
         )
-        self.assertEqual(descriptor["baseVersions"], ["2.51.0"])
+        validate_release_impact(descriptor)
         self.assertEqual(descriptor["version"], agent_lifecycle.__version__)
         self.assertIsNone(descriptor["sourceCommit"])
-        changes = {(r["domain"], r["identifier"]) for r in descriptor["changes"]}
-        self.assertEqual(
-            changes,
-            {("path", ".github/workflows/ci.yml"), ("quality", "validation.commands")},
-        )
+        target = stable_version(descriptor["version"])
+        self.assertTrue(descriptor["baseVersions"])
+        for base in descriptor["baseVersions"]:
+            self.assertLess(stable_version(base), target)
+        self.assertTrue(descriptor["changes"])
         self.assertTrue(all(r["impact"] == "UNKNOWN" for r in descriptor["changes"]))
         for domain in descriptor["domains"].values():
             self.assertEqual(domain["coverage"], "PARTIAL")

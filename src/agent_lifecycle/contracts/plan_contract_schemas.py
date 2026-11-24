@@ -7,6 +7,21 @@ from typing import Any
 from agent_lifecycle.contracts.schema_builders import open_object_schema as _open_object_schema
 
 PLAN_CONTRACT_SCHEMAS: dict[str, dict[str, Any]] = {
+    "agent-sdd-tier-resolution-request.v1": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agent-sdd-tier-resolution-request.v1",
+        "type": "object",
+        "required": ["taskCount", "executableOwners"],
+        "properties": {
+            "schemaVersion": {"const": "agent-sdd-tier-resolution-request.v1"},
+            "taskCount": {"type": "integer", "minimum": 1},
+            "executableOwners": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+            "capabilityHints": {"type": "array", "items": {"type": "string", "minLength": 1}},
+            "requirementsBytes": {"type": "integer", "minimum": 0},
+            "externalSpecification": {"type": "boolean"},
+            "riskFlags": {"type": "object", "additionalProperties": {"type": "boolean"}},
+        },
+    },
     "agent-plan-verification-receipt.v1": _open_object_schema(
         "agent-plan-verification-receipt.v1",
         required=[

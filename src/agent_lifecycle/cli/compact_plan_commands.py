@@ -38,6 +38,11 @@ def compact_package_profiles() -> dict[str, Any]:
     body = build_plan_package_profiles()
     body.pop("profileDigest")
     body["draftCompletionPrerequisites"] = [_DRAFT_PREREQUISITE]
+    body["traceabilityOwnerRule"] = {
+        "en": "Each acceptance ID and each evidence ID has exactly one owning workstream.",
+        "ru": "Каждому идентификатору приёмки и доказательства назначается ровно один рабочий поток-владелец.",
+        "reference": "docs/reference/tier-proportional-plan-packages.md#one-owner-per-id",
+    }
     for profile in body["profiles"]:
         if profile["compactSupported"]:
             profile["requiredArtifacts"].append("acceptance-criteria.md explicitly added to planFiles before freeze")

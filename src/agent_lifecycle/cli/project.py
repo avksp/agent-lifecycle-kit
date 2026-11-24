@@ -36,6 +36,17 @@ def add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
 
     project = subparsers.add_parser("project", help="project-local ALK configuration")
     project_sub = project.add_subparsers(dest="project_command", required=True)
+    archive = project_sub.add_parser("archive", help="inventory or snapshot a closed local package")
+    archive_sub = archive.add_subparsers(dest="archive_command", required=True)
+    for action in ("inventory", "create"):
+        child_archive = archive_sub.add_parser(action)
+        child_archive.add_argument("--project-root", default=".")
+        child_archive.add_argument("--catalogue", required=True)
+        child_archive.add_argument("--catalogue-sha256", required=True)
+        if action == "create":
+            child_archive.add_argument("--inventory-digest", required=True)
+            child_archive.add_argument("--package", required=True)
+            child_archive.add_argument("--out", required=True)
     profile = project_sub.add_parser("profile", help="project workflow profile commands")
     profile_sub = profile.add_subparsers(dest="profile_command", required=True)
     init = profile_sub.add_parser("init", help="create a minimal local project profile")
@@ -98,7 +109,20 @@ def add_project_parser(subparsers: argparse._SubParsersAction[argparse.ArgumentP
     render.add_argument("--out", required=True)
 
 
+def _dispatch_archive(args: argparse.Namespace) -> dict[str, Any]:
+    from agent_lifecycle.workflow.package_archive import create_package_archive, inventory_packages
+
+    root = Path(args.project_root)
+    if args.archive_command == "inventory":
+        return inventory_packages(root, args.catalogue, args.catalogue_sha256)
+    return create_package_archive(
+        root, args.catalogue, args.catalogue_sha256, args.inventory_digest, args.package, Path(args.out)
+    )
+
+
 def dispatch_project(args: argparse.Namespace) -> dict[str, Any]:
+    if args.project_command == "archive":
+        return _dispatch_archive(args)
     if args.project_command == "principles":
         if args.principles_command not in {"check", "validate"}:
             raise LifecycleError("command-not-implemented", "project principles command is not implemented")

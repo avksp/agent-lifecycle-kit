@@ -1337,18 +1337,20 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
             root = Path(temporary)
             executable = self._app_server_io_fixture(root, stall=True)
             real_start = subprocess.Popen
-            started = time.monotonic()
             children = []
+            ready_at = []
 
             def start_ready(*args, **kwargs):
                 process = real_start(*args, **kwargs)
                 children.append(process)
-                # Begin the write-timeout scenario with the Python fixture ready.
-                ready_until = started + 1.0
+                # Budget fixture startup separately from the stalled request.
+                ready_until = time.monotonic() + 8.0
                 while (not (root / "child.pid").is_file()
                        and process.poll() is None
                        and time.monotonic() < ready_until):
                     time.sleep(0.005)
+                if (root / "child.pid").is_file():
+                    ready_at.append(time.monotonic())
                 return process
 
             with patch.object(exact_prompt_module, "_APP_SERVER_TIMEOUT_SECONDS", 0.25), patch.object(
@@ -1359,7 +1361,8 @@ class ExactPromptPrivateInputTests(unittest.TestCase):
                                             thread_id="x" * 200_000)
             self.assertEqual(error.exception.code, "codex-exact-bootstrap-review-unavailable")
             self.assertIn("timed out", str(error.exception))
-            self.assertLess(time.monotonic() - started, 3.0)
+            self.assertEqual(len(ready_at), 1)
+            self.assertLess(time.monotonic() - ready_at[0], 3.0)
             self.assertEqual(start.call_count, 1)
             self.assertTrue((root / "child.pid").is_file())
             self.assertTrue((root / "child.stalled").is_file())

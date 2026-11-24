@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 from agent_lifecycle.contracts import LifecycleError, canonical_digest, read_json_object
 from agent_lifecycle.contracts.operator_signature import operator_observed_at, verify_operator_freeze
-from agent_lifecycle.contracts.ownership_paths import require_declared_output_footprint
+from agent_lifecycle.contracts.ownership_paths import repository_authority_name, require_declared_output_footprint
+from agent_lifecycle.contracts.paths import normalize_repo_path
 from agent_lifecycle.freeze import verify_plan_lock, verify_plan_package_integrity
 from agent_lifecycle.planning.acceptance_markdown import validate_acceptance_checklist
 from agent_lifecycle.planning.completeness import validate_plan_completeness
@@ -82,6 +84,18 @@ def build_plan_verification(
     package_root_check = _package_root_check(manifest, package_root, root)
     checks["packageRoot"] = package_root_check
     _extend_blockers(blockers, package_root_check)
+    integrity = manifest.get("packageIntegrity")
+    if (
+        package_root is None
+        and manifest.get("schemaVersion") == "agent-plan-manifest.v1"
+        and manifest.get("status") == "DRAFT"
+        and manifest_path.name == "plan.manifest.json"
+        and isinstance(integrity, dict)
+        and integrity.get("required") is True
+    ):
+        location = _check("manifestLocation", lambda: require_manifest_package_location(manifest, manifest_path, root))
+        checks["manifestLocation"] = location
+        _extend_blockers(blockers, location)
 
     lock_check = _lock_check(
         manifest,
@@ -265,6 +279,25 @@ def _package_id(manifest: dict[str, Any]) -> str | None:
 
 def _is_package_inventory_fixture(manifest: dict[str, Any]) -> bool:
     return not isinstance(manifest.get("specification"), dict) and not isinstance(manifest.get("acceptance"), dict)
+
+
+def require_manifest_package_location(manifest: dict[str, Any], manifest_path: Path, root: Path) -> str:
+    package = manifest.get("package")
+    declared = package.get("planArtifactRoot") if isinstance(package, dict) else None
+    if not isinstance(declared, str):
+        raise LifecycleError("invalid-plan-manifest", "package.planArtifactRoot is required")
+    plan_root = normalize_repo_path(declared, label="package.planArtifactRoot")
+    actual = str(manifest_path)
+    normalized: str | None = None
+    with suppress(LifecycleError):
+        normalized = repository_authority_name(manifest_path.absolute(), root)
+    if normalized != f"{plan_root}/plan.manifest.json":
+        raise LifecycleError(
+            "plan-manifest-path-mismatch",
+            "Manifest path does not match its declared package root",
+            {"manifestPath": normalized or actual, "planArtifactRoot": plan_root},
+        )
+    return plan_root
 
 
 def _package_root_check(manifest: dict[str, Any], package_root: Path | None, repository_root: Path) -> dict[str, Any]:

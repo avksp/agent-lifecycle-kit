@@ -14,6 +14,7 @@ from agent_lifecycle.contracts.ownership_paths import (
     require_manifest_authority_paths,
 )
 from agent_lifecycle.contracts.statistical_evidence_schemas import validate_statistical_evidence_requirement
+from agent_lifecycle.planning.scaffold import scaffold_placeholders
 from agent_lifecycle.planning.traceability import validate_plan_traceability
 from agent_lifecycle.quality.validation_ladder import validation_ladder_manifest_blockers
 from agent_lifecycle.research.preflight import decision_research_blockers
@@ -133,6 +134,11 @@ def validate_plan_completeness(
     profile_validation = validate_plan_completeness_profile(active_profile)
     blockers = list(profile_validation["blockers"])
     blockers.extend(decision_research_blockers(manifest))
+    placeholders = sorted(set(scaffold_placeholders(manifest)))
+    if placeholders:
+        blockers.append(
+            _blocker("scaffold-placeholders-unfilled", "Fill the named scaffold placeholders", {"names": placeholders})
+        )
     tier = _tier(manifest)
     if tier not in SUPPORTED_TIERS:
         blockers.append(_blocker("invalid-plan-tier", "plan tier must be S0, S1 or S2", {"tier": tier}))

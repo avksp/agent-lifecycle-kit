@@ -279,7 +279,7 @@ Python 3.11-3.15 is supported. Install the exact release from the official
 [PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.51.1
+python -m pip install agent-lifecycle-kit==2.52.0
 ```
 
 ## Task evidence identity
@@ -1110,3 +1110,21 @@ agent-lifecycle operator-signature verify --kind freeze --manifest plans/example
 ```
 
 The fingerprint above is a placeholder, not a valid key. Signing runs outside ALK.
+
+
+## S2 author preflight and local archive
+
+Use `plan scaffold` for a [full S2 draft](tier-proportional-plan-packages.md#create-an-s2-draft).
+If creation stops before completion, inspect the partial path and use a fresh
+directory for the retry. `plan check` lists structural checks and unfilled
+fields. `plan verify` checks the location of a canonical draft.
+Use `tier resolve --help` for its request schema and example.
+
+Use `project archive inventory` and `project archive create` as described in
+[the local archive guide](../guides/archive-plan-packages.md). Inventory
+reports closure eligibility in the declared catalogue. Creation also checks
+the actual file inventory, Git ignore rules, byte limits and destination.
+The operator supplies the catalogue's packages and predecessor edges.
+ALK cannot infer omitted entries or edges from arbitrary local files.
+The ZIP preserves source files and grants no execution authority or
+independent provenance.

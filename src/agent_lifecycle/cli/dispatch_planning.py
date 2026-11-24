@@ -9,6 +9,7 @@ from typing import Any
 from agent_lifecycle.audit.review_packet import prepare_review_packet
 from agent_lifecycle.cli.compact_plan_commands import compact_package_profiles, compact_plan_command
 from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock, prepare_freeze_candidate
+from agent_lifecycle.cli.plan_scaffold_commands import create_plan_scaffold
 from agent_lifecycle.compiler import build_phase_packet, compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
     LifecycleError,
@@ -106,6 +107,16 @@ def _dispatch_specification(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
+    if args.plan_command == "scaffold":
+        return create_plan_scaffold(
+            out=args.out,
+            artifact_root=args.artifact_root,
+            repository_root=Path(args.repository_root),
+            author=args.author,
+            owner=args.owner,
+            base_ref=args.base_ref,
+            base_sha=args.base_sha,
+        )
     if args.plan_command == "package-profiles":
         return compact_package_profiles()
     if args.plan_command in {"compact-compile", "compact-explain"}:
@@ -128,20 +139,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
             repository_root=Path(args.repository_root),
         )
     if args.plan_command == "check":
-        manifest = read_json_object(Path(args.manifest), label="plan manifest")
-        lock = read_json_object(Path(args.lock), label="plan lock") if args.lock else None
-        completeness_profile = (
-            load_plan_completeness_profile(Path(args.completeness_profile)) if args.completeness_profile else None
-        )
-        return {
-            "schemaVersion": "agent-plan-check.v1",
-            "manifest": validate_plan_manifest(
-                manifest,
-                require_completeness=True,
-                completeness_profile=completeness_profile,
-            ),
-            "lock": verify_plan_lock(manifest, lock) if lock else None,
-        }
+        return _check_plan(args)
     if args.plan_command == "completeness-check":
         manifest = read_json_object(Path(args.manifest), label="plan manifest")
         profile = load_plan_completeness_profile(Path(args.profile)) if args.profile else None
@@ -172,42 +170,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         snapshot = read_json_object(Path(args.snapshot), label="plan snapshot")
         return require_reconciliation_pass(reconcile_plan_snapshot(snapshot, manifest))
     if args.plan_command == "handoff":
-        manifest = read_json_object(Path(args.manifest), label="plan manifest")
-        handoff_snapshot = read_json_object(Path(args.snapshot), label="plan snapshot") if args.snapshot else None
-        payload = render_plan_handoff(
-            manifest,
-            snapshot=handoff_snapshot,
-            max_workstreams=args.max_workstreams,
-            target_tokens=args.target_tokens,
-        )
-        if payload.get("status") != "PASS":
-            raise LifecycleError(
-                "plan-handoff-render-failed",
-                "plan handoff did not fit the requested limits",
-                {"handoff": payload},
-            )
-        if args.out:
-            write_json_create(Path(args.out), payload)
-        if args.phase_packet_out:
-            if not args.snapshot or not args.lock:
-                raise LifecycleError(
-                    "phase-packet-required-fact-missing",
-                    "plan handoff phase packet requires --snapshot and --lock",
-                )
-            lock = read_json_object(Path(args.lock), label="plan lock")
-            verify_plan_lock(manifest, lock)
-            packet = _build_planning_handoff_phase_packet(
-                manifest,
-                lock,
-                handoff_snapshot,
-                selected_workstream_ids=[
-                    item["id"]
-                    for item in payload.get("workstreams", [])
-                    if isinstance(item, dict) and isinstance(item.get("id"), str)
-                ],
-            )
-            write_json_create(Path(args.phase_packet_out), packet)
-        return payload
+        return _plan_handoff(args)
     if args.plan_command == "delta":
 
         def read(value: str | None, label: str) -> dict[str, Any] | None:
@@ -243,6 +206,45 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
     raise LifecycleError("command-not-implemented", "plan command is not implemented")
 
 
+def _plan_handoff(args: argparse.Namespace) -> dict[str, Any]:
+    manifest = read_json_object(Path(args.manifest), label="plan manifest")
+    handoff_snapshot = read_json_object(Path(args.snapshot), label="plan snapshot") if args.snapshot else None
+    payload = render_plan_handoff(
+        manifest,
+        snapshot=handoff_snapshot,
+        max_workstreams=args.max_workstreams,
+        target_tokens=args.target_tokens,
+    )
+    if payload.get("status") != "PASS":
+        raise LifecycleError(
+            "plan-handoff-render-failed",
+            "plan handoff did not fit the requested limits",
+            {"handoff": payload},
+        )
+    if args.out:
+        write_json_create(Path(args.out), payload)
+    if args.phase_packet_out:
+        if not args.snapshot or not args.lock:
+            raise LifecycleError(
+                "phase-packet-required-fact-missing",
+                "plan handoff phase packet requires --snapshot and --lock",
+            )
+        lock = read_json_object(Path(args.lock), label="plan lock")
+        verify_plan_lock(manifest, lock)
+        packet = _build_planning_handoff_phase_packet(
+            manifest,
+            lock,
+            handoff_snapshot,
+            selected_workstream_ids=[
+                item["id"]
+                for item in payload.get("workstreams", [])
+                if isinstance(item, dict) and isinstance(item.get("id"), str)
+            ],
+        )
+        write_json_create(Path(args.phase_packet_out), packet)
+    return payload
+
+
 def _plan_review_packet(args: argparse.Namespace) -> dict[str, Any]:
     """Adapt CLI values to the shared review-packet service."""
     request = ReviewPacketRequest(
@@ -253,6 +255,33 @@ def _plan_review_packet(args: argparse.Namespace) -> dict[str, Any]:
         subject_out=args.subject_out,
     )
     return prepare_review_packet(Path(args.repository_root), request)
+
+
+def _check_plan(args: argparse.Namespace) -> dict[str, Any]:
+    manifest = read_json_object(Path(args.manifest), label="plan manifest")
+    lock = read_json_object(Path(args.lock), label="plan lock") if args.lock else None
+    completeness_profile = (
+        load_plan_completeness_profile(Path(args.completeness_profile)) if args.completeness_profile else None
+    )
+    try:
+        result = validate_plan_manifest(manifest, require_completeness=True, completeness_profile=completeness_profile)
+    except LifecycleError as exc:
+        if exc.code == "plan-completeness-failed":
+            validation = exc.details["validation"]
+            raise LifecycleError(
+                exc.code, exc.message, {**exc.details, **_completeness_projection(validation)}
+            ) from None
+        raise
+    return {
+        "schemaVersion": "agent-plan-check.v1",
+        "manifest": result,
+        "lock": verify_plan_lock(manifest, lock) if lock else None,
+        **_completeness_projection(result["completeness"]),
+    }
+
+
+def _completeness_projection(validation: dict[str, Any]) -> dict[str, Any]:
+    return {"requiredChecks": validation["requiredChecks"], "blockers": validation["blockers"]}
 
 
 def _verify_plan(args: argparse.Namespace) -> dict[str, Any]:

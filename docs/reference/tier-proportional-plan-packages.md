@@ -203,3 +203,43 @@ feature; quality and authority checks remain mandatory.
 See [plan completeness](plan-completeness.md), [CLI](cli.md),
 [authority boundaries](authority-artifact-boundaries.md) and
 [workflow continuation](workflow-continuation.md).
+
+## One owner per ID
+
+Assign each acceptance ID and each evidence ID to exactly one workstream.
+Other workstreams may depend on that workstream. Put the validation command
+and the evidence writer in the owning workstream so it can finish independently.
+
+## Create an S2 draft
+
+Create the parent directory first. Then select a fresh plan directory and a
+separate runtime root.
+
+```sh
+agent-lifecycle plan scaffold --out tasks/example --artifact-root work/example \
+  --author plan-author --owner implementation-owner --base-ref main --base-sha YOUR_GIT_SHA
+agent-lifecycle plan check --manifest tasks/example/plan.manifest.json --require-completeness
+agent-lifecycle plan verify --manifest tasks/example/plan.manifest.json
+```
+
+Fill each named `ALK_FILL_*` placeholder and complete the four accompanying
+documents. Check that the example write path, validation command and budget
+match the task. The scaffold is a DRAFT. Obtain independent S2 review and
+reviewed freeze before asking for execution authority.
+
+Use `agent-lifecycle tier resolve --help` for a minimal request and
+`agent-lifecycle schema show agent-sdd-tier-resolution-request.v1` for the
+input schema.
+
+## Check the next action
+
+Before an ALK-managed action, inspect its available input estimate, remaining
+budget, and reserve for required review and closeout. When the host cannot
+supply complete input, keep the missing value `UNKNOWN` and use the existing
+admission rule for that action. The coordinator's host submits its own model
+request. ALK's managed-action check covers the declared operation.
+
+If structural validation reports a stale package root and an unowned evidence
+ID, fix both in the DRAFT before retrying. Keep the previous refusal, usage
+and start time. For an external check in `WAITING`, resume when the required
+bound result arrives. Keep the original clock and earlier receipts.

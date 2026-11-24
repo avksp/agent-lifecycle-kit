@@ -1,19 +1,31 @@
 {
   "baseVersions": [
-    "2.51.0"
+    "2.51.1"
   ],
   "changes": [
     {
-      "domain": "path",
-      "identifier": ".github/workflows/ci.yml",
+      "domain": "cli",
+      "identifier": "plan.verify",
       "impact": "UNKNOWN",
-      "reason": "The repository delivery workflow may reuse qualified per-cell evidence. Downstream plan applicability is not established."
+      "reason": "Canonical DRAFT verification rejects the wrong package location earlier."
     },
     {
-      "domain": "quality",
-      "identifier": "validation.commands",
+      "domain": "cli",
+      "identifier": "plan.scaffold",
       "impact": "UNKNOWN",
-      "reason": "Source-bound GitHub delivery results do not attest compatibility for arbitrary plan commands."
+      "reason": "A new command creates draft inputs. Existing plan authority is unchanged."
+    },
+    {
+      "domain": "cli",
+      "identifier": "project.archive",
+      "impact": "UNKNOWN",
+      "reason": "A new explicit local archive route has independent input and path checks."
+    },
+    {
+      "domain": "schema",
+      "identifier": "agent-sdd-tier-resolution-request.v1",
+      "impact": "UNKNOWN",
+      "reason": "New documentation schema for the existing tier request."
     }
   ],
   "domains": {
@@ -26,7 +38,11 @@
     "cli": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [],
+      "identifiers": [
+        "plan.scaffold",
+        "plan.verify",
+        "project.archive"
+      ],
       "semanticReview": "UNVERIFIED"
     },
     "evidence": {
@@ -44,9 +60,7 @@
     "path": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        ".github/workflows/ci.yml"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     },
     "profile": {
@@ -58,9 +72,7 @@
     "quality": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [
-        "validation.commands"
-      ],
+      "identifiers": [],
       "semanticReview": "UNVERIFIED"
     },
     "review": {
@@ -72,17 +84,19 @@
     "schema": {
       "coverage": "PARTIAL",
       "evidenceRefs": [],
-      "identifiers": [],
+      "identifiers": [
+        "agent-sdd-tier-resolution-request.v1"
+      ],
       "semanticReview": "UNVERIFIED"
     }
   },
   "exclusions": [
-    "Internal GitHub delivery changes only.",
-    "No universal plan semantic compatibility or new host route is qualified.",
-    "No automatic installation, update or plan migration is authorized."
+    "No arbitrary plan semantic compatibility or new host route is qualified.",
+    "No automatic installation, update or plan migration is authorized.",
+    "Archive eligibility is scoped to the operator-supplied catalogue."
   ],
   "origin": "https://github.com/avksp/agent-lifecycle-kit",
   "schemaVersion": "agent-plugin-release-impact.v1",
   "sourceCommit": null,
-  "version": "2.51.1"
+  "version": "2.52.0"
 }

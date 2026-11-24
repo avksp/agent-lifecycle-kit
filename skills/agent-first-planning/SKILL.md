@@ -34,8 +34,11 @@ JSON; `task artifact-inspect` displays it read-only. Serialization and prepared
 Review Mesh packets grant no review, attestation or execution authority. See
 [safe artifact authoring](../../docs/reference/safe-artifact-authoring.md).
 
-Full contract SHA256: `8c2545075762d46eced02d8a95a7cbb8556a36bcd19df68360c470443778bf0f`
+Full contract SHA256: `77fb0a3245ae9f493cca03a20817210d7b7dd7c615a6b965460136b1abdd6f95`
 Contract origin: `ec59da9e956c67d34e823dcad362d66901ec3348`.
 
 Resource paths are relative to this installed skill root. The package supplies
 its required documents; a consumer project is not their fallback source.
+
+For a new full S2 draft, use `plan scaffold` and fill the named fields.
+Each acceptance ID and evidence ID has exactly one owning workstream.

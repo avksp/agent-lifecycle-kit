@@ -140,7 +140,7 @@ def _normalize_hostname(hostname: str | None, *, label: str) -> str:
     return ascii_host
 
 
-def _validated_port(parsed: Any, *, label: str) -> int | None:
+def _validated_port(parsed: SplitResult, *, label: str) -> int | None:
     try:
         port = parsed.port
     except ValueError as exc:
