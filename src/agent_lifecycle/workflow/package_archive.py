@@ -333,7 +333,8 @@ def _members(root: Path, plan_root: str, work_root: str) -> list[_Member]:
                     seen.add(key)
                     if len(seen) > MAX_ENTRIES:
                         raise LifecycleError("archive-entry-limit", "archive exceeds its entry limit")
-                    info = entry.stat(follow_symlinks=False)
+                    # Windows DirEntry.stat omits the link count and file identity.
+                    info = held.stat_child(entry.name) if held.fd is None else entry.stat(follow_symlinks=False)
                     if getattr(info, "st_file_attributes", 0) & 0x400:
                         raise LifecycleError("archive-member-unsafe", "reparse-point member refused")
                     if stat.S_ISDIR(info.st_mode):

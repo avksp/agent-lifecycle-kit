@@ -33,11 +33,13 @@ class AuthorityDirectoryCreationTests(unittest.TestCase):
             source.mkdir()
             target.mkdir()
             (source / "note").write_bytes(b"synthetic")
+            source_identity = source.stat()
             target_identity = target.stat()
             with authority_io.hold_authority_directory(root, writable=True) as parent:
                 publish = authority_io._directory_no_replace(parent)
                 with self.assertRaises(FileExistsError):
                     publish(source.name, target.name)
+            self.assertTrue(os.path.samestat(source_identity, source.stat()))
             self.assertTrue(os.path.samestat(target_identity, target.stat()))
             self.assertEqual(list(target.iterdir()), [])
             self.assertEqual((source / "note").read_bytes(), b"synthetic")

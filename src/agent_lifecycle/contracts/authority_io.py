@@ -208,7 +208,7 @@ class _Directory:
         if self.fd is not None:
             os.replace(source, destination, src_dir_fd=self.fd, dst_dir_fd=self.fd)
         else:
-            _windows_replace(self, source, destination)
+            _windows_rename(self, source, destination, directory=False, replace=True)
 
     def sync(self) -> None:
         if self.fd is not None:
@@ -537,7 +537,7 @@ def _directory_no_replace(parent: _Directory) -> Callable[[str, str], None]:
     if sys.platform == "win32":
 
         def rename_windows(source: str, destination: str) -> None:
-            (parent.path / source).rename(parent.path / destination)
+            _windows_rename(parent, source, destination, directory=True, replace=False)
 
         return rename_windows
     if parent.fd is None or sys.platform not in {"darwin", "linux"}:
@@ -776,7 +776,14 @@ def _windows_link(parent: _Directory, source_fd: int, destination: str) -> None:
         raise OSError(status & 0xFFFFFFFF, "Private staging failed; original retained")
 
 
-def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
+def _windows_rename(
+    parent: _Directory,
+    source: str,
+    destination: str,
+    *,
+    directory: bool,
+    replace: bool,
+) -> None:
     """Rename within the source handle's directory while its parent stays guarded."""
     if sys.platform != "win32":
         raise LifecycleError("authority-io-unavailable", "Windows authority I/O is unavailable")
@@ -799,7 +806,7 @@ def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
         _fields_ = [("StatusOrPointer", ctypes.c_void_p), ("Information", ctypes.c_size_t)]
 
     # Native simple-name rename avoids Win32 path expansion and target-directory reopen.
-    info = RenameInfo(1, None, len(name))
+    info = RenameInfo(int(replace), None, len(name))
     ctypes.memmove(ctypes.addressof(info) + RenameInfo.FileName.offset, name, len(name))
     api = ctypes.WinDLL("ntdll")
     api.NtSetInformationFile.argtypes = [
@@ -811,14 +818,23 @@ def _windows_replace(parent: _Directory, source: str, destination: str) -> None:
     ]
     api.NtSetInformationFile.restype = wintypes.LONG
     io_status = IoStatus()
-    handle = _windows_open(parent.path / source, directory=False, operation="rename")
+    handle = _windows_open(parent.path / source, directory=directory, operation="rename")
     try:
         status = api.NtSetInformationFile(handle, ctypes.byref(io_status), ctypes.byref(info), ctypes.sizeof(info), 10)
         if status != 0:
+            native_status = status & 0xFFFFFFFF
+            if not replace:
+                if native_status == 0xC0000035:  # STATUS_OBJECT_NAME_COLLISION
+                    raise FileExistsError(errno.EEXIST, "authority directory already exists")
+                raise LifecycleError(
+                    "authority-directory-publish-failed",
+                    "authority directory publication failed",
+                    {"ntStatus": native_status},
+                )
             raise LifecycleError(
                 "authority-output-unavailable",
                 "authority output cannot be safely replaced",
-                {"ntStatus": status & 0xFFFFFFFF},
+                {"ntStatus": native_status},
             )
     finally:
         _windows_close(handle)
