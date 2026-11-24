@@ -41,6 +41,9 @@ MAX_INDEX = 262144
 MAX_AGE = timedelta(hours=24)
 PROVIDER_WINDOW_SECONDS = 180
 PROVIDER_CLOCK_SKEW = timedelta(seconds=2)
+MAX_PROVIDER_REQUESTS = 80
+MAX_PROVIDER_AUTH_REQUESTS = 48
+ARTIFACT_DATE_UNAVAILABLE = "canonical artifact response Date outside request window"
 PR_ATTEMPT_WINDOW = 3
 FRESH_MAIN_CELL = "ci/macos-latest-py3.11"
 INDEX_V1 = "alk-ci-qualification-index.v1"
@@ -489,6 +492,7 @@ class GitHub:
     def __init__(
         self, repository: str, token: str, *,
         now: datetime | None = None, clock: Callable[[], datetime] | None = None,
+        retry_json_timeout: bool = False,
     ) -> None:
         require(repository == REPOSITORY and bool(token), "provider repository or read token unavailable")
         self.base = f"https://api.github.com/repos/{repository}"
@@ -500,11 +504,15 @@ class GitHub:
         self.total_requests = 0
         self.input_bytes = 0
         self.opener = urllib.request.build_opener(_NoRedirect)
+        self._json_timeout_retry = retry_json_timeout
 
     def _request(self, url: str, *, authenticated: bool) -> Any:
         self.total_requests += 1
         self.auth_requests += int(authenticated)
-        require(self.total_requests <= 80 and self.auth_requests <= 48, "provider request budget exceeded")
+        require(
+            self.total_requests <= MAX_PROVIDER_REQUESTS and self.auth_requests <= MAX_PROVIDER_AUTH_REQUESTS,
+            "provider request budget exceeded",
+        )
         remaining = self.deadline - time.monotonic()
         require(remaining > 0, "provider verification deadline exceeded")
         headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
@@ -534,9 +542,22 @@ class GitHub:
             ) from exc
 
     def json(self, path: str) -> Any:
+        try:
+            return self._json_response(path)[0]
+        except ProviderUnavailable as exc:
+            if not (
+                self._json_timeout_retry
+                and isinstance(exc.__cause__, TimeoutError)
+                and self.total_requests < MAX_PROVIDER_REQUESTS
+                and self.auth_requests < MAX_PROVIDER_AUTH_REQUESTS
+                and self.input_bytes < MAX_TOTAL
+                and time.monotonic() < self.deadline
+            ):
+                raise
+            self._json_timeout_retry = False
         return self._json_response(path)[0]
 
-    def artifact_metadata(self, identifier: int) -> tuple[dict[str, Any], datetime | None]:
+    def artifact_metadata(self, identifier: int) -> tuple[dict[str, Any], datetime | None, str | None]:
         sent = self._clock()
         started = time.monotonic()
         payload, dates = self._json_response(f"/actions/artifacts/{identifier}")
@@ -552,10 +573,10 @@ class GitHub:
         latest = min(received, sent + elapsed)
         require(
             sent <= received and abs(received - sent - elapsed) <= PROVIDER_CLOCK_SKEW,
-            "artifact response time outside the request window",
+            "artifact request wall and elapsed clocks disagree",
         )
         if not dates:
-            return row, None
+            return row, None, None
         require(len(dates) == 1 and len(dates[0]) <= 40, "invalid artifact response time")
         response_date = dates[0]
         try:
@@ -566,12 +587,11 @@ class GitHub:
             observed.utcoffset() == timedelta(0) and format_datetime(observed, usegmt=True) == response_date,
             "invalid artifact response time",
         )
-        require(
-            sent.replace(microsecond=0) - PROVIDER_CLOCK_SKEW <= observed
-            <= latest.replace(microsecond=0) + PROVIDER_CLOCK_SKEW,
-            "artifact response time outside the request window",
-        )
-        return row, observed
+        earliest = sent.replace(microsecond=0) - PROVIDER_CLOCK_SKEW
+        latest = latest.replace(microsecond=0) + PROVIDER_CLOCK_SKEW
+        if not earliest <= observed <= latest:
+            return row, None, ARTIFACT_DATE_UNAVAILABLE
+        return row, observed, None
 
     def archive(self, artifact: dict[str, Any], expected: set[str]) -> dict[str, bytes]:
         url = f"{self.base}/actions/artifacts/{artifact['id']}/zip"
@@ -886,6 +906,7 @@ def joined_artifact(
     head: str,
     now: datetime | None,
     optional_sender: bool | None = None,
+    missing_time_reason: str | None = None,
 ) -> dict[str, Any]:
     row = obj(artifacts.get(name), "artifact")
     identity = obj(row.get("workflow_run"), "artifact run")
@@ -937,7 +958,7 @@ def joined_artifact(
         "artifact has invalid upload timestamps",
     )
     if now is None:
-        raise ProviderUnavailable("artifact response time unavailable")
+        raise ProviderUnavailable(missing_time_reason or "artifact response time unavailable")
     require(now - MAX_AGE <= created <= now < expires, "artifact is stale or expired")
     return row
 
@@ -2126,13 +2147,13 @@ def probe(root: Path, role: str, cell: str, candidate_path: Path, out: Path) -> 
         if sender_success:
             upload = job_step(job, CANDIDATE_UPLOAD)
             identifier, _ = artifact_origin_identity(job, upload)
-            row, observed_at = api.artifact_metadata(identifier)
+            row, observed_at, missing_time_reason = api.artifact_metadata(identifier)
             name = artifact_name("main-candidate", main["run"], main["attempt"])
             # Only this job's candidate is needed while peers upload probes.
             artifact = joined_artifact(
                 {name: row}, name, job, CANDIDATE_UPLOAD,
                 run=main["run"], repository=main["repository"], head=main["sha"],
-                now=observed_at, optional_sender=True,
+                now=observed_at, optional_sender=True, missing_time_reason=missing_time_reason,
             )
             members = api.archive(artifact, {"reuse-candidate.json"})
         else:
@@ -2439,6 +2460,15 @@ def decide(
     print(mode, decision["reason"])
 
 
+def requires_full_fresh_timing(transport: dict[str, Any]) -> bool:
+    return any(
+        row["phase"] == "probe"
+        and row["cell"] in transport["unavailableCells"]
+        and row["reason"] == ARTIFACT_DATE_UNAVAILABLE
+        for row in transport["failures"]
+    )
+
+
 def mixed_cells(decision: dict[str, Any], index: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
     failures = {row["cell"] for row in decision["transport"]["failures"]}
     can_reuse = (
@@ -2446,6 +2476,7 @@ def mixed_cells(decision: dict[str, Any], index: dict[str, Any] | None) -> dict[
         and index["status"] == "CANDIDATE"
         and None not in failures
         and not decision["probeProviderUnavailable"]
+        and not requires_full_fresh_timing(decision["transport"])
     )
     cells: dict[str, dict[str, Any]] = {}
     for key in CELLS:
@@ -2842,6 +2873,10 @@ def validate_mixed_cells(proof: dict[str, Any]) -> None:
         )
     expected = "FULL" if len(fresh_keys(proof)) == len(CELLS) else "PARTIAL_REUSE"
     require(proof["mode"] == expected, "mixed decision mode disagrees with cell coverage")
+    require(
+        expected == "FULL" or not requires_full_fresh_timing(proof["transport"]),
+        "unavailable artifact response time requires full fresh proof",
+    )
 
 
 def legacy_decision_proof(value: Any, main: dict[str, Any], checked: dict[str, Any]) -> dict[str, Any]:
@@ -2947,6 +2982,10 @@ def transport_graph(
         raw = members["probe.json"]
         payload = strict_json(raw)
         unavailable = unavailable_probe(payload, key, main, decision["source"], decision["indexSha256"])
+        require(
+            not (reused and unavailable and payload["reason"] == ARTIFACT_DATE_UNAVAILABLE),
+            "unavailable artifact response time requires full fresh proof",
+        )
         matched = False
         if not unavailable:
             if index is None:
@@ -3094,7 +3133,7 @@ def terminal(root: Path, decision_path: Path, checks_dir: Path, out: Path, needs
         )
     require(all(outcomes[job] == expected for job, expected in family_outcomes(decision).items()),
             "full family results differ from main mode")
-    api = GitHub(REPOSITORY, os.environ.get("GH_TOKEN", ""))
+    api = GitHub(REPOSITORY, os.environ.get("GH_TOKEN", ""), retry_json_timeout=True)
     jobs = provider_jobs(api, main["run"], main["attempt"])
     artifacts = artifact_rows(api, main["run"])
     graph = main_job_graph(api, main, decision, jobs, artifacts)
