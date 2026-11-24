@@ -24,8 +24,9 @@ import zipfile
 import zlib
 from collections import Counter
 from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime, parsedate_to_datetime
 from pathlib import Path, PurePosixPath
-from typing import Any, TypeGuard, cast
+from typing import Any, Callable, TypeGuard, cast
 
 REPOSITORY = "avksp/agent-lifecycle-kit"
 WORKFLOW = ".github/workflows/ci.yml"
@@ -38,6 +39,8 @@ MAX_FILE = 8 * 1024 * 1024
 MAX_TOTAL = 64 * 1024 * 1024
 MAX_INDEX = 262144
 MAX_AGE = timedelta(hours=24)
+PROVIDER_WINDOW_SECONDS = 180
+PROVIDER_CLOCK_SKEW = timedelta(seconds=2)
 PR_ATTEMPT_WINDOW = 3
 FRESH_MAIN_CELL = "ci/macos-latest-py3.11"
 INDEX_V1 = "alk-ci-qualification-index.v1"
@@ -483,12 +486,16 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 class GitHub:
     """A single bounded, non-redirecting client for provider reads and archive bytes."""
 
-    def __init__(self, repository: str, token: str, *, now: datetime | None = None) -> None:
+    def __init__(
+        self, repository: str, token: str, *,
+        now: datetime | None = None, clock: Callable[[], datetime] | None = None,
+    ) -> None:
         require(repository == REPOSITORY and bool(token), "provider repository or read token unavailable")
         self.base = f"https://api.github.com/repos/{repository}"
         self.token = token
-        self.now = now or datetime.now(UTC)
-        self.deadline = time.monotonic() + 180
+        self._clock = clock or (lambda: datetime.now(UTC))
+        self.now = now or self._clock()
+        self.deadline = time.monotonic() + PROVIDER_WINDOW_SECONDS
         self.auth_requests = 0
         self.total_requests = 0
         self.input_bytes = 0
@@ -517,14 +524,47 @@ class GitHub:
             self.input_bytes += len(chunk)
             result.extend(chunk)
 
-    def json(self, path: str) -> Any:
+    def _json_response(self, path: str) -> tuple[Any, list[str]]:
         try:
             with self._request(self.base + path, authenticated=True) as response:
-                return strict_json(self._read(response, MAX_FILE))
+                return strict_json(self._read(response, MAX_FILE)), response.headers.get_all("Date", [])
         except (OSError, http.client.HTTPException) as exc:
             raise ProviderUnavailable(
                 f"provider JSON unavailable ({getattr(exc, 'code', type(exc).__name__)})"
             ) from exc
+
+    def json(self, path: str) -> Any:
+        return self._json_response(path)[0]
+
+    def artifact_metadata(self, identifier: int) -> tuple[dict[str, Any], datetime | None]:
+        sent = self._clock()
+        payload, dates = self._json_response(f"/actions/artifacts/{identifier}")
+        received = self._clock()
+        require(time.monotonic() < self.deadline, "provider read deadline exceeded")
+        row = obj(payload, "artifact")
+        require(
+            row.get("archive_download_url") == f"{self.base}/actions/artifacts/{identifier}/zip",
+            "unexpected archive API origin",
+        )
+        if not dates:
+            return row, None
+        require(len(dates) == 1 and len(dates[0]) <= 40, "invalid artifact response time")
+        response_date = dates[0]
+        try:
+            observed = parsedate_to_datetime(response_date)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ProofError("invalid artifact response time") from exc
+        require(
+            observed.utcoffset() == timedelta(0) and format_datetime(observed, usegmt=True) == response_date,
+            "invalid artifact response time",
+        )
+        require(
+            sent <= received
+            and sent.replace(microsecond=0) - PROVIDER_CLOCK_SKEW <= observed
+            <= received.replace(microsecond=0) + PROVIDER_CLOCK_SKEW,
+            "artifact response time outside the request window",
+        )
+        return row, observed
 
     def archive(self, artifact: dict[str, Any], expected: set[str]) -> dict[str, bytes]:
         url = f"{self.base}/actions/artifacts/{artifact['id']}/zip"
@@ -837,7 +877,7 @@ def joined_artifact(
     run: int,
     repository: int,
     head: str,
-    now: datetime,
+    now: datetime | None,
     optional_sender: bool | None = None,
 ) -> dict[str, Any]:
     row = obj(artifacts.get(name), "artifact")
@@ -881,13 +921,17 @@ def joined_artifact(
         )
     else:
         step = job_step(job, upload)
-    require(
-        fresh(row.get("created_at"), now) and utc_time(row.get("expires_at")) > now
-        and utc_time(step.get("started_at")) <= utc_time(step.get("completed_at")),
-        "artifact is stale, expired, or has invalid upload timestamps",
-    )
     if optional_sender is not False:
         artifact_origin(job, step, row)
+    created = utc_time(row.get("created_at"))
+    expires = utc_time(row.get("expires_at"))
+    require(
+        created < expires and utc_time(step.get("started_at")) <= utc_time(step.get("completed_at")),
+        "artifact has invalid upload timestamps",
+    )
+    if now is None:
+        raise ProviderUnavailable("artifact response time unavailable")
+    require(now - MAX_AGE <= created <= now < expires, "artifact is stale or expired")
     return row
 
 
@@ -2069,8 +2113,24 @@ def probe(root: Path, role: str, cell: str, candidate_path: Path, out: Path) -> 
     try:
         api = GitHub(REPOSITORY, os.environ.get("GH_TOKEN", ""))
         jobs = provider_jobs(api, main["run"], main["attempt"])
-        artifacts = artifact_rows(api, main["run"])
-        members, _, _, sender_success = current_archive(api, main, jobs, artifacts, None)
+        job = successful_job(jobs, CANDIDATE_JOB, main["sha"])
+        job_step(job, CANDIDATE_GENERATION)
+        sender_success = optional_upload_succeeded(job)
+        if sender_success:
+            upload = job_step(job, CANDIDATE_UPLOAD)
+            identifier, _ = artifact_origin_identity(job, upload)
+            row, observed_at = api.artifact_metadata(identifier)
+            name = artifact_name("main-candidate", main["run"], main["attempt"])
+            # Only this job's candidate is needed while peers upload probes.
+            artifact = joined_artifact(
+                {name: row}, name, job, CANDIDATE_UPLOAD,
+                run=main["run"], repository=main["repository"], head=main["sha"],
+                now=observed_at, optional_sender=True,
+            )
+            members = api.archive(artifact, {"reuse-candidate.json"})
+        else:
+            artifacts = artifact_rows(api, main["run"])
+            members, _, _, sender_success = current_archive(api, main, jobs, artifacts, None)
         raw = members["reuse-candidate.json"]
         index = verified_index_bytes(raw, digest, main, checked)
         require(index["status"] == status, "candidate differs from native status")
