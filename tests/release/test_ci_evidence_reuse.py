@@ -14,7 +14,9 @@ import urllib.error
 import urllib.parse
 import warnings
 import zipfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from email.message import Message
+from email.utils import format_datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest import mock
 
@@ -133,8 +135,9 @@ class ProviderFixture:
     """Serve the same bounded REST route without contacting a provider."""
 
     def __init__(self) -> None:
-        self.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+        self.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW, clock=lambda: NOW)
         self.api.opener = self
+        self.response_dates = [format_datetime(NOW, usegmt=True)]
         self.requests: list[tuple[str, str | None]] = []
         self.artifacts: list[dict] = []
         self.jobs: list[dict] = []
@@ -255,7 +258,11 @@ class ProviderFixture:
                 identifier = path.split("/")[-2]
                 headers = {"Location": f"https://productionresultssa1.blob.core.windows.net/results/{identifier}"}
                 raise urllib.error.HTTPError(url, 302, "redirect", headers, io.BytesIO())
-            return io.BytesIO(ci.json_bytes(self.routes[path]))
+            response = io.BytesIO(ci.json_bytes(self.routes[path]))
+            response.headers = Message()
+            for value in self.response_dates:
+                response.headers["Date"] = value
+            return response
         return io.BytesIO(self.archives[url.rsplit("/", 1)[1]])
 
 
@@ -275,7 +282,7 @@ class CurrentFixture(ProviderFixture):
                 "reason": "no exact PR association",
             }
         self.digest = ci.sha256(ci.json_bytes(self.index))
-        self.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW)
+        self.api = ci.GitHub(ci.REPOSITORY, "unit-token", now=NOW, clock=lambda: NOW)
         self.api.opener = self
         self.requests = []
         self.blocked = set()
@@ -373,9 +380,14 @@ class CurrentFixture(ProviderFixture):
         artifact = provider_artifact(self.name(key), identifier, raw, MAIN, MAIN["sha"], job["id"])
         bind_artifact_origin(job, ci.CANDIDATE_UPLOAD if key is None else ci.PROBE_UPLOAD, artifact)
         self.current_artifacts.append(artifact)
+        self.routes[f"/actions/artifacts/{identifier}"] = artifact
 
     def remove(self, key):
-        self.current_artifacts.remove(self.artifact(key))
+        artifact = self.artifact(key)
+        self.current_artifacts.remove(artifact)
+        route = f"/actions/artifacts/{artifact['id']}"
+        del self.routes[route]
+        self.blocked.add(self.api.base + route)
         self.sync_counts()
 
     def update_report(self, key):
@@ -1443,6 +1455,128 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 self.assertTrue(ci.unavailable_probe(report, key, MAIN, SOURCE, fixture.digest))
                 self.assertIsNone(report["quality"])
                 static.assert_not_called()
+
+    def test_probe_qualifies_candidate_by_origin_during_an_unstable_listing(self):
+        key = "ci/macos-latest-py3.11"
+        outcomes = (
+            "MATCH", "UNAVAILABLE", "future artifact", "bad digest", "wrong run",
+            "wrong ID", "wrong source", "expired", "other attempt", "malformed row", "wrong archive URL",
+            "invalid response", "duplicate response", "backdated response", "future response", "wall clock jump",
+            "missing date after wall clock jump",
+        )
+        for outcome in outcomes:
+            with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
+                fixture = CurrentFixture()
+                listing = f"/actions/runs/{MAIN['run']}/artifacts?per_page=100"
+                fixture.routes[listing]["total_count"] -= 1
+                artifact = fixture.artifact(None)
+                metadata = f"/actions/artifacts/{artifact['id']}"
+                sent = NOW + timedelta(seconds=1)
+                received = NOW + timedelta(seconds=3)
+                fixture.api._clock = mock.Mock(side_effect=(sent, received))
+                date = format_datetime(NOW + timedelta(seconds=2), usegmt=True)
+                fixture.response_dates = [date]
+                if outcome in {"MATCH", "future artifact"}:
+                    created = NOW + timedelta(seconds=2 if outcome == "MATCH" else 3)
+                    artifact["created_at"] = created.isoformat()
+                if outcome in {
+                    "UNAVAILABLE", "bad digest", "wrong run", "wrong ID", "malformed row", "wrong archive URL",
+                    "missing date after wall clock jump",
+                }:
+                    fixture.response_dates = []
+                if outcome == "malformed row":
+                    fixture.routes[metadata] = []
+                elif outcome == "bad digest":
+                    artifact["digest"] = "sha256:" + "0" * 64
+                elif outcome == "wrong run":
+                    artifact["workflow_run"]["id"] = MAIN["run"] + 1
+                elif outcome == "wrong ID":
+                    artifact["id"] += 1
+                elif outcome == "wrong archive URL":
+                    artifact["archive_download_url"] = (
+                        f"{fixture.api.base}/actions/artifacts/{artifact['id'] + 1}/zip"
+                    )
+                elif outcome == "wrong source":
+                    artifact["workflow_run"]["head_sha"] = BASE
+                elif outcome == "expired":
+                    artifact["expires_at"] = NOW.isoformat()
+                elif outcome == "other attempt":
+                    artifact["name"] = ci.artifact_name("main-candidate", MAIN["run"], 1)
+                elif outcome == "invalid response":
+                    fixture.response_dates = ["unknown"]
+                elif outcome == "duplicate response":
+                    fixture.response_dates = [date, date]
+                elif outcome == "backdated response":
+                    fixture.response_dates = [format_datetime(sent - timedelta(seconds=3), usegmt=True)]
+                elif outcome == "future response":
+                    fixture.response_dates = [format_datetime(received + timedelta(seconds=3), usegmt=True)]
+                elif outcome == "wall clock jump":
+                    fixture.api._clock = mock.Mock(side_effect=(sent, sent + timedelta(seconds=601)))
+                    fixture.response_dates = [format_datetime(sent + timedelta(seconds=300), usegmt=True)]
+                elif outcome == "missing date after wall clock jump":
+                    fixture.api._clock = mock.Mock(side_effect=(sent, sent + timedelta(seconds=601)))
+                root = Path(directory)
+                with (
+                    mock.patch.dict(
+                        os.environ,
+                        {
+                            "GH_TOKEN": fixture.api.token,
+                            "GITHUB_JOB": "probe-ci",
+                            "CANDIDATE_STATUS": "CANDIDATE",
+                            "QUALIFIED_INDEX_SHA256": fixture.digest,
+                            "CANDIDATE_GENERATION_OUTCOME": "success",
+                        },
+                    ),
+                    mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+                    mock.patch.object(ci, "GitHub", return_value=fixture.api),
+                    mock.patch.object(ci, "observed_environment", return_value=OBSERVED),
+                ):
+                    if outcome in {"MATCH", "UNAVAILABLE"}:
+                        ci.probe(root, "ci", ci.CELLS[key][1], root / "index.json", root / "probe.json")
+                        self.assertEqual(ci.read_object(root / "probe.json")["status"], outcome)
+                    else:
+                        with self.assertRaises(ci.ProofError):
+                            ci.probe(root, "ci", ci.CELLS[key][1], root / "index.json", root / "probe.json")
+                        self.assertFalse((root / "probe.json").exists())
+                requested = [url for url, _ in fixture.requests]
+                self.assertEqual(requested.count(fixture.api.base + metadata), 1)
+                self.assertNotIn(fixture.api.base + listing, requested)
+                archive_url = fixture.api.base + metadata + "/zip"
+                self.assertEqual(requested.count(archive_url), int(outcome == "MATCH"))
+
+    def test_candidate_metadata_refuses_response_at_provider_deadline(self):
+        fixture = CurrentFixture()
+        with (
+            mock.patch.object(fixture.api, "_json_response", return_value=(fixture.artifact(None), [])),
+            mock.patch.object(ci.time, "monotonic", return_value=fixture.api.deadline),
+            self.assertRaisesRegex(ci.ProofError, "provider read deadline exceeded"),
+        ):
+            fixture.api.artifact_metadata(fixture.artifact(None)["id"])
+
+    def test_candidate_metadata_limits_response_date_by_elapsed_time(self):
+        cases = (
+            (5, 5, 4, True), (1, 3, 3, True), (1, 3, 4, False),
+            (1, 4, 3, False), (1, 61, 30, False), (1, 601, 300, False),
+        )
+        for elapsed, wall_elapsed, date_offset, accepted in cases:
+            with self.subTest(elapsed=elapsed, wall_elapsed=wall_elapsed, date_offset=date_offset):
+                fixture = CurrentFixture()
+                artifact = fixture.artifact(None)
+                date = NOW + timedelta(seconds=date_offset)
+                fixture.api._clock = mock.Mock(side_effect=(NOW, NOW + timedelta(seconds=wall_elapsed)))
+                start = fixture.api.deadline - 20
+                with (
+                    mock.patch.object(
+                        fixture.api, "_json_response", return_value=(artifact, [format_datetime(date, usegmt=True)])
+                    ) as response,
+                    mock.patch.object(ci.time, "monotonic", side_effect=(start, start + elapsed)),
+                ):
+                    if accepted:
+                        self.assertEqual(fixture.api.artifact_metadata(artifact["id"]), (artifact, date))
+                    else:
+                        with self.assertRaisesRegex(ci.ProofError, "outside the request window"):
+                            fixture.api.artifact_metadata(artifact["id"])
+                    response.assert_called_once_with(f"/actions/artifacts/{artifact['id']}")
 
     def test_optional_sender_upload_failure_preserves_outcome_and_full_route(self):
         for key in (None, next(iter(ci.CELLS))):
