@@ -92,7 +92,7 @@ class ArchiveTests(unittest.TestCase):
         files = {}
         for parent in (self.root / "tasks", self.root / "work", self.target):
             for entry in parent.rglob("*"):
-                name = str(entry.relative_to(parent.parent))
+                name = entry.relative_to(parent.parent).as_posix()
                 if entry.is_symlink():
                     files[name] = str(entry.readlink())
                 elif entry.is_file():
