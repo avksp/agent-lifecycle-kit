@@ -20,6 +20,7 @@ from email.utils import format_datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest import mock
 
+from tests.package import run_packaging_smoke as packaging_smoke
 from tools.ci import qualify_pr_evidence as ci
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -129,6 +130,14 @@ def bind_artifact_origin(job: dict, upload: str, artifact: dict) -> None:
         steps.insert(selected + 1, provider_step(name, selected + 2))
     for number, step in enumerate(steps, 1):
         step["number"] = number
+
+
+def provider_json_response(raw: bytes, dates=()):
+    body = io.BytesIO(raw)
+    body.headers = Message()
+    for value in dates:
+        body.headers["Date"] = value
+    return body
 
 
 class ProviderFixture:
@@ -258,11 +267,7 @@ class ProviderFixture:
                 identifier = path.split("/")[-2]
                 headers = {"Location": f"https://productionresultssa1.blob.core.windows.net/results/{identifier}"}
                 raise urllib.error.HTTPError(url, 302, "redirect", headers, io.BytesIO())
-            response = io.BytesIO(ci.json_bytes(self.routes[path]))
-            response.headers = Message()
-            for value in self.response_dates:
-                response.headers["Date"] = value
-            return response
+            return provider_json_response(ci.json_bytes(self.routes[path]), self.response_dates)
         return io.BytesIO(self.archives[url.rsplit("/", 1)[1]])
 
 
@@ -1462,7 +1467,8 @@ class CiEvidenceReuseTests(unittest.TestCase):
             "MATCH", "UNAVAILABLE", "future artifact", "bad digest", "wrong run",
             "wrong ID", "wrong source", "expired", "other attempt", "malformed row", "wrong archive URL",
             "invalid response", "duplicate response", "backdated response", "future response", "wall clock jump",
-            "missing date after wall clock jump",
+            "missing date after wall clock jump", "backdated wrong ID", "backdated wrong archive URL",
+            "backdated wrong digest", "backdated inverted timestamps", "backdated wrong uploader",
         )
         for outcome in outcomes:
             with self.subTest(outcome=outcome), tempfile.TemporaryDirectory() as directory:
@@ -1486,16 +1492,20 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     fixture.response_dates = []
                 if outcome == "malformed row":
                     fixture.routes[metadata] = []
-                elif outcome == "bad digest":
+                elif outcome in {"bad digest", "backdated wrong digest"}:
                     artifact["digest"] = "sha256:" + "0" * 64
                 elif outcome == "wrong run":
                     artifact["workflow_run"]["id"] = MAIN["run"] + 1
-                elif outcome == "wrong ID":
+                elif outcome in {"wrong ID", "backdated wrong ID"}:
                     artifact["id"] += 1
-                elif outcome == "wrong archive URL":
+                elif outcome in {"wrong archive URL", "backdated wrong archive URL"}:
                     artifact["archive_download_url"] = (
                         f"{fixture.api.base}/actions/artifacts/{artifact['id'] + 1}/zip"
                     )
+                elif outcome == "backdated inverted timestamps":
+                    artifact["expires_at"] = STARTED
+                elif outcome == "backdated wrong uploader":
+                    artifact["job_id"] = 1
                 elif outcome == "wrong source":
                     artifact["workflow_run"]["head_sha"] = BASE
                 elif outcome == "expired":
@@ -1515,6 +1525,8 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     fixture.response_dates = [format_datetime(sent + timedelta(seconds=300), usegmt=True)]
                 elif outcome == "missing date after wall clock jump":
                     fixture.api._clock = mock.Mock(side_effect=(sent, sent + timedelta(seconds=601)))
+                if outcome.startswith("backdated"):
+                    fixture.response_dates = [format_datetime(sent - timedelta(seconds=3), usegmt=True)]
                 root = Path(directory)
                 with (
                     mock.patch.dict(
@@ -1531,9 +1543,15 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     mock.patch.object(ci, "GitHub", return_value=fixture.api),
                     mock.patch.object(ci, "observed_environment", return_value=OBSERVED),
                 ):
-                    if outcome in {"MATCH", "UNAVAILABLE"}:
+                    if outcome in {"MATCH", "UNAVAILABLE", "backdated response", "future response"}:
                         ci.probe(root, "ci", ci.CELLS[key][1], root / "index.json", root / "probe.json")
-                        self.assertEqual(ci.read_object(root / "probe.json")["status"], outcome)
+                        report = ci.read_object(root / "probe.json")
+                        self.assertEqual(report["status"], "MATCH" if outcome == "MATCH" else "UNAVAILABLE")
+                        if outcome.endswith(" response"):
+                            self.assertEqual(report["reason"], ci.ARTIFACT_DATE_UNAVAILABLE)
+                            self.assertFalse((root / "index.json").exists())
+                        elif outcome == "UNAVAILABLE":
+                            self.assertEqual(report["reason"], "artifact response time unavailable")
                     else:
                         with self.assertRaises(ci.ProofError):
                             ci.probe(root, "ci", ci.CELLS[key][1], root / "index.json", root / "probe.json")
@@ -1555,10 +1573,10 @@ class CiEvidenceReuseTests(unittest.TestCase):
 
     def test_candidate_metadata_limits_response_date_by_elapsed_time(self):
         cases = (
-            (5, 5, 4, True), (1, 3, 3, True), (1, 3, 4, False),
-            (1, 4, 3, False), (1, 61, 30, False), (1, 601, 300, False),
+            (5, 5, 4, "accepted"), (1, 3, 3, "accepted"), (1, 3, 4, "unavailable"),
+            (1, 4, 3, "refused"), (1, 61, 30, "refused"), (1, 601, 300, "refused"),
         )
-        for elapsed, wall_elapsed, date_offset, accepted in cases:
+        for elapsed, wall_elapsed, date_offset, outcome in cases:
             with self.subTest(elapsed=elapsed, wall_elapsed=wall_elapsed, date_offset=date_offset):
                 fixture = CurrentFixture()
                 artifact = fixture.artifact(None)
@@ -1571,12 +1589,359 @@ class CiEvidenceReuseTests(unittest.TestCase):
                     ) as response,
                     mock.patch.object(ci.time, "monotonic", side_effect=(start, start + elapsed)),
                 ):
-                    if accepted:
-                        self.assertEqual(fixture.api.artifact_metadata(artifact["id"]), (artifact, date))
-                    else:
-                        with self.assertRaisesRegex(ci.ProofError, "outside the request window"):
+                    if outcome == "refused":
+                        with self.assertRaisesRegex(ci.ProofError, "wall and elapsed clocks disagree"):
                             fixture.api.artifact_metadata(artifact["id"])
+                    else:
+                        observation = (date, None) if outcome == "accepted" else (None, ci.ARTIFACT_DATE_UNAVAILABLE)
+                        self.assertEqual(fixture.api.artifact_metadata(artifact["id"]), (artifact, *observation))
                     response.assert_called_once_with(f"/actions/artifacts/{artifact['id']}")
+
+    def timing_probe_fixture(self, root, *, out_of_window):
+        fixture = CurrentFixture(mixed=True)
+        key = "ci/macos-latest-py3.15"
+        fixture.response_dates = [format_datetime(NOW - timedelta(seconds=3), usegmt=True)] if out_of_window else []
+        github_output = root / "github-output.txt"
+        env = {
+            "GH_TOKEN": fixture.api.token, "GITHUB_JOB": "probe-ci", "GITHUB_OUTPUT": str(github_output),
+            "CANDIDATE_STATUS": "CANDIDATE", "QUALIFIED_INDEX_SHA256": fixture.digest,
+            "CANDIDATE_GENERATION_OUTCOME": "success",
+        }
+        decision_path = root / "decision.json"
+        probe_path = root / "probe.json"
+        with (
+            mock.patch.dict(os.environ, env),
+            mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+            mock.patch.object(ci, "GitHub", return_value=fixture.api),
+        ):
+            ci.probe(root, "ci", ci.CELLS[key][1], root / "index.json", probe_path)
+            self.assertFalse((root / "index.json").exists())
+            fixture.reports[key] = ci.read_object(probe_path)
+            self.assertTrue(ci.unavailable_probe(fixture.reports[key], key, MAIN, SOURCE, fixture.digest))
+            fixture.update_report(key)
+            fixture.reset_api()
+            ci.decide(root, root / "index.json", root / "probes", decision_path,
+                      {"candidate": {"result": "success"},
+                       **{f"probe-{role}": {"result": "success"} for role in ci.ROLES}}, mixed=True)
+        return fixture, key, ci.read_object(decision_path), dict(
+            line.split("=", 1) for line in github_output.read_text().splitlines()
+        )
+
+    def timing_smoke_commands(self, root, kind, artifact):
+        venv = root / f"{kind}-venv"
+        outside = root / f"{kind}-outside"
+        python = str(packaging_smoke._venv_python(venv))
+        lifecycle = str(packaging_smoke._venv_script(venv, "agent-lifecycle"))
+        neutrality = str(packaging_smoke._venv_script(venv, "agent-lifecycle-neutrality"))
+        commands = [[str(root / "python"), "-m", "venv", str(venv)]]
+        install = [python, "-m", "pip", "install", "--force-reinstall"]
+        if kind == "sdist":
+            commands.append([
+                "uv", "pip", "install", "--python", python, "--no-deps",
+                "--require-hashes", "--only-binary=:all:", "-r", str(ROOT / "tools/ci/build-requirements.txt"),
+            ])
+            install.extend(("--no-deps", "--no-build-isolation"))
+        commands.extend((
+            [*install, str(artifact)],
+            [lifecycle, "version"],
+            [neutrality, "--help"],
+            [lifecycle, "model", "route", "--request", str(outside / "model-route-request.json")],
+            [lifecycle, "project", "preset", "list"],
+            [python, "-c", "py.typed probe"],
+        ))
+        return [packaging_smoke._portable_argv(argv) for argv in commands]
+
+    def assert_timing_smoke_inventory(self, smoke, expected):
+        commands = smoke["commands"]
+        self.assertEqual([check["kind"] for check in smoke["artifactChecks"]], ["wheel", "sdist"])
+        start = 0
+        for check in smoke["artifactChecks"]:
+            required = expected[check["kind"]]
+            end = start + len(required)
+            self.assertEqual(check["commandRange"], {"start": start, "end": end})
+            self.assertEqual(
+                commands[start:end], [{"argv": argv, "returncode": 0} for argv in required],
+                f"{check['kind']} smoke command inventory differs",
+            )
+            start = end
+        self.assertEqual(len(commands), start)
+
+    def timing_package_fixture(self, root):
+        commands = []
+        checks = []
+        expected = {}
+
+        def record_command(argv, command_records, _blockers, **_kwargs):
+            command_records.append({"argv": packaging_smoke._portable_argv(argv), "returncode": 0})
+            return 0
+
+        for kind, name in (("wheel", "package-1.0-py3-none-any.whl"), ("sdist", "package-1.0.tar.gz")):
+            artifact = root / name
+            artifact.write_bytes(f"{kind} receipt fixture".encode())
+            expected[kind] = self.timing_smoke_commands(root, kind, artifact)
+            with (
+                mock.patch.object(packaging_smoke, "_run_command", side_effect=record_command),
+                mock.patch.object(packaging_smoke, "_probe_type_marker", return_value=True),
+            ):
+                check = packaging_smoke._check_artifact(
+                    kind, artifact, str(root / "python"), root / f"{kind}-venv", commands, [], prebuilt=True,
+                )
+            self.assertEqual(check["status"], "PASS")
+            checks.append({**check, "runtimeInventory": {"status": "PASS"}})
+        self.assertEqual([len(expected[kind]) for kind in ("wheel", "sdist")], [7, 8])
+        artifacts = {check["kind"]: check["artifactIdentity"] for check in checks}
+        build = {
+            "schemaVersion": "alk-ci-main-build.v1",
+            "status": "PASS",
+            "source": SOURCE,
+            "environment": ENV,
+            "argv": ci.package_argv(str(ROOT / ".venv/bin/python")),
+            "returncode": 0,
+            "artifacts": artifacts,
+        }
+        smoke = {
+            "schemaVersion": "agent-packaging-smoke-evidence.v1",
+            "status": "PASS",
+            "blockers": [],
+            "prebuilt": {
+                "receiptSha256": ci.sha256(ci.json_bytes(build)),
+                "sourceSha": SOURCE["sha"],
+                "sourceTree": SOURCE["tree"],
+                "artifacts": artifacts,
+            },
+            "artifactChecks": checks,
+            "commands": commands,
+        }
+        self.assert_timing_smoke_inventory(smoke, expected)
+        return build, smoke, expected
+
+    def test_timing_smoke_inventory_refuses_duplicate_command_with_equal_count(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, valid, expected = self.timing_package_fixture(Path(directory))
+            for check in valid["artifactChecks"]:
+                kind = check["kind"]
+                with self.subTest(kind=kind):
+                    duplicate = copy.deepcopy(valid)
+                    start = check["commandRange"]["start"]
+                    self.assertNotEqual(duplicate["commands"][start], duplicate["commands"][start + 1])
+                    duplicate["commands"][start + 1] = duplicate["commands"][start]
+                    self.assertEqual(len(duplicate["commands"]), 15)
+                    self.assertTrue(all(row["returncode"] == 0 for row in duplicate["commands"]))
+                    with self.assertRaisesRegex(AssertionError, f"{kind} smoke command inventory differs"):
+                        self.assert_timing_smoke_inventory(duplicate, expected)
+
+    def run_timing_fixture_terminal(self, root, fixture, decision, *, package_checks=None):
+        checks_dir = root / "checks"
+        checks_dir.mkdir(exist_ok=True)
+        build, smoke = self.timing_package_fixture(root)[:2] if package_checks is None else package_checks
+        (checks_dir / "main-package-build.json").write_bytes(ci.json_bytes(build))
+        (checks_dir / "main-packaging-smoke.json").write_bytes(ci.json_bytes(smoke))
+        decision_path = root / "decision.json"
+        decision_path.write_bytes(ci.json_bytes(decision))
+        env = {
+            "GH_TOKEN": fixture.api.token, "MAIN_MODE": decision["mode"],
+            "MAIN_DECISION_SHA256": ci.sha256(decision_path.read_bytes()),
+            "CANDIDATE_STATUS": "CANDIDATE", "QUALIFIED_INDEX_SHA256": fixture.digest,
+            "CANDIDATE_GENERATION_OUTCOME": "success",
+        }
+        needs = {name: {"result": result} for name, result in (
+            {"candidate": "success", "decide": "success", "main-checks": "success", **ci.family_outcomes(decision)}
+        ).items()}
+        fixture.reset_api()
+        result = root / "qualification.json"
+        with (
+            mock.patch.dict(os.environ, env),
+            mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
+            mock.patch.object(ci, "GitHub", return_value=fixture.api) as github,
+        ):
+            ci.terminal(root, decision_path, checks_dir, result, needs)
+            github.assert_called_once_with(ci.REPOSITORY, fixture.api.token, retry_json_timeout=True)
+        return ci.read_object(result)
+
+    def test_timing_fallback_refuses_invalid_package_checks_on_full_terminal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture, _, decision, _ = self.timing_probe_fixture(root, out_of_window=True)
+            fixture.add_main_full()
+            build, smoke, _ = self.timing_package_fixture(root)
+            proof = self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(build, smoke))
+            self.assertEqual(proof["checks"]["build"], smoke["prebuilt"])
+            self.assertEqual(proof["checks"]["smokeSha256"], ci.sha256(ci.json_bytes(smoke)))
+            output = root / "qualification.json"
+            output.unlink()
+
+            bad_build = copy.deepcopy(build)
+            bad_build["argv"][1] = "sync"
+            bound_smoke = copy.deepcopy(smoke)
+            bound_smoke["prebuilt"]["receiptSha256"] = ci.sha256(ci.json_bytes(bad_build))
+            with self.assertRaisesRegex(ci.ProofError, "main build receipt does not identify"):
+                self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(bad_build, bound_smoke))
+            self.assertFalse(output.exists())
+
+            bad_smoke = copy.deepcopy(smoke)
+            bad_smoke["artifactChecks"][1]["runtimeInventory"]["status"] = "FAIL"
+            with self.assertRaisesRegex(ci.ProofError, "main smoke did not consume the built artifact"):
+                self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(build, bad_smoke))
+            self.assertFalse(output.exists())
+
+    def test_unusable_date_requires_all_fresh_matrices_and_current_terminal_proof(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture, key, decision, outputs = self.timing_probe_fixture(root, out_of_window=True)
+            self.assertEqual(fixture.reports[key]["reason"], ci.ARTIFACT_DATE_UNAVAILABLE)
+            self.assertEqual((decision["mode"], outputs["mode"]), ("FULL", "FULL"))
+            self.assertEqual(outputs["sha256"], ci.sha256(ci.json_bytes(decision)))
+            self.assertEqual(ci.fresh_keys(decision), set(ci.CELLS))
+            emitted = []
+            for role in ci.ROLES:
+                self.assertEqual(outputs[f"{role}_has_fresh"], "true")
+                matrix = ci.strict_json(outputs[f"{role}_matrix"].encode())
+                for row in matrix["include"]:
+                    os_name = row["os"] if role == "ci" else "ubuntu-latest"
+                    version = row["python-version"] if role == "foundation" else row["python"]
+                    emitted.append(f"{role}/{os_name}-py{version}")
+            self.assertCountEqual(emitted, ci.CELLS)
+            fixture.add_main_full()
+            proof = self.run_timing_fixture_terminal(root, fixture, decision)
+            self.assertEqual(proof["decisionSha256"], outputs["sha256"])
+            self.assertEqual(proof["completeSuitesRun"], len(ci.CELLS))
+            self.assertEqual(set(proof["graph"]["freshSuites"]), set(ci.CELLS))
+            (root / "qualification.json").unlink()
+            fresh_name = ci.artifact_name("main-full", MAIN["run"], MAIN["attempt"], key)
+            fresh_artifact = next(row for row in fixture.current_artifacts if row["name"] == fresh_name)
+            producer_name = ci.CELLS[key][2]
+            producer_index = next(i for i, row in enumerate(fixture.current_jobs) if row["name"] == producer_name)
+            producer = fixture.current_jobs[producer_index]
+            expected_artifact = ci.json_bytes(fresh_artifact)
+            for replacement, error in (
+                ([], "invalid job object"),
+                ([{**producer, "run_attempt": MAIN["attempt"] - 1}], "cross-attempt job"),
+            ):
+                with self.subTest(producer=error):
+                    fixture.current_jobs[producer_index:producer_index + 1] = replacement
+                    fixture.sync_counts()
+                    try:
+                        with self.assertRaisesRegex(ci.ProofError, error):
+                            self.run_timing_fixture_terminal(root, fixture, decision)
+                        self.assertFalse((root / "qualification.json").exists())
+                        self.assertEqual(ci.json_bytes(fresh_artifact), expected_artifact)
+                        self.assertIn(fresh_artifact, fixture.current_artifacts)
+                        self.assertEqual(ci.sha256((root / "decision.json").read_bytes()), outputs["sha256"])
+                    finally:
+                        fixture.current_jobs[producer_index:producer_index + len(replacement)] = [producer]
+                        fixture.sync_counts()
+            fixture.current_artifacts.remove(fresh_artifact)
+            fixture.sync_counts()
+            with self.assertRaises(ci.ProofError):
+                self.run_timing_fixture_terminal(root, fixture, decision)
+            fixture.current_artifacts.append({
+                **fresh_artifact, "name": ci.artifact_name("main-full", MAIN["run"], MAIN["attempt"] - 1, key),
+            })
+            fixture.sync_counts()
+            with self.assertRaises(ci.ProofError):
+                self.run_timing_fixture_terminal(root, fixture, decision)
+            self.assertFalse((root / "qualification.json").exists())
+
+    def test_terminal_and_publisher_reject_partial_reuse_with_unusable_date(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture, key, decision, _ = self.timing_probe_fixture(root, out_of_window=False)
+            self.assertEqual(decision["mode"], "PARTIAL_REUSE")
+            self.assertEqual(decision["cells"][key]["disposition"], "FRESH")
+            self.assertTrue(any(row["disposition"] == "REUSE" for row in decision["cells"].values()))
+            fixture.add_main_full(ci.fresh_keys(decision))
+            proof = self.run_timing_fixture_terminal(root, fixture, decision)
+            (root / "qualification.json").unlink()
+
+            # Retain otherwise eligible peers and a valid partial inventory,
+            # but give the actual source-bound probe the reserved timing reason.
+            fixture.reports[key]["reason"] = ci.ARTIFACT_DATE_UNAVAILABLE
+            fixture.update_report(key)
+            decision["probes"][key]["sha256"] = ci.sha256(ci.json_bytes(fixture.reports[key]))
+            with self.assertRaisesRegex(ci.ProofError, "requires full fresh proof"):
+                self.run_timing_fixture_terminal(root, fixture, decision)
+            self.assertFalse((root / "qualification.json").exists())
+
+            proof["decision"] = decision
+            proof["decisionSha256"] = ci.sha256(ci.json_bytes(decision))
+            job = provider_job(ci.TERMINAL_JOB, 14000, [ci.TERMINAL_STEP, ci.TERMINAL_UPLOAD], MAIN, MAIN["sha"])
+            fixture.current_jobs.append(job)
+            raw = zipped([("qualification.json", ci.json_bytes(proof))])
+            artifact = provider_artifact(
+                ci.artifact_name("main-qualification", MAIN["run"], MAIN["attempt"]), 14001,
+                raw, MAIN, MAIN["sha"], job["id"],
+            )
+            bind_artifact_origin(job, ci.TERMINAL_UPLOAD, artifact)
+            fixture.current_artifacts.append(artifact)
+            fixture.archives[str(artifact["id"])] = raw
+            fixture.sync_counts()
+            fixture.reset_api()
+            with (
+                mock.patch.object(ci, "workflow_id", return_value=120),
+                mock.patch.object(ci, "verified_push_run", return_value=(MAIN["run"], MAIN["attempt"])),
+                self.assertRaisesRegex(ci.ProofError, "requires full fresh proof"),
+            ):
+                ci.verified_main(fixture.api, SOURCE, REPO["id"])
+
+    def test_terminal_json_timeout_retry_charges_partial_read_and_shares_one_seat(self):
+        class PartialResponse(io.BytesIO):
+            def read1(self, count):
+                data = super().read1(count)
+                if not data:
+                    raise TimeoutError("response body timeout")
+                return data
+
+        api = ci.GitHub(ci.REPOSITORY, "unit-token", retry_json_timeout=True)
+        api.opener = mock.Mock()
+        valid = b'{"accepted":true}'
+        api.opener.open.side_effect = [
+            PartialResponse(b"{"), provider_json_response(valid), TimeoutError("next path timeout"),
+        ]
+        self.assertEqual(api.json("/original"), {"accepted": True})
+        self.assertEqual(api.input_bytes, 1 + len(valid))
+        with self.assertRaisesRegex(ci.ProviderUnavailable, "TimeoutError"):
+            api.json("/different")
+        self.assertEqual((api.total_requests, api.auth_requests), (3, 3))
+        self.assertEqual([call.args[0].full_url for call in api.opener.open.call_args_list],
+                         [api.base + "/original", api.base + "/original", api.base + "/different"])
+
+    def test_terminal_json_retry_preserves_failure_and_provider_budgets(self):
+        for scenario in ("disabled", "non-timeout", "request", "authenticated", "bytes", "time", "last-slot",
+                         "second-timeout", "invalid-second", "successful-first"):
+            with self.subTest(scenario=scenario):
+                api = ci.GitHub(ci.REPOSITORY, "unit-token", retry_json_timeout=scenario != "disabled")
+                api.opener = mock.Mock()
+                opens = 0
+
+                def open_request(*_args, **_kwargs):
+                    nonlocal opens
+                    opens += 1
+                    if scenario == "successful-first" or (scenario == "last-slot" and opens == 2):
+                        return provider_json_response(b"{}")
+                    if scenario == "invalid-second" and opens == 2:
+                        return provider_json_response(b"{")
+                    if scenario == "non-timeout":
+                        raise urllib.error.URLError("unavailable")
+                    if scenario == "time":
+                        api.deadline = 0
+                    raise TimeoutError("test transport")
+
+                api.opener.open.side_effect = open_request
+                if scenario == "request":
+                    api.total_requests = ci.MAX_PROVIDER_REQUESTS - 1
+                elif scenario == "authenticated":
+                    api.auth_requests = ci.MAX_PROVIDER_AUTH_REQUESTS - 1
+                elif scenario == "bytes":
+                    api.input_bytes = ci.MAX_TOTAL
+                elif scenario == "last-slot":
+                    api.total_requests = ci.MAX_PROVIDER_REQUESTS - 2
+                    api.auth_requests = ci.MAX_PROVIDER_AUTH_REQUESTS - 2
+                if scenario in {"last-slot", "successful-first"}:
+                    self.assertEqual(api.json("/same"), {})
+                else:
+                    with self.assertRaises(ci.ProofError):
+                        api.json("/same")
+                self.assertEqual(opens, 2 if scenario in {"last-slot", "second-timeout", "invalid-second"} else 1)
 
     def test_optional_sender_upload_failure_preserves_outcome_and_full_route(self):
         for key in (None, next(iter(ci.CELLS))):
