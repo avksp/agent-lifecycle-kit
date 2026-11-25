@@ -1739,7 +1739,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
         decision_path = root / "decision.json"
         decision_path.write_bytes(ci.json_bytes(decision))
         env = {
-            "GH_TOKEN": "unit-token", "MAIN_MODE": decision["mode"],
+            "GH_TOKEN": fixture.api.token, "MAIN_MODE": decision["mode"],
             "MAIN_DECISION_SHA256": ci.sha256(decision_path.read_bytes()),
             "CANDIDATE_STATUS": "CANDIDATE", "QUALIFIED_INDEX_SHA256": fixture.digest,
             "CANDIDATE_GENERATION_OUTCOME": "success",
@@ -1755,7 +1755,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
             mock.patch.object(ci, "GitHub", return_value=fixture.api) as github,
         ):
             ci.terminal(root, decision_path, checks_dir, result, needs)
-            github.assert_called_once_with(ci.REPOSITORY, "unit-token", retry_json_timeout=True)
+            github.assert_called_once_with(ci.REPOSITORY, fixture.api.token, retry_json_timeout=True)
         return ci.read_object(result)
 
     def test_timing_fallback_refuses_invalid_package_checks_on_full_terminal(self):
