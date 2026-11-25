@@ -1626,11 +1626,49 @@ class CiEvidenceReuseTests(unittest.TestCase):
             line.split("=", 1) for line in github_output.read_text().splitlines()
         )
 
-    def run_timing_fixture_terminal(self, root, fixture, decision):
+    def timing_package_fixture(self):
+        artifacts = {
+            "wheel": {"name": "package-1.0-py3-none-any.whl", "bytes": 100, "sha256": "a" * 64},
+            "sdist": {"name": "package-1.0.tar.gz", "bytes": 200, "sha256": "b" * 64},
+        }
+        build = {
+            "schemaVersion": "alk-ci-main-build.v1",
+            "status": "PASS",
+            "source": SOURCE,
+            "environment": ENV,
+            "argv": ci.package_argv(str(ROOT / ".venv/bin/python")),
+            "returncode": 0,
+            "artifacts": artifacts,
+        }
+        smoke = {
+            "schemaVersion": "agent-packaging-smoke-evidence.v1",
+            "status": "PASS",
+            "blockers": [],
+            "prebuilt": {
+                "receiptSha256": ci.sha256(ci.json_bytes(build)),
+                "sourceSha": SOURCE["sha"],
+                "sourceTree": SOURCE["tree"],
+                "artifacts": artifacts,
+            },
+            "artifactChecks": [
+                {
+                    "kind": kind,
+                    "status": "PASS",
+                    "artifactIdentity": identity,
+                    "runtimeInventory": {"status": "PASS"},
+                }
+                for kind, identity in artifacts.items()
+            ],
+            "commands": [{"returncode": 0} for _ in range(14)],
+        }
+        return build, smoke
+
+    def run_timing_fixture_terminal(self, root, fixture, decision, *, package_checks=None):
         checks_dir = root / "checks"
         checks_dir.mkdir(exist_ok=True)
-        for name in ("main-package-build.json", "main-packaging-smoke.json"):
-            (checks_dir / name).write_text("{}")
+        build, smoke = self.timing_package_fixture() if package_checks is None else package_checks
+        (checks_dir / "main-package-build.json").write_bytes(ci.json_bytes(build))
+        (checks_dir / "main-packaging-smoke.json").write_bytes(ci.json_bytes(smoke))
         decision_path = root / "decision.json"
         decision_path.write_bytes(ci.json_bytes(decision))
         env = {
@@ -1648,12 +1686,36 @@ class CiEvidenceReuseTests(unittest.TestCase):
             mock.patch.dict(os.environ, env),
             mock.patch.object(ci, "main_context", return_value=(MAIN, SOURCE)),
             mock.patch.object(ci, "GitHub", return_value=fixture.api) as github,
-            mock.patch.object(ci, "main_checks_evidence", return_value={"packageFixture": "checked"}) as package_checks,
         ):
             ci.terminal(root, decision_path, checks_dir, result, needs)
             github.assert_called_once_with(ci.REPOSITORY, "unit-token", retry_json_timeout=True)
-            package_checks.assert_called_once_with(b"{}", b"{}", SOURCE)
         return ci.read_object(result)
+
+    def test_timing_fallback_refuses_invalid_package_checks_on_full_terminal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fixture, _, decision, _ = self.timing_probe_fixture(root, out_of_window=True)
+            fixture.add_main_full()
+            build, smoke = self.timing_package_fixture()
+            proof = self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(build, smoke))
+            self.assertEqual(proof["checks"]["build"], smoke["prebuilt"])
+            self.assertEqual(proof["checks"]["smokeSha256"], ci.sha256(ci.json_bytes(smoke)))
+            output = root / "qualification.json"
+            output.unlink()
+
+            bad_build = copy.deepcopy(build)
+            bad_build["argv"][1] = "sync"
+            bound_smoke = copy.deepcopy(smoke)
+            bound_smoke["prebuilt"]["receiptSha256"] = ci.sha256(ci.json_bytes(bad_build))
+            with self.assertRaisesRegex(ci.ProofError, "main build receipt does not identify"):
+                self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(bad_build, bound_smoke))
+            self.assertFalse(output.exists())
+
+            bad_smoke = copy.deepcopy(smoke)
+            bad_smoke["artifactChecks"][1]["runtimeInventory"]["status"] = "FAIL"
+            with self.assertRaisesRegex(ci.ProofError, "main smoke did not consume the built artifact"):
+                self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(build, bad_smoke))
+            self.assertFalse(output.exists())
 
     def test_unusable_date_requires_all_fresh_matrices_and_current_terminal_proof(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1680,6 +1742,27 @@ class CiEvidenceReuseTests(unittest.TestCase):
             (root / "qualification.json").unlink()
             fresh_name = ci.artifact_name("main-full", MAIN["run"], MAIN["attempt"], key)
             fresh_artifact = next(row for row in fixture.current_artifacts if row["name"] == fresh_name)
+            producer_name = ci.CELLS[key][2]
+            producer_index = next(i for i, row in enumerate(fixture.current_jobs) if row["name"] == producer_name)
+            producer = fixture.current_jobs[producer_index]
+            expected_artifact = ci.json_bytes(fresh_artifact)
+            for replacement, error in (
+                ([], "invalid job object"),
+                ([{**producer, "run_attempt": MAIN["attempt"] - 1}], "cross-attempt job"),
+            ):
+                with self.subTest(producer=error):
+                    fixture.current_jobs[producer_index:producer_index + 1] = replacement
+                    fixture.sync_counts()
+                    try:
+                        with self.assertRaisesRegex(ci.ProofError, error):
+                            self.run_timing_fixture_terminal(root, fixture, decision)
+                        self.assertFalse((root / "qualification.json").exists())
+                        self.assertEqual(ci.json_bytes(fresh_artifact), expected_artifact)
+                        self.assertIn(fresh_artifact, fixture.current_artifacts)
+                        self.assertEqual(ci.sha256((root / "decision.json").read_bytes()), outputs["sha256"])
+                    finally:
+                        fixture.current_jobs[producer_index:producer_index + len(replacement)] = [producer]
+                        fixture.sync_counts()
             fixture.current_artifacts.remove(fresh_artifact)
             fixture.sync_counts()
             with self.assertRaises(ci.ProofError):
