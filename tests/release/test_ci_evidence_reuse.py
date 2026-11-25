@@ -20,6 +20,7 @@ from email.utils import format_datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from unittest import mock
 
+from tests.package import run_packaging_smoke as packaging_smoke
 from tools.ci import qualify_pr_evidence as ci
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1626,11 +1627,69 @@ class CiEvidenceReuseTests(unittest.TestCase):
             line.split("=", 1) for line in github_output.read_text().splitlines()
         )
 
-    def timing_package_fixture(self):
-        artifacts = {
-            "wheel": {"name": "package-1.0-py3-none-any.whl", "bytes": 100, "sha256": "a" * 64},
-            "sdist": {"name": "package-1.0.tar.gz", "bytes": 200, "sha256": "b" * 64},
-        }
+    def timing_smoke_commands(self, root, kind, artifact):
+        venv = root / f"{kind}-venv"
+        outside = root / f"{kind}-outside"
+        python = str(packaging_smoke._venv_python(venv))
+        lifecycle = str(packaging_smoke._venv_script(venv, "agent-lifecycle"))
+        neutrality = str(packaging_smoke._venv_script(venv, "agent-lifecycle-neutrality"))
+        commands = [[str(root / "python"), "-m", "venv", str(venv)]]
+        install = [python, "-m", "pip", "install", "--force-reinstall"]
+        if kind == "sdist":
+            commands.append([
+                "uv", "pip", "install", "--python", python, "--no-deps",
+                "--require-hashes", "--only-binary=:all:", "-r", str(ROOT / "tools/ci/build-requirements.txt"),
+            ])
+            install.extend(("--no-deps", "--no-build-isolation"))
+        commands.extend((
+            [*install, str(artifact)],
+            [lifecycle, "version"],
+            [neutrality, "--help"],
+            [lifecycle, "model", "route", "--request", str(outside / "model-route-request.json")],
+            [lifecycle, "project", "preset", "list"],
+            [python, "-c", "py.typed probe"],
+        ))
+        return [packaging_smoke._portable_argv(argv) for argv in commands]
+
+    def assert_timing_smoke_inventory(self, smoke, expected):
+        commands = smoke["commands"]
+        self.assertEqual([check["kind"] for check in smoke["artifactChecks"]], ["wheel", "sdist"])
+        start = 0
+        for check in smoke["artifactChecks"]:
+            required = expected[check["kind"]]
+            end = start + len(required)
+            self.assertEqual(check["commandRange"], {"start": start, "end": end})
+            self.assertEqual(
+                commands[start:end], [{"argv": argv, "returncode": 0} for argv in required],
+                f"{check['kind']} smoke command inventory differs",
+            )
+            start = end
+        self.assertEqual(len(commands), start)
+
+    def timing_package_fixture(self, root):
+        commands = []
+        checks = []
+        expected = {}
+
+        def record_command(argv, command_records, _blockers, **_kwargs):
+            command_records.append({"argv": packaging_smoke._portable_argv(argv), "returncode": 0})
+            return 0
+
+        for kind, name in (("wheel", "package-1.0-py3-none-any.whl"), ("sdist", "package-1.0.tar.gz")):
+            artifact = root / name
+            artifact.write_bytes(f"{kind} receipt fixture".encode())
+            expected[kind] = self.timing_smoke_commands(root, kind, artifact)
+            with (
+                mock.patch.object(packaging_smoke, "_run_command", side_effect=record_command),
+                mock.patch.object(packaging_smoke, "_probe_type_marker", return_value=True),
+            ):
+                check = packaging_smoke._check_artifact(
+                    kind, artifact, str(root / "python"), root / f"{kind}-venv", commands, [], prebuilt=True,
+                )
+            self.assertEqual(check["status"], "PASS")
+            checks.append({**check, "runtimeInventory": {"status": "PASS"}})
+        self.assertEqual([len(expected[kind]) for kind in ("wheel", "sdist")], [7, 8])
+        artifacts = {check["kind"]: check["artifactIdentity"] for check in checks}
         build = {
             "schemaVersion": "alk-ci-main-build.v1",
             "status": "PASS",
@@ -1650,23 +1709,31 @@ class CiEvidenceReuseTests(unittest.TestCase):
                 "sourceTree": SOURCE["tree"],
                 "artifacts": artifacts,
             },
-            "artifactChecks": [
-                {
-                    "kind": kind,
-                    "status": "PASS",
-                    "artifactIdentity": identity,
-                    "runtimeInventory": {"status": "PASS"},
-                }
-                for kind, identity in artifacts.items()
-            ],
-            "commands": [{"returncode": 0} for _ in range(14)],
+            "artifactChecks": checks,
+            "commands": commands,
         }
-        return build, smoke
+        self.assert_timing_smoke_inventory(smoke, expected)
+        return build, smoke, expected
+
+    def test_timing_smoke_inventory_refuses_duplicate_command_with_equal_count(self):
+        with tempfile.TemporaryDirectory() as directory:
+            _, valid, expected = self.timing_package_fixture(Path(directory))
+            for check in valid["artifactChecks"]:
+                kind = check["kind"]
+                with self.subTest(kind=kind):
+                    duplicate = copy.deepcopy(valid)
+                    start = check["commandRange"]["start"]
+                    self.assertNotEqual(duplicate["commands"][start], duplicate["commands"][start + 1])
+                    duplicate["commands"][start + 1] = duplicate["commands"][start]
+                    self.assertEqual(len(duplicate["commands"]), 15)
+                    self.assertTrue(all(row["returncode"] == 0 for row in duplicate["commands"]))
+                    with self.assertRaisesRegex(AssertionError, f"{kind} smoke command inventory differs"):
+                        self.assert_timing_smoke_inventory(duplicate, expected)
 
     def run_timing_fixture_terminal(self, root, fixture, decision, *, package_checks=None):
         checks_dir = root / "checks"
         checks_dir.mkdir(exist_ok=True)
-        build, smoke = self.timing_package_fixture() if package_checks is None else package_checks
+        build, smoke = self.timing_package_fixture(root)[:2] if package_checks is None else package_checks
         (checks_dir / "main-package-build.json").write_bytes(ci.json_bytes(build))
         (checks_dir / "main-packaging-smoke.json").write_bytes(ci.json_bytes(smoke))
         decision_path = root / "decision.json"
@@ -1696,7 +1763,7 @@ class CiEvidenceReuseTests(unittest.TestCase):
             root = Path(directory)
             fixture, _, decision, _ = self.timing_probe_fixture(root, out_of_window=True)
             fixture.add_main_full()
-            build, smoke = self.timing_package_fixture()
+            build, smoke, _ = self.timing_package_fixture(root)
             proof = self.run_timing_fixture_terminal(root, fixture, decision, package_checks=(build, smoke))
             self.assertEqual(proof["checks"]["build"], smoke["prebuilt"])
             self.assertEqual(proof["checks"]["smokeSha256"], ci.sha256(ci.json_bytes(smoke)))
