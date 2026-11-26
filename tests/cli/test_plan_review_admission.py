@@ -318,8 +318,9 @@ class PlanReviewAdmissionTests(unittest.TestCase):
             if os.name == "nt" and getattr(error, "winerror", None) == 1314:
                 self.skipTest("Windows symlink fixture requires local link permission")
             raise
+        target_before = report.readlink()
         before = f.inventory()
         code, receipt = f.preflight()
         self.assertEqual((code, receipt["code"]), (2, "review-preflight-review-exists"))
         self.assertEqual(f.inventory(), before)
-        self.assertEqual(report.readlink(), missing)
+        self.assertEqual(report.readlink(), target_before)
