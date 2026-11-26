@@ -1,0 +1,870 @@
+{
+  "schemaVersion": "agent-stable-surface.v1",
+  "inventoryVersion": "2.53.0",
+  "promiseStatus": "PENDING_ACTIVATION",
+  "unlistedClassification": "preview",
+  "referenceControl": "2.52.0",
+  "introductionEvidence": "First release tag containing the command or schema introduction; Python exports use the first explicit policy declaration.",
+  "commands": [
+    {
+      "path": [
+        "version"
+      ],
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.1.0",
+      "flags": [],
+      "schemas": [
+        "agent-lifecycle-version.v1"
+      ],
+      "exitCodes": {
+        "success": 0
+      }
+    },
+    {
+      "path": [
+        "plan",
+        "verify"
+      ],
+      "owner": "agent_lifecycle.planning",
+      "introducedIn": "1.79.0",
+      "flags": [
+        "--acceptance",
+        "--lock",
+        "--manifest",
+        "--out",
+        "--package-root",
+        "--repository-root"
+      ],
+      "schemas": [
+        "agent-plan-verification-receipt.v1"
+      ],
+      "exitCodes": {
+        "success": 0,
+        "refusal": 2
+      }
+    },
+    {
+      "path": [
+        "workflow",
+        "continue"
+      ],
+      "owner": "agent_lifecycle.workflow",
+      "introducedIn": "2.8.0",
+      "flags": [
+        "--apply",
+        "--expected-revision",
+        "--lock",
+        "--manifest",
+        "--operation-id",
+        "--projected-action-digest",
+        "--projected-state-revision",
+        "--reason",
+        "--source-revision",
+        "--state",
+        "--task"
+      ],
+      "schemas": [
+        "agent-workflow-continuation-receipt.v1",
+        "agent-workflow-continuation-action.v1"
+      ],
+      "exitCodes": {
+        "success": 0,
+        "refusal": 0
+      }
+    },
+    {
+      "path": [
+        "model",
+        "route"
+      ],
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.2.0",
+      "flags": [
+        "--host-profile",
+        "--profile",
+        "--request"
+      ],
+      "schemas": [
+        "agent-lifecycle-model-route-request.v1",
+        "agent-lifecycle-model-route-decision.v1"
+      ],
+      "exitCodes": {
+        "success": 0,
+        "refusal": 2
+      }
+    },
+    {
+      "path": [
+        "model",
+        "usage-check"
+      ],
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.2.0",
+      "flags": [
+        "--budget-targets",
+        "--receipt",
+        "--route-decision"
+      ],
+      "schemas": [
+        "agent-lifecycle-model-usage-receipt.v1"
+      ],
+      "exitCodes": {
+        "success": 0,
+        "refusal": 2
+      }
+    }
+  ],
+  "schemas": [
+    {
+      "schemaId": "agent-lifecycle-model-route-decision.v1",
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.2.0",
+      "schemaDigest": "e3106ab1d70194cd0a495a46fa970c420f95c756737fd27f925022faf53f9229",
+      "required": [
+        "decisionDigest",
+        "modelClass",
+        "operationId",
+        "schemaVersion"
+      ]
+    },
+    {
+      "schemaId": "agent-lifecycle-model-route-request.v1",
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.2.0",
+      "schemaDigest": "36f52f2ab1bb0383886700ccbba53c460fc8e02a38c09ac206f8e25154cce2e5",
+      "required": [
+        "operationId",
+        "phase",
+        "schemaVersion",
+        "sddTier"
+      ]
+    },
+    {
+      "schemaId": "agent-lifecycle-model-usage-receipt.v1",
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.2.0",
+      "schemaDigest": "c83aa84095506b8db30b61b0f5f1ad741b533eb05daf0489f60b3bf57e8d3404",
+      "required": [
+        "attestation",
+        "host",
+        "modelClass",
+        "operationId",
+        "providerModelHash",
+        "schemaVersion",
+        "usage"
+      ]
+    },
+    {
+      "schemaId": "agent-lifecycle-version.v1",
+      "owner": "agent_lifecycle.cli",
+      "introducedIn": "0.1.0",
+      "schemaDigest": "145f604e261425251eef6c51158ea0aa5d8262482a36923ba4c5529fb6085cb6",
+      "required": [
+        "schemaVersion",
+        "version"
+      ]
+    },
+    {
+      "schemaId": "agent-plan-verification-receipt.v1",
+      "owner": "agent_lifecycle.planning",
+      "introducedIn": "1.79.0",
+      "schemaDigest": "13649d8cb0867241f98242d725d235e2b32c8ec60975b33c5cd1c728c270d39a",
+      "required": [
+        "blockers",
+        "checks",
+        "executedCommands",
+        "packageId",
+        "planDigest",
+        "planRevision",
+        "planStatus",
+        "productionPromotionClaimed",
+        "schemaVersion",
+        "status",
+        "verificationDigest"
+      ]
+    },
+    {
+      "schemaId": "agent-workflow-continuation-action.v1",
+      "owner": "agent_lifecycle.workflow",
+      "introducedIn": "2.8.0",
+      "schemaDigest": "ad4f95db68229f4ecd5ca0979a07cf01e78c44ac3271b9ecae030c188a274c18",
+      "required": [
+        "actionDigest",
+        "managedActionDigest",
+        "managedActionType",
+        "operationId",
+        "planDigest",
+        "route",
+        "schemaVersion",
+        "sourceRevision",
+        "stateRevision",
+        "suppliedInputs",
+        "taskId"
+      ]
+    },
+    {
+      "schemaId": "agent-workflow-continuation-receipt.v1",
+      "owner": "agent_lifecycle.workflow",
+      "introducedIn": "2.8.0",
+      "schemaDigest": "5f02691867d30f9ae3035630f0e2e5dc10093fc6ac017432331b980621a18493",
+      "required": [
+        "action",
+        "appliedEvent",
+        "blockers",
+        "hostLaunchStarted",
+        "mode",
+        "modelCallsStarted",
+        "nextAction",
+        "operationId",
+        "plan",
+        "productionPromotionClaimed",
+        "receiptDigest",
+        "requiredInputs",
+        "schemaVersion",
+        "stateAfter",
+        "stateBefore",
+        "stateWritten",
+        "status"
+      ]
+    }
+  ],
+  "pythonApi": {
+    "sourcePolicy": "policy/python-public-api.json",
+    "modules": [
+      {
+        "module": "agent_lifecycle",
+        "owner": "agent_lifecycle",
+        "exports": [
+          {
+            "name": "__version__",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.contracts",
+        "owner": "agent_lifecycle.contracts",
+        "exports": [
+          {
+            "name": "LifecycleError",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "canonical_bytes",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "canonical_digest",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "is_under_repo_path",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_json_object",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "normalize_repo_path",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "read_json_object",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "sha256_hex",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "write_json_create",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.context",
+        "owner": "agent_lifecycle.context",
+        "exports": [
+          {
+            "name": "build_context_checkpoint",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_episode_context",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_thread_episode_context",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "check_context",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_thread_context",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "list_context_checkpoints",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_context_checkpoint",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_context_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "render_context",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_context_checkpoint_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "restore_context_checkpoint",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_context_checkpoint",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_context_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "write_context_checkpoint",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.imports",
+        "owner": "agent_lifecycle.imports",
+        "exports": [
+          {
+            "name": "agentskills_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "bmad_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "collect_markdown_collection",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "constitution_adr_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "external_dialect_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "external_dialect_registry",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_agentskills_dialect",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_bmad_planning",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_constitution_adr",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_external_agent",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_external_dialect",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_external_workflow",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_markdown_collection",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_openspec_planning",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_planning_input",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_planning_text",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_spec_kit_planning",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "import_spec_kitty_planning",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "openspec_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "planning_dialect_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_dialect_profile_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_external_import_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_external_profile_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_import_validation_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_skill_proposal_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "spec_kit_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "spec_kitty_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_agentskills_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_dialect_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_external_dialect_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_external_import_result",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_import_result",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_skill_improvement_proposal",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.planning",
+        "owner": "agent_lifecycle.planning",
+        "exports": [
+          {
+            "name": "build_domain_language_continuity",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "build_plan_completeness_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_plan_delta",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_plan_snapshot",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_task_template_library",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_plan_completeness_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "reconcile_domain_language_continuity",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "reconcile_plan_snapshot",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "render_plan_handoff",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "render_task_template",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_plan_completeness_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_plan_delta_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_reconciliation_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_repository_references_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "require_task_template_validation_pass",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "resolve_sdd_tier",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_acceptance_checklist",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_plan_completeness",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_plan_completeness_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_plan_delta",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_plan_manifest",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_repository_references",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_task_template_library",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.project",
+        "owner": "agent_lifecycle.project",
+        "exports": [
+          {
+            "name": "PROJECT_PROFILE_RELATIVE_PATH",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_default_project_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_domain_language_delta",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "build_effective_project_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_preset_profile_draft",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "domain_language_digest",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "inspect_project_preset",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "language_terms",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "list_project_presets",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_domain_language",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "load_project_preset",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_project_principles",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_project_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "merge_preset_defaults",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "merge_project_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "normalize_project_profile",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "profile_field_is_explicit",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "project_principles_digest",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "project_profile_digest",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "render_project_preset",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_domain_language",
+            "introducedIn": "2.2.0"
+          },
+          {
+            "name": "validate_project_preset",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_project_principles",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_project_profile",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.benchmarks",
+        "owner": "agent_lifecycle.benchmarks",
+        "exports": [
+          {
+            "name": "build_benchmark_run_receipt",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "build_stratified_sample",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "compare_qualified_routes",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "compare_reference_task_evaluations",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "evaluate_reference_task",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_benchmark_run_receipt",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "qualify_benchmark_runs",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "select_stratified_tasks",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_benchmark_run_receipt",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_qualification_report",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_qualified_route_comparison",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_reference_task_comparison",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "validate_stratified_sample",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.neutrality",
+        "owner": "agent_lifecycle.neutrality",
+        "exports": [
+          {
+            "name": "AuthorityBundle",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "LEGACY_NEUTRALITY_SCOPES",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "NEUTRALITY_SCOPE_CHOICES",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "NeutralityFinding",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "NeutralityReport",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "TRACKED_RELEASE_SCOPE",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "load_authority_bundle",
+            "introducedIn": "1.77.0"
+          },
+          {
+            "name": "scan_repository",
+            "introducedIn": "1.77.0"
+          }
+        ]
+      },
+      {
+        "module": "agent_lifecycle.reporting",
+        "owner": "agent_lifecycle.reporting",
+        "exports": [
+          {
+            "name": "build_attention_projection",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_change_summary_receipt",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_lifecycle_progress_view",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_lifecycle_progress_watch",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_multi_run_attention_view",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_multi_run_overlap",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_multi_run_view",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_progress_bridge_config",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_progress_bridge_receipt",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_progress_hook_policy",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_progress_hook_receipt",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_status_view",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "build_workflow_event_feed",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "render_goal_view_terminal",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "render_progress_bridge_terminal",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "render_progress_terminal",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "render_usage_export_json",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "render_usage_export_table",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "require_status_view_pass",
+            "introducedIn": "2.3.0"
+          },
+          {
+            "name": "write_progress_hook_receipt",
+            "introducedIn": "2.3.0"
+          }
+        ]
+      }
+    ]
+  }
+}

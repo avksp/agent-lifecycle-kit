@@ -1,5 +1,7 @@
 # Integrate an external AI SDLC client
 
+See [Compatibility and release channels](compatibility-and-release-channels.md) for the candidate stable inventory and the installed replay evidence.
+
 An external client can invoke the installed `agent-lifecycle` CLI as a bounded
 subprocess and display its receipts. A task tracker, IDE, script or other client
 uses the same contract; no task-tracker service or private Python import is

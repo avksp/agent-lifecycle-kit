@@ -1,31 +1,25 @@
 {
   "baseVersions": [
-    "2.51.1"
+    "2.52.0"
   ],
   "changes": [
     {
       "domain": "cli",
-      "identifier": "plan.verify",
+      "identifier": "plan.review-preflight",
       "impact": "UNKNOWN",
-      "reason": "Canonical DRAFT verification rejects the wrong package location earlier."
+      "reason": "Opt-in local checks for prepared reviewer packets. The command grants no reviewer or execution authority."
     },
     {
       "domain": "cli",
-      "identifier": "plan.scaffold",
+      "identifier": "plan.lock-create",
       "impact": "UNKNOWN",
-      "reason": "A new command creates draft inputs. Existing plan authority is unchanged."
-    },
-    {
-      "domain": "cli",
-      "identifier": "project.archive",
-      "impact": "UNKNOWN",
-      "reason": "A new explicit local archive route has independent input and path checks."
+      "reason": "Optional exact preflight receipt and reviewed packet binding. The existing route remains available."
     },
     {
       "domain": "schema",
-      "identifier": "agent-sdd-tier-resolution-request.v1",
+      "identifier": "agent-plan-review-preflight-receipt.v1",
       "impact": "UNKNOWN",
-      "reason": "New documentation schema for the existing tier request."
+      "reason": "The new local receipt binds input identity and a declared budget decision."
     }
   ],
   "domains": {
@@ -39,9 +33,8 @@
       "coverage": "PARTIAL",
       "evidenceRefs": [],
       "identifiers": [
-        "plan.scaffold",
-        "plan.verify",
-        "project.archive"
+        "plan.lock-create",
+        "plan.review-preflight"
       ],
       "semanticReview": "UNVERIFIED"
     },
@@ -85,18 +78,18 @@
       "coverage": "PARTIAL",
       "evidenceRefs": [],
       "identifiers": [
-        "agent-sdd-tier-resolution-request.v1"
+        "agent-plan-review-preflight-receipt.v1"
       ],
       "semanticReview": "UNVERIFIED"
     }
   },
   "exclusions": [
-    "No arbitrary plan semantic compatibility or new host route is qualified.",
-    "No automatic installation, update or plan migration is authorized.",
-    "Archive eligibility is scoped to the operator-supplied catalogue."
+    "Observed compatibility covers the retained installed consumer cases only.",
+    "Stable policy activation and arbitrary plan semantic compatibility remain open.",
+    "No automatic installation, update or plan migration is authorized."
   ],
   "origin": "https://github.com/avksp/agent-lifecycle-kit",
   "schemaVersion": "agent-plugin-release-impact.v1",
   "sourceCommit": null,
-  "version": "2.52.0"
+  "version": "2.53.0"
 }

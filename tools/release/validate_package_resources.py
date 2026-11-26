@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ RESOURCE_PATHS = (
     "external-checks/declared-dependencies.v1.json",
 )
 PACKAGE_DATA_PATTERN = "data/profiles/**/*.json"
+COMPATIBILITY_INVENTORY = "compatibility/stable-surface.v1.json"
 
 
 def validate_package_resources(
@@ -96,7 +98,22 @@ def validate_package_resources(
             )
         resource_records.append({"path": relative, "source": source_identity, "package": package_identity})
 
-    expected = set(RESOURCE_PATHS)
+    # The release inventory is authored directly as package data. The profile
+    # copies above still require identical bytes in their canonical source.
+    inventory = package_root / COMPATIBILITY_INVENTORY
+    if inventory.is_file():
+        identity = _identity(inventory)
+        try:
+            value = json.loads(inventory.read_bytes())
+        except (UnicodeError, json.JSONDecodeError):
+            value = None
+        valid = isinstance(value, dict) and value.get("schemaVersion") == "agent-stable-surface.v1"
+        if not valid:
+            blockers.append({"code": "compatibility-inventory-invalid", "path": COMPATIBILITY_INVENTORY})
+        checks.append({"id": "compatibility-inventory", "status": "PASS" if valid else "FAIL",
+                       "path": COMPATIBILITY_INVENTORY, "identity": identity})
+
+    expected = {*RESOURCE_PATHS, COMPATIBILITY_INVENTORY}
     actual_package = (
         {path.relative_to(package_root).as_posix() for path in package_root.rglob("*") if path.is_file()}
         if package_root.is_dir()
