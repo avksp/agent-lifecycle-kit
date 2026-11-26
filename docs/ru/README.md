@@ -10,7 +10,7 @@ Agent Lifecycle Kit (ALK) координирует работу кодового
 
 Проект работает поверх разных CLI: Codex, Claude Code, Qwen Code, Goose, OpenInterpreter, Pi, Grok Build и других. Ядро не зависит от конкретного провайдера или модели; команды, настройки окружения и работа с секретами выносятся в адаптеры или локальные профили хоста.
 
-**Лицензия:** Apache-2.0 · **Версия:** 2.52.0 · Python 3.11-3.15
+**Лицензия:** Apache-2.0 · **Версия:** 2.53.0 · Python 3.11-3.15
 
 [Проверка цепочки в CI](guides/verify-chain-in-ci.md) описывает автономную сверку запуска с независимыми входами. Английская документация: [английская версия на GitHub](https://github.com/avksp/agent-lifecycle-kit/blob/main/README.md).
 
@@ -18,11 +18,11 @@ Agent Lifecycle Kit (ALK) координирует работу кодового
 
 ## Быстрый старт
 
-Начните с подробного руководства [установка ALK и первый запуск](guides/install-and-first-run.md). В 2.18 ограничены ввод-вывод и диагностика процессов/Git, усилены подписи и разделена совместимость OpenCode 1.x/2.x ([границы](adapters/opencode.md)); в 2.17 усилены [проверка рабочего цикла и восстановление](reference/workflow-completeness.md). В 2.16 добавлен накопительный учёт в подтверждённых границах хоста; см. [обслуживание и хранение подробностей](reference/cli.md#очистка-подробностей).
+Начните с подробного руководства [установка ALK и первый запуск](guides/install-and-first-run.md). См. [совместимость и каналы выпуска](guides/compatibility-and-release-channels.md). В 2.18 ограничены ввод-вывод и диагностика процессов/Git, усилены подписи и разделена совместимость OpenCode 1.x/2.x ([границы](adapters/opencode.md)); в 2.17 усилены [проверка рабочего цикла и восстановление](reference/workflow-completeness.md). В 2.16 добавлен накопительный учёт в подтверждённых границах хоста; см. [обслуживание и хранение подробностей](reference/cli.md#очистка-подробностей).
 
 Описание переносимого пакета навыков находится в разделе [переносимый пакет Agent Plugins](reference/agent-plugins.md), проверка установленного пакета - в разделе [проверка Agent Plugins в клиентах](reference/agent-plugin-qualification.md), а необязательный контроль жизненного цикла адаптера - в [отдельном справочнике](adapters/lifecycle-control.md). Сейчас комплектные адаптеры публикуют `GUIDANCE_ONLY` и `NO_RECOMMENDATION`, а управляемый запуск сохраняет статус `WRAPPER_ONLY`.
 
-В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.52.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
+В нём есть варианты для macOS, Linux и Windows, установка из [PyPI](https://pypi.org/project/agent-lifecycle-kit/) командой `python -m pip install agent-lifecycle-kit==2.53.0` и разбор ошибок команды `agent-lifecycle version`. См. [миграцию на 2.15](reference/cli.md#миграция-артефактов-полномочий-на-215) и [границы полномочий](reference/authority-artifact-boundaries.md).
 
 Для быстрого старта выполните:
 

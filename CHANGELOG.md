@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.53.0
+
+- Publish a machine-readable candidate stable inventory and mark Preview
+  commands in CLI help. Record the CLI, schema, exits and public Python
+  surfaces covered by the inventory. Stable policy activation remains open.
+- Replay retained consumer cases on exact, separately installed wheels.
+  Generate the tested-version table from observed compatibility receipts.
+- Add opt-in local `plan review-preflight` for exact input identities,
+  declared budget and packet checks. Require matching current inputs and
+  report binding when the caller opts into preflight at lock creation.
+
 ## 2.52.0
 
 - Create a full S2 draft with `plan scaffold`. List unfilled fields and make

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
-from tools.release.validate_package_resources import validate_package_resources
+from tools.release.validate_package_resources import COMPATIBILITY_INVENTORY, validate_package_resources
 
 
 class PackageResourceValidatorTests(unittest.TestCase):
@@ -66,6 +67,32 @@ class PackageResourceValidatorTests(unittest.TestCase):
         codes = {item["code"] for item in result["blockers"]}
         self.assertIn("resource-content-drift", codes)
         self.assertIn("legacy-preset-data-files", codes)
+
+    def test_only_the_declared_package_owned_inventory_is_allowed(self) -> None:
+        source = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            package = root / "src/agent_lifecycle/data/profiles"
+            shutil.copytree(source / "src/agent_lifecycle/data/profiles", package)
+            shutil.copyfile(source / "src/agent_lifecycle/resources.py", package.parent.parent / "resources.py")
+
+            def blockers() -> list[dict]:
+                report = validate_package_resources(
+                    pyproject_path=source / "pyproject.toml", source_root=source / "profiles", package_root=package,
+                )
+                return report["blockers"]
+
+            self.assertEqual(blockers(), [])
+            extra = package / "compatibility/unlisted.json"
+            extra.write_text("{}\n", encoding="utf-8")
+            self.assertIn({"code": "unexpected-package-resource", "paths": ["compatibility/unlisted.json"]}, blockers())
+            extra.unlink()
+            inventory = package / COMPATIBILITY_INVENTORY
+            inventory.write_text("{}\n", encoding="utf-8")
+            self.assertIn({"code": "compatibility-inventory-invalid", "path": COMPATIBILITY_INVENTORY}, blockers())
+            inventory.unlink()
+            self.assertIn({"code": "package-resource-inventory-incomplete", "paths": [COMPATIBILITY_INVENTORY]},
+                          blockers())
 
     def test_evidence_is_json_serializable(self) -> None:
         root = Path(__file__).resolve().parents[2]

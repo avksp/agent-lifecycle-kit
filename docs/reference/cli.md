@@ -276,10 +276,10 @@ map is in [Commands by task](../guides/commands-by-task.md).
 ## Installation
 
 Python 3.11-3.15 is supported. Install the exact release from the official
-[PyPI project](https://pypi.org/project/agent-lifecycle-kit/):
+[PyPI project](https://pypi.org/project/agent-lifecycle-kit/) when that version is available:
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.52.0
+python -m pip install agent-lifecycle-kit==2.53.0
 ```
 
 ## Task evidence identity
@@ -1128,3 +1128,36 @@ The operator supplies the catalogue's packages and predecessor edges.
 ALK cannot infer omitted entries or edges from arbitrary local files.
 The ZIP preserves source files and grants no execution authority or
 independent provenance.
+
+## Preview review preflight
+
+Use `plan review-preflight --manifest <prepared-manifest> --preparation
+<preparation-receipt> --packet <packet> --request <request> --out <receipt>`
+before sending the prepared packet for independent review. Choose a fresh
+output path outside the plan package. Keep the prepared files unchanged
+while you request review. An existing report at the pending path prevents
+initial receipt creation. This check observes the local path at issuance.
+
+The `agent-plan-review-preflight-request.v1` object supplies the exact
+`sourceRevision`, `packetSha256`, `budgetSnapshot` path and `command` object
+with `argv`, `cwd` and `shell: false`. Use relative repository paths. Keep
+credentials outside the argv and packet. The result records the command
+digest and input identities without launching the command.
+
+An `agent-plan-review-budget-snapshot.v1` supplies
+`previousObservedAt`, `previousGrossTokens`, `observedAt`, `grossTokens`,
+`validUntil`, `ceilingTokens`, `reserves` and `startedAbsentFromGross`.
+Use unique `operationId` values with `tokens` in reserves or
+`unreportedTokens` for work already started. Gross usage includes cached
+input. Supply a `coldCacheBound` with `qualification: "DECLARED_LOCAL"`,
+`basis`, `tokens`, the packet SHA-256 and the command digest.
+
+Only `READY` writes the receipt. Read the status even when the exit code
+is zero. `INSUFFICIENT` means the lower bound exceeds the ceiling.
+`DEFERRED` means a current sufficient upper bound is unavailable.
+The snapshot is local declared evidence. It grants no execution authority.
+
+After independent review use `plan lock-create --review-preflight <receipt>`
+with the ordinary manifest and report arguments. The report must include
+`reviewedPacketSha256`. The CLI checks the inputs again before writing the
+lock. Keep the existing independent review and native authorization steps.

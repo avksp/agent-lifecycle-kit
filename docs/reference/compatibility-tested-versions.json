@@ -1,0 +1,1 @@
+{"cases":["critical-route","guarded-action","incompatible-contract","lost-reply","missing-input","readonly-projection","stale-guards","unattested-usage"],"evidenceBoundary":"INSTALLED_PORTABLE_CASES","schemaVersion":"agent-tested-versions.v1","stablePromiseStatus":"PENDING_ACTIVATION","testedVersions":["2.52.0","2.53.0"]}

@@ -20,7 +20,8 @@
     "2.50.0",
     "2.51.0",
     "2.51.1",
-    "2.52.0"
+    "2.52.0",
+    "2.53.0"
   ],
   "versionSchema": "agent-lifecycle-version.v1",
   "continuationSchema": "agent-workflow-continuation-receipt.v1",

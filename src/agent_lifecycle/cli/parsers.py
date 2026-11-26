@@ -32,7 +32,13 @@ def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     from agent_lifecycle.cli.research import add_research_parser
     from agent_lifecycle.cli.worktree import add_worktree_parser
 
-    parser = _RootArgumentParser(prog="agent-lifecycle")
+    parser = _RootArgumentParser(
+        prog="agent-lifecycle",
+        epilog=(
+            "Compatibility inventory: data/profiles/compatibility/stable-surface.v1.json. "
+            "Unlisted interfaces are Preview. Stable policy activation is pending."
+        ),
+    )
     _measurement_options(parser)
     subparsers = cast(Any, parser.add_subparsers(dest="command", required=True))
     subparsers.add_parser("version", help="print package version as compact JSON")
@@ -70,7 +76,39 @@ def build_parser(argv: list[str] | None = None) -> argparse.ArgumentParser:
     add_adapter_parser(subparsers)
     _add_project_parser(subparsers)
     subparsers.add_parser("conformance", help="conformance commands")
+    if argv is None or "-h" in argv or "--help" in argv:
+        _classify_command_help(parser)
     return parser
+
+
+def _classify_command_help(parser: argparse.ArgumentParser) -> None:
+    import json
+    from importlib.resources import files
+
+    inventory = files("agent_lifecycle").joinpath("data/profiles/compatibility/stable-surface.v1.json")
+    stable = {tuple(row["path"]) for row in json.loads(inventory.read_bytes())["commands"]}
+    _label_preview_help(parser, (), stable)
+
+
+def _label_preview_help(parser: argparse.ArgumentParser, prefix: tuple[str, ...], stable: set[tuple[str, ...]]) -> None:
+    family = next((action for action in parser._actions if isinstance(action, argparse._SubParsersAction)), None)
+    if family is None:
+        if prefix not in stable:
+            parser.epilog = f"Preview interface.\n\n{parser.epilog or ''}".strip()
+        return
+    for name, child in family.choices.items():
+        path = (*prefix, name)
+        if not any(allowed[: len(path)] == path for allowed in stable):
+            _mark_preview_choice(family, name)
+        _label_preview_help(child, path, stable)
+
+
+def _mark_preview_choice(family: argparse._SubParsersAction[argparse.ArgumentParser], name: str) -> None:
+    entry = next((item for item in family._choices_actions if item.dest == name), None)
+    if entry is None:
+        family._choices_actions.append(family._ChoicesPseudoAction(name, [], "[Preview]"))
+    else:
+        entry.help = f"[Preview] {entry.help or ''}".rstrip()
 
 
 def _measurement_options(parser: argparse.ArgumentParser) -> None:

@@ -8,7 +8,11 @@ from typing import Any
 
 from agent_lifecycle.audit.review_packet import prepare_review_packet
 from agent_lifecycle.cli.compact_plan_commands import compact_package_profiles, compact_plan_command
-from agent_lifecycle.cli.plan_lock_commands import create_reviewed_plan_lock, prepare_freeze_candidate
+from agent_lifecycle.cli.plan_lock_commands import (
+    create_reviewed_plan_lock,
+    prepare_freeze_candidate,
+    prepare_review_preflight,
+)
 from agent_lifecycle.cli.plan_scaffold_commands import create_plan_scaffold
 from agent_lifecycle.compiler import build_phase_packet, compile_small_model_packets, compile_task_packets
 from agent_lifecycle.contracts import (
@@ -67,10 +71,23 @@ def dispatch_planning(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == "specification":
         return _dispatch_specification(args)
     if args.command == "plan":
-        return _dispatch_plan(args)
+        return _dispatch_plan_with_preflight(args)
     if args.command == "task":
         return _dispatch_task(args)
     raise LifecycleError("command-not-implemented", "planning command is not implemented")
+
+
+def _dispatch_plan_with_preflight(args: argparse.Namespace) -> dict[str, Any]:
+    if args.plan_command == "review-preflight":
+        return prepare_review_preflight(
+            manifest_path=args.manifest,
+            preparation_path=args.preparation,
+            packet_path=args.packet,
+            request_path=args.request,
+            output_path=args.out,
+            repository_root=Path(args.repository_root),
+        )
+    return _dispatch_plan(args)
 
 
 def _dispatch_tier(args: argparse.Namespace) -> dict[str, Any]:
@@ -136,6 +153,7 @@ def _dispatch_plan(args: argparse.Namespace) -> dict[str, Any]:
         return create_reviewed_plan_lock(
             manifest_path=args.manifest,
             review_path=args.review,
+            review_preflight_path=args.review_preflight,
             repository_root=Path(args.repository_root),
         )
     if args.plan_command == "check":

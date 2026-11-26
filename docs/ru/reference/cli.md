@@ -286,10 +286,10 @@ ALK и первый запуск](../guides/install-and-first-run.md). Указ�
 ## Установка
 
 Поддерживаются Python 3.11-3.15. Установите точную версию из официального
-[проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/):
+[проекта в PyPI](https://pypi.org/project/agent-lifecycle-kit/) после её публикации:
 
 ```bash
-python -m pip install agent-lifecycle-kit==2.52.0
+python -m pip install agent-lifecycle-kit==2.53.0
 ```
 
 ## Идентичность подтверждений задачи
@@ -1194,3 +1194,37 @@ ALK проверяет состав файлов, правила Git, лимит
 Пакеты и связи с предшественниками указывает оператор. ALK не восстанавливает
 пропущенные записи и связи из произвольных локальных файлов. ZIP сохраняет
 исходники и не подтверждает независимое происхождение или право на выполнение.
+
+## Локальная проверка пакета ревью в Preview
+
+До отправки пакета независимому ревьюверу вызовите
+`plan review-preflight --manifest <prepared-manifest> --preparation
+<preparation-receipt> --packet <packet> --request <request> --out <receipt>`.
+Укажите новый путь для квитанции вне пакета плана. Сохраняйте подготовленные
+файлы неизменными до ревью. Отчёт в ожидаемом месте блокирует выдачу
+первичной квитанции. Проверка читает локальное состояние пути при выдаче.
+
+В объекте `agent-plan-review-preflight-request.v1` задайте
+`sourceRevision`, `packetSha256`, путь `budgetSnapshot` и объект
+`command` с полями `argv`, `cwd` и `shell: false`. Пути указывайте
+от корня репозитория. Храните учётные данные вне argv и пакета.
+CLI фиксирует хеш команды и входные данные. Команда не запускается.
+
+В `agent-plan-review-budget-snapshot.v1` укажите
+`previousObservedAt`, `previousGrossTokens`, `observedAt`, `grossTokens`,
+`validUntil`, `ceilingTokens`, `reserves` и `startedAbsentFromGross`.
+Записи с уникальным `operationId` содержат `tokens` в резерве или
+`unreportedTokens` для уже начатой работы. Валовый расход включает
+кэшированный ввод. Для `coldCacheBound` задайте
+`qualification: "DECLARED_LOCAL"`, `basis`, `tokens`, SHA-256 пакета
+и хеш команды.
+
+Квитанция записывается только при `READY`. Проверяйте статус и при нулевом
+коде выхода. `INSUFFICIENT` означает, что нижняя граница выше лимита.
+`DEFERRED` означает, что достаточная верхняя граница пока недоступна.
+Снимок отражает локально заявленные данные и не выдаёт допуск.
+
+После независимого ревью добавьте `--review-preflight <receipt>` к команде
+`plan lock-create`. В отчёте укажите `reviewedPacketSha256`. CLI повторно
+проверяет входы перед записью lock. Пройдите штатное независимое ревью
+и отдельный native-допуск.
